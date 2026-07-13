@@ -1,101 +1,61 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { createOrder, fetchGroups, type GroupWithProducts, type Product } from './api'
-import ProductCard from './components/ProductCard.vue'
+import { onMounted, ref } from 'vue'
+import { currentUser, gotoLogin, gotoLogout } from './auth'
+import { showToast, toast } from './toast'
 
-const groups = ref<GroupWithProducts[]>([])
-const activeGroupId = ref<number | null>(null)
-const loading = ref(true)
-const loadError = ref('')
-const buyingProductId = ref<number | null>(null)
+const menuOpen = ref(false)
 
-interface Toast {
-  type: 'success' | 'error'
-  text: string
-}
-const toast = ref<Toast | null>(null)
-let toastTimer: ReturnType<typeof setTimeout> | undefined
-
-function showToast(type: Toast['type'], text: string) {
-  toast.value = { type, text }
-  clearTimeout(toastTimer)
-  toastTimer = setTimeout(() => {
-    toast.value = null
-  }, 3000)
-}
-
-const activeGroup = computed(
-  () => groups.value.find((g) => g.id === activeGroupId.value) ?? null,
-)
-
-onMounted(async () => {
-  try {
-    groups.value = await fetchGroups()
-    activeGroupId.value = groups.value[0]?.id ?? null
-  } catch (e) {
-    loadError.value = e instanceof Error ? e.message : '加载失败，请稍后重试'
-  } finally {
-    loading.value = false
+onMounted(() => {
+  // OIDC 握手失败会回跳 ?login_error=1：提示后清掉参数
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('login_error')) {
+    showToast('error', '登录未完成，请重试')
+    params.delete('login_error')
+    const query = params.toString()
+    history.replaceState(null, '', window.location.pathname + (query ? `?${query}` : ''))
   }
 })
-
-async function buy(product: Product) {
-  buyingProductId.value = product.id
-  try {
-    const result = await createOrder(product.id)
-    showToast('success', `下单成功，订单号 ${result.orderNo}`)
-  } catch (e) {
-    showToast('error', e instanceof Error ? e.message : '下单失败，请稍后重试')
-  } finally {
-    buyingProductId.value = null
-  }
-}
 </script>
 
 <template>
   <header class="header">
-    <h1 class="wordmark">
-      <img
-        class="wordmark-img"
-        src="https://standards.mintpop.ai/assets/brand/wordmark/mintpop-wordmark-dark.png"
-        alt="MintPop"
-      />
-      <span class="wordmark-sub">Shop</span>
-    </h1>
+    <RouterLink to="/" class="wordmark-link">
+      <h1 class="wordmark">
+        <img
+          class="wordmark-img"
+          src="https://standards.mintpop.ai/assets/brand/wordmark/mintpop-wordmark-dark.png"
+          alt="MintPop"
+        />
+        <span class="wordmark-sub">Shop</span>
+      </h1>
+    </RouterLink>
+
+    <nav class="auth-area">
+      <button v-if="!currentUser" type="button" class="login-btn" @click="gotoLogin">
+        登录
+      </button>
+      <div v-else class="user-menu">
+        <button type="button" class="user-trigger" @click="menuOpen = !menuOpen">
+          <img
+            v-if="currentUser.avatarUrl"
+            class="avatar"
+            :src="currentUser.avatarUrl"
+            alt=""
+          />
+          <span v-else class="avatar avatar-fallback">
+            {{ (currentUser.nickname ?? currentUser.email).slice(0, 1) }}
+          </span>
+          <span class="nickname">{{ currentUser.nickname ?? currentUser.email }}</span>
+        </button>
+        <div v-if="menuOpen" class="menu" @click="menuOpen = false">
+          <RouterLink to="/orders" class="menu-item">我的订单</RouterLink>
+          <button type="button" class="menu-item" @click="gotoLogout">退出登录</button>
+        </div>
+      </div>
+    </nav>
   </header>
 
-  <main class="page">
-    <p v-if="loading" class="hint">加载中……</p>
-    <p v-else-if="loadError" class="hint error">{{ loadError }}</p>
-
-    <template v-else>
-      <nav class="group-nav" aria-label="商品分组">
-        <button
-          v-for="group in groups"
-          :key="group.id"
-          type="button"
-          class="pill"
-          :class="{ active: group.id === activeGroupId }"
-          @click="activeGroupId = group.id"
-        >
-          {{ group.name }}
-        </button>
-      </nav>
-
-      <section v-if="activeGroup" class="grid" aria-live="polite">
-        <ProductCard
-          v-for="product in activeGroup.products"
-          :key="product.id"
-          :product="product"
-          :buying="buyingProductId === product.id"
-          @buy="buy"
-        />
-      </section>
-      <p v-if="activeGroup && activeGroup.products.length === 0" class="hint">
-        该分组暂无上架商品
-      </p>
-    </template>
-  </main>
+  <RouterView />
 
   <Transition name="toast">
     <div v-if="toast" class="toast" :class="toast.type" role="status">
@@ -106,8 +66,15 @@ async function buy(product: Product) {
 
 <style scoped>
 .header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 16px 32px;
   border-bottom: 1px solid var(--color-border);
+}
+
+.wordmark-link {
+  text-decoration: none;
 }
 
 .wordmark {
@@ -129,61 +96,95 @@ async function buy(product: Product) {
   font-weight: 500;
 }
 
-.page {
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 24px 32px 48px;
+.auth-area {
+  position: relative;
 }
 
-.hint {
-  color: var(--color-ink-secondary);
-  padding: 24px 0;
-}
-
-.hint.error {
-  color: #b91c1c;
-}
-
-.group-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 24px;
-}
-
-.pill {
-  padding: 8px 16px;
-  border: 1px solid var(--color-border);
+.login-btn {
+  padding: 8px 20px;
+  border: none;
   border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: #ffffff;
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.login-btn:hover {
+  background: var(--color-brand-deep);
+}
+
+.user-menu {
+  position: relative;
+}
+
+.user-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.user-trigger:hover {
   background: var(--color-bg);
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-brand);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 140px;
+  padding: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(11, 11, 12, 0.12);
+  display: flex;
+  flex-direction: column;
+  z-index: 20;
+}
+
+.menu-item {
+  display: block;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
   color: var(--color-ink);
   font-size: 14px;
   font-family: inherit;
+  text-align: left;
+  text-decoration: none;
   cursor: pointer;
-  transition: all 0.15s ease;
 }
 
-.pill:hover {
-  border-color: var(--color-brand);
-  color: var(--color-brand-deep);
-}
-
-.pill:focus-visible {
-  outline: 2px solid var(--color-brand-deep);
-  outline-offset: 2px;
-}
-
-.pill.active {
-  background: var(--color-brand);
-  border-color: var(--color-brand);
-  color: #ffffff;
-  font-weight: 500;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 16px;
+.menu-item:hover {
+  background: var(--color-bg);
 }
 
 .toast {

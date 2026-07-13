@@ -6,5 +6,10 @@ import '@fontsource/inter/600.css'
 import '@fontsource/fredoka/600.css'
 import './styles/base.css'
 import App from './App.vue'
+import { router } from './router'
+import { loadCurrentUser } from './auth'
 
-createApp(App).mount('#app')
+// 先取登录态再挂载，避免页头登录区闪烁（失败也照常挂载）
+loadCurrentUser().finally(() => {
+  createApp(App).use(router).mount('#app')
+})

@@ -27,16 +27,51 @@ export interface CreateOrderResult {
   amountCents: number
 }
 
+/** 当前用户（镜像后端 MeResponse） */
+export interface Me {
+  id: number
+  email: string
+  nickname: string | null
+  avatarUrl: string | null
+}
+
+/** 我的订单列表项（镜像后端 OrderItemResponse） */
+export interface OrderItem {
+  orderNo: string
+  productName: string
+  quantity: number
+  amountCents: number
+  status: string
+  statusLabel: string
+  createdAt: string
+}
+
+/** 未登录/会话过期（HTTP 401），调用方据此引导登录 */
+export class UnauthorizedError extends Error {
+  constructor() {
+    super('未登录或会话已过期')
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  let body: ApiResponse<T>
+  let res: Response
   try {
-    const res = await fetch(path, {
+    res = await fetch(path, {
       headers: { 'Content-Type': 'application/json' },
       ...init,
     })
+  } catch {
+    // 网络失败：不把原始英文报错透给用户
+    throw new Error('网络异常，请稍后重试')
+  }
+  // 鉴权中间件的 401 是唯一非 200 业务入口，转成类型化错误
+  if (res.status === 401) {
+    throw new UnauthorizedError()
+  }
+  let body: ApiResponse<T>
+  try {
     body = (await res.json()) as ApiResponse<T>
   } catch {
-    // 网络失败 / 响应非 JSON：不把原始英文报错透给用户
     throw new Error('网络异常，请稍后重试')
   }
   if (body.code !== 0) {
@@ -56,6 +91,16 @@ export function createOrder(productId: number): Promise<CreateOrderResult> {
     method: 'POST',
     body: JSON.stringify({ productId, quantity: 1 }),
   })
+}
+
+/** 当前登录用户（401 抛 UnauthorizedError 表示游客） */
+export function fetchMe(): Promise<Me> {
+  return request<Me>('/api/me')
+}
+
+/** 我的订单列表 */
+export function fetchMyOrders(): Promise<OrderItem[]> {
+  return request<OrderItem[]>('/api/orders')
 }
 
 /** 分转元展示 */
