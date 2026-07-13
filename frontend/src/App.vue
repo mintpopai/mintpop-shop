@@ -54,7 +54,14 @@ async function buy(product: Product) {
 
 <template>
   <header class="header">
-    <h1 class="wordmark">MintPop <span class="wordmark-sub">Shop</span></h1>
+    <h1 class="wordmark">
+      <img
+        class="wordmark-img"
+        src="https://standards.mintpop.ai/assets/brand/wordmark/mintpop-wordmark-dark.png"
+        alt="MintPop"
+      />
+      <span class="wordmark-sub">Shop</span>
+    </h1>
   </header>
 
   <main class="page">
@@ -104,8 +111,17 @@ async function buy(product: Product) {
 }
 
 .wordmark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: 24px;
   color: var(--color-brand-deep);
+}
+
+.wordmark-img {
+  height: 28px;
+  width: auto;
+  display: block;
 }
 
 .wordmark-sub {
