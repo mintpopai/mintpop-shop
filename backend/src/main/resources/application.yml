@@ -6,3 +6,6 @@ spring:
 
 server:
   port: 8080
+  # 生产在反向代理（Cloudflare/nginx）后运行：按 X-Forwarded-* 还原 scheme/host，
+  # 保证 post_logout_redirect_uri 拼装与 Cookie Secure 判定正确
+  forward-headers-strategy: framework

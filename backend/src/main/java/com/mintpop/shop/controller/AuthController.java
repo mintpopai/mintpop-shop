@@ -1,6 +1,7 @@
 package com.mintpop.shop.controller;
 
 import com.mintpop.shop.config.AuthProperties;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -35,9 +36,10 @@ public class AuthController {
 
     /** 登出：清本地会话 Cookie，再跳账号中心 end-session 单点登出（无 end-session 则直接回前端） */
     @GetMapping("/auth/logout")
-    public void logout(HttpServletResponse response) throws IOException {
+    public void logout(HttpServletRequest request, HttpServletResponse response) throws IOException {
         ResponseCookie expired = ResponseCookie.from(AuthProperties.SESSION_COOKIE_NAME, "")
                 .httpOnly(true)
+                .secure(request.isSecure())
                 .path("/")
                 .maxAge(0)
                 .sameSite("Lax")
