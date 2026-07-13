@@ -4,7 +4,7 @@
 
 **Goal:** 打出 MintPop 商店骨架——前端分组展示商品、点击购买后端落库建待支付订单。
 
-**Architecture:** monorepo（`apps/web` Vue 3 前端 + `apps/api` Spring Boot 4 单体后端），连接用户现有的独立 MySQL 服务——数据库连接写在 jar 外、gitignore 的 `apps/api/config/application.yml`（Spring 外置配置自动发现并覆盖 classpath），仓库只提交 example 模板。Flyway 管 DDL 与种子数据，统一 `ApiResponse<T>` 返回。前端单页：分组 pill 导航 + 商品卡片网格 + 购买 toast。
+**Architecture:** monorepo（`frontend` Vue 3 前端 + `backend` Spring Boot 4 单体后端），连接用户现有的独立 MySQL 服务——数据库连接写在 jar 外、gitignore 的 `backend/config/application.yml`（Spring 外置配置自动发现并覆盖 classpath），仓库只提交 example 模板。Flyway 管 DDL 与种子数据，统一 `ApiResponse<T>` 返回。前端单页：分组 pill 导航 + 商品卡片网格 + 购买 toast。
 
 **Tech Stack:** Spring Boot 4.1.0（Java 21 / Maven）、MyBatis-Plus 3.5.17（`mybatis-plus-spring-boot4-starter`）、Flyway、MySQL（用户现有服务）、Vue 3.5 + Vite 8 + TypeScript 5.9、Fontsource 自托管字体、mise 统一工具链。
 
@@ -12,14 +12,14 @@
 
 - 回复/文档/注释/提交信息一律**简体中文**；代码、命令、标识符保持英文。
 - 工具链版本钉死在根 `mise.toml`：`java = "temurin-21.0.11+10.0.LTS"`、`maven = "3.9.16"`、`node = "24.18.0"`、`pnpm = "11.12.0"`；子目录禁止再放 `mise.toml`。
-- mise task 命名「动作-组件」（`run-api`、`build-web`）；task 直接调底层命令；`package.json` 不留 scripts。
+- mise task 命名「动作-组件」（`run-backend`、`build-frontend`）；task 直接调底层命令；`package.json` 不留 scripts。
 - Spring Boot 4 注意：web starter 是 **`spring-boot-starter-webmvc`**（不是 3.x 的 `spring-boot-starter-web`）。
 - 统一返回 `ApiResponse<T>`（`code`/`data`/`msg`，0=成功），HTTP 一律 200；业务码 6 位分段：`11xxxx` 通用、`21xxxx` 商品模块。
 - 枚举成员名与字符串取值 SCREAMING_SNAKE_CASE 且逐字一致（如 `PENDING_PAYMENT`）。
 - 数据库表/列 snake_case + 全中文 COMMENT；金额以**分**（BIGINT）存储。
 - 层间依赖构造器注入（Lombok `@RequiredArgsConstructor` + final 字段），禁止业务代码自取依赖。
 - 前端零外链第三方资源（字体走 `@fontsource/*` 自托管）；设计 token：主色 `#17D1A7`、hover `#0FB389`、文本 `#0B0B0C`、次要 `#6B7280`、背景 `#FFFFFF`/`#F4F8F6`、分隔线 `#E5E7EB`、卡片圆角 8px、按钮 6px、药丸 999px、间距 4 的倍数。
-- 数据库连用户现有的独立 MySQL 服务：`src/main/resources/application.yml`（提交）只放非敏感默认值；真实连接配置写在 `apps/api/config/application.yml`（**gitignore，且在 resources 之外、不会被打进 jar**），Spring Boot 自动发现工作目录下的 `config/application.yml` 并覆盖 classpath 配置；仓库只提交 `apps/api/config/application.example.yml` 模板。**执行涉及真实数据库的验证步骤前，若 `apps/api/config/application.yml` 不存在，先停下向用户要连接信息。**
+- 数据库连用户现有的独立 MySQL 服务：`src/main/resources/application.yml`（提交）只放非敏感默认值；真实连接配置写在 `backend/config/application.yml`（**gitignore，且在 resources 之外、不会被打进 jar**），Spring Boot 自动发现工作目录下的 `config/application.yml` 并覆盖 classpath 配置；仓库只提交 `backend/config/application.example.yml` 模板。**执行涉及真实数据库的验证步骤前，若 `backend/config/application.yml` 不存在，先停下向用户要连接信息。**
 - 测试不起 Spring 上下文：service 层用 Mockito 纯单测，controller 层用 `MockMvcBuilders.standaloneSetup`（规避 Boot 4 测试切片注解包路径变动）。
 - 提交信息中文，结尾带 `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`。
 
@@ -33,7 +33,7 @@
 
 **Interfaces:**
 - Consumes: 无
-- Produces: `mise run install|install-web|run-api|run-web|build-api|build-web|test-api` 任务；gitignore 已排除 `apps/api/config/application.yml`（Task 2 的本地连接配置落这里）
+- Produces: `mise run install|install-frontend|run-backend|run-frontend|build-backend|build-frontend|test-backend` 任务；gitignore 已排除 `backend/config/application.yml`（Task 2 的本地连接配置落这里）
 
 - [ ] **Step 1: 写 `.gitignore`**
 
@@ -49,7 +49,7 @@ dist/
 target/
 
 # 本地数据库连接配置（jar 外的 Spring 外置配置，含凭据绝不入库；example 模板会提交）
-apps/api/config/application.yml
+backend/config/application.yml
 
 # 本地环境文件
 *.local
@@ -67,42 +67,42 @@ pnpm = "11.12.0"
 # —— 安装 ——
 [tasks.install]
 description = "安装全部组件依赖（api 由 Maven 构建时自动解析，无需单独安装）"
-depends = ["install-web"]
+depends = ["install-frontend"]
 
-[tasks.install-web]
-description = "安装 web 前端依赖"
+[tasks.install-frontend]
+description = "安装 前端依赖"
 usage = '''
 flag "--frozen" help="按 lockfile 精确安装、不更新 lockfile（CI/Docker 用）"
 '''
-dir = "apps/web"
+dir = "frontend"
 run = "pnpm install ${usage_frozen:+--frozen-lockfile}"
 
 # —— 运行 ——
-[tasks.run-api]
-description = "启动 api 后端（Spring Boot，端口 8080）"
-dir = "apps/api"
+[tasks.run-backend]
+description = "启动 后端（Spring Boot，端口 8080）"
+dir = "backend"
 run = "mvn spring-boot:run"
 
-[tasks.run-web]
-description = "启动 web 前端开发服务器（Vite，/api 代理到 8080）"
-dir = "apps/web"
+[tasks.run-frontend]
+description = "启动 前端开发服务器（Vite，/api 代理到 8080）"
+dir = "frontend"
 run = "pnpm vite"
 
 # —— 构建 ——
-[tasks.build-api]
-description = "构建 api 后端 jar"
-dir = "apps/api"
+[tasks.build-backend]
+description = "构建 后端 jar"
+dir = "backend"
 run = "mvn -DskipTests package"
 
-[tasks.build-web]
-description = "类型检查并构建 web 前端产物"
-dir = "apps/web"
+[tasks.build-frontend]
+description = "类型检查并构建 前端产物"
+dir = "frontend"
 run = "pnpm vue-tsc --noEmit && pnpm vite build"
 
 # —— 质量 ——
-[tasks.test-api]
-description = "运行 api 后端单元测试"
-dir = "apps/api"
+[tasks.test-backend]
+description = "运行 后端单元测试"
+dir = "backend"
 run = "mvn test"
 ```
 
@@ -129,19 +129,19 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 ### Task 2: 后端应用骨架（pom / 启动类 / 配置 / Flyway 迁移）
 
 **Files:**
-- Create: `apps/api/pom.xml`
-- Create: `apps/api/src/main/java/com/mintpop/shop/ShopApplication.java`
-- Create: `apps/api/src/main/resources/application.yml`（提交，仅非敏感默认值）
-- Create: `apps/api/config/application.example.yml`（提交，连接模板）
-- Create: `apps/api/config/application.yml`（gitignore，真实连接配置，由用户提供内容）
-- Create: `apps/api/src/main/resources/db/migration/V1__schema.sql`
-- Create: `apps/api/src/main/resources/db/migration/V2__seed.sql`
+- Create: `backend/pom.xml`
+- Create: `backend/src/main/java/com/mintpop/shop/ShopApplication.java`
+- Create: `backend/src/main/resources/application.yml`（提交，仅非敏感默认值）
+- Create: `backend/config/application.example.yml`（提交，连接模板）
+- Create: `backend/config/application.yml`（gitignore，真实连接配置，由用户提供内容）
+- Create: `backend/src/main/resources/db/migration/V1__schema.sql`
+- Create: `backend/src/main/resources/db/migration/V2__seed.sql`
 
 **Interfaces:**
-- Consumes: Task 1 的 gitignore 规则（`apps/api/config/application.yml` 不入库）
+- Consumes: Task 1 的 gitignore 规则（`backend/config/application.yml` 不入库）
 - Produces: 可启动的 Spring Boot 应用（端口 8080）；三张表 `product_group` / `product` / `shop_order` 及种子数据；Java 包根 `com.mintpop.shop`
 
-- [ ] **Step 1: 写 `apps/api/pom.xml`**
+- [ ] **Step 1: 写 `backend/pom.xml`**
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -158,9 +158,9 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
     </parent>
 
     <groupId>com.mintpop</groupId>
-    <artifactId>mintpop-shop-api</artifactId>
+    <artifactId>mintpop-shop-backend</artifactId>
     <version>0.1.0-SNAPSHOT</version>
-    <name>mintpop-shop-api</name>
+    <name>mintpop-shop-backend</name>
     <description>MintPop 商店后端（单体）</description>
 
     <properties>
@@ -250,25 +250,25 @@ public class ShopApplication {
 
 - [ ] **Step 3: 写配置文件（提交的默认值 + 外置连接配置）**
 
-`apps/api/src/main/resources/application.yml`（提交，**不含任何数据库凭据**）：
+`backend/src/main/resources/application.yml`（提交，**不含任何数据库凭据**）：
 
 ```yaml
 # 仅非敏感默认值；数据库连接写在 jar 外的 config/application.yml（gitignore，见 config/application.example.yml）。
 # Spring Boot 自动发现工作目录下的 config/application.yml 并覆盖本文件同名配置。
 spring:
   application:
-    name: mintpop-shop-api
+    name: mintpop-shop-backend
 
 server:
   port: 8080
 ```
 
-`apps/api/config/application.example.yml`（提交，模板）：
+`backend/config/application.example.yml`（提交，模板）：
 
 ```yaml
 # 复制本文件为同目录 application.yml 并填入你的 MySQL 连接信息。
 # config/application.yml 已被 .gitignore 排除，且位于 src/main/resources 之外、不会被打进 jar。
-# mise run run-api 的工作目录是 apps/api，Spring Boot 启动时会自动读取 ./config/application.yml。
+# mise run run-backend 的工作目录是 backend，Spring Boot 启动时会自动读取 ./config/application.yml。
 spring:
   datasource:
     # createDatabaseIfNotExist：账号有建库权限时自动创建目标库
@@ -277,7 +277,7 @@ spring:
     password: 填密码
 ```
 
-`apps/api/config/application.yml`（**不提交**）：内容同模板，由用户提供真实 host:端口、库名、账号、密码后填入。执行到本步时若用户尚未给连接信息，先创建模板副本并停下向用户索要。
+`backend/config/application.yml`（**不提交**）：内容同模板，由用户提供真实 host:端口、库名、账号、密码后填入。执行到本步时若用户尚未给连接信息，先创建模板副本并停下向用户索要。
 
 （Flyway 在 classpath 上默认启用，迁移目录用默认 `classpath:db/migration`。）
 
@@ -350,10 +350,10 @@ INSERT INTO product (group_id, name, description, price_cents, on_sale) VALUES
 
 - [ ] **Step 6: 启动验证（建表 + 种子数据落库）**
 
-前置：`apps/api/config/application.yml` 已填好真实连接信息（不存在则先停下向用户索要）。
+前置：`backend/config/application.yml` 已填好真实连接信息（不存在则先停下向用户索要）。
 
 ```bash
-mise run run-api
+mise run run-backend
 ```
 
 预期：启动日志出现 Flyway `Migrating schema ... to version "1 - schema"`、`"2 - seed"`、`Successfully applied 2 migrations`，随后 `Started ShopApplication`。验证后停掉应用。（若本机装有 mysql 客户端，可选加验：`SHOW TABLES` 应有三张表 + `flyway_schema_history`，`product` 表 10 行。）
@@ -361,8 +361,8 @@ mise run run-api
 - [ ] **Step 7: 提交**
 
 ```bash
-git add apps/api
-git commit -m "feat: api 应用骨架——Spring Boot 4 + MyBatis-Plus + Flyway 建表与种子数据
+git add backend
+git commit -m "feat: 后端应用骨架——Spring Boot 4 + MyBatis-Plus + Flyway 建表与种子数据
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 ```
@@ -372,11 +372,11 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 ### Task 3: 统一返回与全局异常（ApiResponse / BizCodeEnum / BizException / 全局处理器）
 
 **Files:**
-- Create: `apps/api/src/main/java/com/mintpop/shop/response/ApiResponse.java`
-- Create: `apps/api/src/main/java/com/mintpop/shop/enumeration/BizCodeEnum.java`
-- Create: `apps/api/src/main/java/com/mintpop/shop/exception/BizException.java`
-- Create: `apps/api/src/main/java/com/mintpop/shop/exception/GlobalExceptionHandler.java`
-- Test: `apps/api/src/test/java/com/mintpop/shop/exception/GlobalExceptionHandlerTest.java`
+- Create: `backend/src/main/java/com/mintpop/shop/response/ApiResponse.java`
+- Create: `backend/src/main/java/com/mintpop/shop/enumeration/BizCodeEnum.java`
+- Create: `backend/src/main/java/com/mintpop/shop/exception/BizException.java`
+- Create: `backend/src/main/java/com/mintpop/shop/exception/GlobalExceptionHandler.java`
+- Test: `backend/src/test/java/com/mintpop/shop/exception/GlobalExceptionHandlerTest.java`
 
 **Interfaces:**
 - Consumes: 无
@@ -428,7 +428,7 @@ class GlobalExceptionHandlerTest {
 
 - [ ] **Step 2: 运行测试确认编译失败**
 
-Run: `cd apps/api && mvn test`
+Run: `cd backend && mvn test`
 Expected: 编译错误（`ApiResponse`、`BizCodeEnum` 等不存在）。
 
 - [ ] **Step 3: 实现四个类**
@@ -569,13 +569,13 @@ public class GlobalExceptionHandler {
 
 - [ ] **Step 4: 运行测试确认通过**
 
-Run: `cd apps/api && mvn test`
+Run: `cd backend && mvn test`
 Expected: `GlobalExceptionHandlerTest` 3 个用例全部 PASS。
 
 - [ ] **Step 5: 提交**
 
 ```bash
-git add apps/api/src
+git add backend/src
 git commit -m "feat: 统一 ApiResponse 返回、业务码枚举与全局异常处理
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
@@ -586,16 +586,16 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 ### Task 4: 分组商品查询接口 GET /api/groups
 
 **Files:**
-- Create: `apps/api/src/main/java/com/mintpop/shop/entity/ProductGroup.java`
-- Create: `apps/api/src/main/java/com/mintpop/shop/entity/Product.java`
-- Create: `apps/api/src/main/java/com/mintpop/shop/mapper/ProductGroupMapper.java`
-- Create: `apps/api/src/main/java/com/mintpop/shop/mapper/ProductMapper.java`
-- Create: `apps/api/src/main/java/com/mintpop/shop/response/ProductResponse.java`
-- Create: `apps/api/src/main/java/com/mintpop/shop/response/GroupWithProductsResponse.java`
-- Create: `apps/api/src/main/java/com/mintpop/shop/service/GroupService.java`
-- Create: `apps/api/src/main/java/com/mintpop/shop/controller/GroupController.java`
-- Test: `apps/api/src/test/java/com/mintpop/shop/service/GroupServiceTest.java`
-- Test: `apps/api/src/test/java/com/mintpop/shop/controller/GroupControllerTest.java`
+- Create: `backend/src/main/java/com/mintpop/shop/entity/ProductGroup.java`
+- Create: `backend/src/main/java/com/mintpop/shop/entity/Product.java`
+- Create: `backend/src/main/java/com/mintpop/shop/mapper/ProductGroupMapper.java`
+- Create: `backend/src/main/java/com/mintpop/shop/mapper/ProductMapper.java`
+- Create: `backend/src/main/java/com/mintpop/shop/response/ProductResponse.java`
+- Create: `backend/src/main/java/com/mintpop/shop/response/GroupWithProductsResponse.java`
+- Create: `backend/src/main/java/com/mintpop/shop/service/GroupService.java`
+- Create: `backend/src/main/java/com/mintpop/shop/controller/GroupController.java`
+- Test: `backend/src/test/java/com/mintpop/shop/service/GroupServiceTest.java`
+- Test: `backend/src/test/java/com/mintpop/shop/controller/GroupControllerTest.java`
 
 **Interfaces:**
 - Consumes: Task 3 的 `ApiResponse`
@@ -671,7 +671,7 @@ class GroupServiceTest {
 
 - [ ] **Step 2: 运行测试确认编译失败**
 
-Run: `cd apps/api && mvn test`
+Run: `cd backend && mvn test`
 Expected: 编译错误（实体、mapper、service 不存在）。
 
 - [ ] **Step 3: 实现实体、mapper、响应体、service、controller**
@@ -927,7 +927,7 @@ public class GroupController {
 
 - [ ] **Step 4: 运行测试确认 service 测试通过**
 
-Run: `cd apps/api && mvn test`
+Run: `cd backend && mvn test`
 Expected: `GroupServiceTest` PASS。
 
 - [ ] **Step 5: 写 controller 冒烟测试 `GroupControllerTest.java`（standalone MockMvc，不起 Spring 上下文）**
@@ -984,13 +984,13 @@ class GroupControllerTest {
 
 - [ ] **Step 6: 运行全部测试确认通过**
 
-Run: `cd apps/api && mvn test`
+Run: `cd backend && mvn test`
 Expected: 全部 PASS。
 
 - [ ] **Step 7: 联调冒烟（真实数据库）**
 
 ```bash
-mise run run-api
+mise run run-backend
 # 另开终端：
 curl -s http://localhost:8080/api/groups
 ```
@@ -1000,7 +1000,7 @@ curl -s http://localhost:8080/api/groups
 - [ ] **Step 8: 提交**
 
 ```bash
-git add apps/api/src
+git add backend/src
 git commit -m "feat: 分组商品查询接口 GET /api/groups
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
@@ -1011,15 +1011,15 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 ### Task 5: 下单接口 POST /api/orders
 
 **Files:**
-- Create: `apps/api/src/main/java/com/mintpop/shop/entity/ShopOrder.java`
-- Create: `apps/api/src/main/java/com/mintpop/shop/enumeration/OrderStatusEnum.java`
-- Create: `apps/api/src/main/java/com/mintpop/shop/mapper/ShopOrderMapper.java`
-- Create: `apps/api/src/main/java/com/mintpop/shop/request/CreateOrderRequest.java`
-- Create: `apps/api/src/main/java/com/mintpop/shop/response/CreateOrderResponse.java`
-- Create: `apps/api/src/main/java/com/mintpop/shop/service/OrderService.java`
-- Create: `apps/api/src/main/java/com/mintpop/shop/controller/OrderController.java`
-- Test: `apps/api/src/test/java/com/mintpop/shop/service/OrderServiceTest.java`
-- Test: `apps/api/src/test/java/com/mintpop/shop/controller/OrderControllerTest.java`
+- Create: `backend/src/main/java/com/mintpop/shop/entity/ShopOrder.java`
+- Create: `backend/src/main/java/com/mintpop/shop/enumeration/OrderStatusEnum.java`
+- Create: `backend/src/main/java/com/mintpop/shop/mapper/ShopOrderMapper.java`
+- Create: `backend/src/main/java/com/mintpop/shop/request/CreateOrderRequest.java`
+- Create: `backend/src/main/java/com/mintpop/shop/response/CreateOrderResponse.java`
+- Create: `backend/src/main/java/com/mintpop/shop/service/OrderService.java`
+- Create: `backend/src/main/java/com/mintpop/shop/controller/OrderController.java`
+- Test: `backend/src/test/java/com/mintpop/shop/service/OrderServiceTest.java`
+- Test: `backend/src/test/java/com/mintpop/shop/controller/OrderControllerTest.java`
 
 **Interfaces:**
 - Consumes: Task 3 的 `ApiResponse`/`BizCodeEnum.PRODUCT_NOT_ON_SALE`/`BizException`；Task 4 的 `Product` 实体与 `ProductMapper`
@@ -1112,7 +1112,7 @@ class OrderServiceTest {
 
 - [ ] **Step 2: 运行测试确认编译失败**
 
-Run: `cd apps/api && mvn test`
+Run: `cd backend && mvn test`
 Expected: 编译错误（`ShopOrder`、`OrderService` 等不存在）。
 
 - [ ] **Step 3: 实现订单模块**
@@ -1351,7 +1351,7 @@ public class OrderController {
 
 - [ ] **Step 4: 运行测试确认 service 测试通过**
 
-Run: `cd apps/api && mvn test`
+Run: `cd backend && mvn test`
 Expected: `OrderServiceTest` 3 个用例 PASS。
 
 - [ ] **Step 5: 写 controller 测试 `OrderControllerTest.java`**
@@ -1433,13 +1433,13 @@ class OrderControllerTest {
 
 - [ ] **Step 6: 运行全部测试确认通过**
 
-Run: `cd apps/api && mvn test`
+Run: `cd backend && mvn test`
 Expected: 全部 PASS。
 
 - [ ] **Step 7: 联调冒烟（真实数据库）**
 
 ```bash
-mise run run-api
+mise run run-backend
 # 另开终端：
 curl -s -X POST http://localhost:8080/api/orders -H "Content-Type: application/json" -d '{"productId":1,"quantity":2}'
 curl -s -X POST http://localhost:8080/api/orders -H "Content-Type: application/json" -d '{"productId":999,"quantity":1}'
@@ -1450,7 +1450,7 @@ curl -s -X POST http://localhost:8080/api/orders -H "Content-Type: application/j
 - [ ] **Step 8: 提交**
 
 ```bash
-git add apps/api/src
+git add backend/src
 git commit -m "feat: 下单接口 POST /api/orders——校验上架商品并落库待支付订单
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
@@ -1461,17 +1461,17 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 ### Task 6: 前端脚手架（Vite + Vue 3 + TS + 设计 token）
 
 **Files:**
-- Create: `apps/web/package.json`
-- Create: `apps/web/vite.config.ts`
-- Create: `apps/web/tsconfig.json`
-- Create: `apps/web/index.html`
-- Create: `apps/web/src/env.d.ts`
-- Create: `apps/web/src/main.ts`
-- Create: `apps/web/src/App.vue`（临时壳，Task 7 替换）
-- Create: `apps/web/src/styles/base.css`
+- Create: `frontend/package.json`
+- Create: `frontend/vite.config.ts`
+- Create: `frontend/tsconfig.json`
+- Create: `frontend/index.html`
+- Create: `frontend/src/env.d.ts`
+- Create: `frontend/src/main.ts`
+- Create: `frontend/src/App.vue`（临时壳，Task 7 替换）
+- Create: `frontend/src/styles/base.css`
 
 **Interfaces:**
-- Consumes: Task 1 的 `install-web` / `run-web` / `build-web` 任务
+- Consumes: Task 1 的 `install-frontend` / `run-frontend` / `build-frontend` 任务
 - Produces: 可运行的前端工程；CSS 变量 `--color-brand/--color-brand-deep/--color-ink/--color-ink-secondary/--color-bg/--color-bg-cloud/--color-border/--radius-card/--radius-button/--radius-pill`（Task 7 样式使用）；开发期 `/api` 代理到 `http://localhost:8080`
 
 - [ ] **Step 1: 写 `package.json`（无 scripts，命令统一走 mise task）**
@@ -1638,17 +1638,17 @@ body {
 - [ ] **Step 6: 安装依赖并验证 dev/build**
 
 ```bash
-mise run install-web
-mise run build-web
+mise run install-frontend
+mise run build-frontend
 ```
 
-预期：类型检查通过、`vite build` 产出 `apps/web/dist`。再 `mise run run-web` 打开 http://localhost:5173 能看到「MintPop 商店骨架建设中……」，验证后停掉。
+预期：类型检查通过、`vite build` 产出 `frontend/dist`。再 `mise run run-frontend` 打开 http://localhost:5173 能看到「MintPop 商店骨架建设中……」，验证后停掉。
 
 - [ ] **Step 7: 提交**
 
 ```bash
-git add apps/web
-git commit -m "feat: web 前端脚手架——Vite + Vue 3 + TS 与 MintPop 设计 token
+git add frontend
+git commit -m "feat: 前端脚手架——Vite + Vue 3 + TS 与 MintPop 设计 token
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 ```
@@ -1658,9 +1658,9 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 ### Task 7: 前端页面与购买流（分组导航 / 商品网格 / 下单 toast）
 
 **Files:**
-- Create: `apps/web/src/api.ts`
-- Create: `apps/web/src/components/ProductCard.vue`
-- Modify: `apps/web/src/App.vue`（整体替换 Task 6 的临时壳）
+- Create: `frontend/src/api.ts`
+- Create: `frontend/src/components/ProductCard.vue`
+- Modify: `frontend/src/App.vue`（整体替换 Task 6 的临时壳）
 
 **Interfaces:**
 - Consumes: Task 4/5 的 HTTP 接口（`GET /api/groups`、`POST /api/orders`，`ApiResponse` 包装，`code===0` 为成功）；Task 6 的 CSS token
@@ -2079,14 +2079,14 @@ async function buy(product: Product) {
 
 - [ ] **Step 4: 类型检查与构建**
 
-Run: `mise run build-web`
+Run: `mise run build-frontend`
 Expected: `vue-tsc --noEmit` 与 `vite build` 均通过。
 
 - [ ] **Step 5: 提交**
 
 ```bash
-git add apps/web/src
-git commit -m "feat: web 商店页——分组导航、商品网格与购买下单流
+git add frontend/src
+git commit -m "feat: 商店页——分组导航、商品网格与购买下单流
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 ```
@@ -2105,8 +2105,8 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 - [ ] **Step 1: 端到端验收（对照设计文档验收标准）**
 
 ```bash
-mise run run-api   # 终端 1，等 “Started ShopApplication”
-mise run run-web   # 终端 2
+mise run run-backend   # 终端 1，等 “Started ShopApplication”
+mise run run-frontend   # 终端 2
 ```
 
 浏览器打开 http://localhost:5173，逐项确认：
@@ -2127,20 +2127,20 @@ MintPop 品牌商店：前端分组展示商品，点击购买创建待支付订
 
 ## 技术栈
 
-- **apps/api**：Spring Boot 4 单体（Java 21 / Maven）+ MyBatis-Plus + Flyway + MySQL
-- **apps/web**：Vue 3 + Vite + TypeScript（字体 Fontsource 自托管）
+- **backend**：Spring Boot 4 单体（Java 21 / Maven）+ MyBatis-Plus + Flyway + MySQL
+- **frontend**：Vue 3 + Vite + TypeScript（字体 Fontsource 自托管）
 - 工具链与命令统一由根 `mise.toml` 管理
 
 ## 快速开始
 
-1. 复制 `apps/api/config/application.example.yml` 为同目录 `application.yml`，填入你的 MySQL 连接信息（该文件已被 gitignore 且在 jar 之外，凭据不入库；账号有建库权限时会自动创建 `mintpop_shop` 库）。
+1. 复制 `backend/config/application.example.yml` 为同目录 `application.yml`，填入你的 MySQL 连接信息（该文件已被 gitignore 且在 jar 之外，凭据不入库；账号有建库权限时会自动创建 `mintpop_shop` 库）。
 2. 依次执行：
 
 ​```bash
 mise install          # 安装工具链（java/maven/node/pnpm）
 mise run install      # 安装项目依赖
-mise run run-api      # 终端 1：启动后端（8080，Flyway 自动建表并写入种子数据）
-mise run run-web      # 终端 2：启动前端（5173，/api 代理到 8080）
+mise run run-backend      # 终端 1：启动后端（8080，Flyway 自动建表并写入种子数据）
+mise run run-frontend      # 终端 2：启动前端（5173，/api 代理到 8080）
 ​```
 
 打开 http://localhost:5173 即可看到商店页面。
@@ -2149,9 +2149,9 @@ mise run run-web      # 终端 2：启动前端（5173，/api 代理到 8080）
 
 | 命令 | 说明 |
 |---|---|
-| `mise run run-api` / `run-web` | 启动后端 / 前端 |
-| `mise run test-api` | 后端单元测试 |
-| `mise run build-api` / `build-web` | 构建后端 jar / 前端产物 |
+| `mise run run-backend` / `run-frontend` | 启动后端 / 前端 |
+| `mise run test-backend` | 后端单元测试 |
+| `mise run build-backend` / `build-frontend` | 构建后端 jar / 前端产物 |
 
 ## 接口
 

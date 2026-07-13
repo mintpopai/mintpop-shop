@@ -14,7 +14,7 @@
 |---|---|---|
 | 后端 | Spring Boot 4.x 单体（Java 21，Maven；实施时已核实为 4.1.0） | 当前需求用 Spring Cloud Alibaba（Nacos/Gateway 等）属于过度设计；单体按模块分包，将来拆微服务成本低 |
 | ORM | MyBatis-Plus | 阿里系事实标准，与 mapper 分层规范契合 |
-| 数据库 | MySQL（连接用户现有的独立 MySQL 服务，不随仓库拉起） | 电商标配；DDL 带中文注释；连接配置写在 jar 外、gitignore 的 `apps/api/config/application.yml`（Spring 外置配置自动发现），仓库只提交 example 模板 |
+| 数据库 | MySQL（连接用户现有的独立 MySQL 服务，不随仓库拉起） | 电商标配；DDL 带中文注释；连接配置写在 jar 外、gitignore 的 `backend/config/application.yml`（Spring 外置配置自动发现），仓库只提交 example 模板 |
 | 迁移 | Flyway | DDL 与种子数据版本化，启动即建表带数据 |
 | 前端 | Vue 3 + Vite + TypeScript | 不引重型 UI 库，按 MintPop 设计基线手写轻量样式 token |
 | 工具链 | mise 统一（java/maven/node/pnpm 钉具体版本，实施时锁定最新稳定版） | 单一来源、可复现 |
@@ -24,19 +24,20 @@
 ```
 mintpop-shop/
 ├── mise.toml               # 唯一工具链与命令入口（仅根目录一份）
-├── .gitignore              # 排除 .idea/ .claude/ apps/api/config/application.yml node_modules/ target/ 等
-├── apps/
-│   ├── web/                # Vue 3 + Vite + TS 前端
-│   └── api/                # Spring Boot 单体后端
-│       └── config/
-│           ├── application.example.yml  # 数据库连接模板（提交）
-│           └── application.yml          # 真实连接配置（gitignore，不入库、不进 jar）
+├── .gitignore              # 排除 .idea/ .claude/ backend/config/application.yml node_modules/ target/ 等
+├── frontend/               # Vue 3 + Vite + TS 前端
+├── backend/                # Spring Boot 单体后端
+│   └── config/
+│       ├── application.example.yml  # 数据库连接模板（提交）
+│       └── application.yml          # 真实连接配置（gitignore，不入库、不进 jar）
 └── docs/
 ```
 
-mise tasks（动作-组件命名）：`install`（聚合）、`install-web`、`run-web`、`run-api`、`build-web`、`build-api`、`test-api`。CI/发版 workflow 本期不做（骨架阶段无发布需求），后续按 `monorepo-cicd-naming.md` 补。
+> 目录结构拍平（不用 `apps/` 分层）：仓库只有前后端两个组件，`frontend`/`backend` 更直观；组件名即目录名，将来发版 tag 前缀（`backend-v*`）与 CI 命名照常按组件名锚定。
 
-数据库连接：连用户现有的独立 MySQL 服务，走 **Spring 外置配置**——`src/main/resources/application.yml`（提交）只放应用名、端口等非敏感默认值；数据库连接写在 `apps/api/config/application.yml`（gitignore）。Spring Boot 启动时自动发现工作目录下的 `config/application.yml` 并覆盖 classpath 配置（`mise run run-api` 的工作目录即 `apps/api`）；该文件在 `src/main/resources` 之外，天然不会被打进 jar。JDBC URL 带 `createDatabaseIfNotExist=true`，账号有建库权限时自动建 `mintpop_shop` 库。将来容器化部署时，同一机制换成 compose `env_file` 注入 `SPRING_DATASOURCE_*` 环境变量（Spring relaxed binding 自动覆盖），配置文件无需改动。
+mise tasks（动作-组件命名）：`install`（聚合）、`install-frontend`、`run-frontend`、`run-backend`、`build-frontend`、`build-backend`、`test-backend`。CI/发版 workflow 本期不做（骨架阶段无发布需求），后续按 `monorepo-cicd-naming.md` 补。
+
+数据库连接：连用户现有的独立 MySQL 服务，走 **Spring 外置配置**——`src/main/resources/application.yml`（提交）只放应用名、端口等非敏感默认值；数据库连接写在 `backend/config/application.yml`（gitignore）。Spring Boot 启动时自动发现工作目录下的 `config/application.yml` 并覆盖 classpath 配置（`mise run run-backend` 的工作目录即 `backend`）；该文件在 `src/main/resources` 之外，天然不会被打进 jar。JDBC URL 带 `createDatabaseIfNotExist=true`，账号有建库权限时自动建 `mintpop_shop` 库。将来容器化部署时，同一机制换成 compose `env_file` 注入 `SPRING_DATASOURCE_*` 环境变量（Spring relaxed binding 自动覆盖），配置文件无需改动。
 
 ## 四、数据库设计（snake_case + 全中文 COMMENT）
 
@@ -86,4 +87,4 @@ Flyway：`V1__schema.sql`（建表）+ `V2__seed.sql`（3 个分组、每组 3~4
 
 ## 九、验收标准
 
-复制 `apps/api/config/application.example.yml` 为同目录 `application.yml` 填好 MySQL 连接信息后，`mise run run-api` + `mise run run-web` 两条命令，浏览器打开页面能看到分组与种子商品，点击购买弹出订单号，`shop_order` 表新增一行 `PENDING_PAYMENT` 记录。
+复制 `backend/config/application.example.yml` 为同目录 `application.yml` 填好 MySQL 连接信息后，`mise run run-backend` + `mise run run-frontend` 两条命令，浏览器打开页面能看到分组与种子商品，点击购买弹出订单号，`shop_order` 表新增一行 `PENDING_PAYMENT` 记录。
