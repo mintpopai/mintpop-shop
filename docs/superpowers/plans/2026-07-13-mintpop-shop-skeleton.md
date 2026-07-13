@@ -4,7 +4,7 @@
 
 **Goal:** 打出 MintPop 商店骨架——前端分组展示商品、点击购买后端落库建待支付订单。
 
-**Architecture:** monorepo（`apps/web` Vue 3 前端 + `apps/api` Spring Boot 4 单体后端），连接用户现有的独立 MySQL 服务（凭据走 gitignore 的 `mise.local.toml` 环境变量，仓库只提交 example 模板），Flyway 管 DDL 与种子数据，统一 `ApiResponse<T>` 返回。前端单页：分组 pill 导航 + 商品卡片网格 + 购买 toast。
+**Architecture:** monorepo（`apps/web` Vue 3 前端 + `apps/api` Spring Boot 4 单体后端），连接用户现有的独立 MySQL 服务——数据库连接写在 jar 外、gitignore 的 `apps/api/config/application.yml`（Spring 外置配置自动发现并覆盖 classpath），仓库只提交 example 模板。Flyway 管 DDL 与种子数据，统一 `ApiResponse<T>` 返回。前端单页：分组 pill 导航 + 商品卡片网格 + 购买 toast。
 
 **Tech Stack:** Spring Boot 4.1.0（Java 21 / Maven）、MyBatis-Plus 3.5.17（`mybatis-plus-spring-boot4-starter`）、Flyway、MySQL（用户现有服务）、Vue 3.5 + Vite 8 + TypeScript 5.9、Fontsource 自托管字体、mise 统一工具链。
 
@@ -19,22 +19,21 @@
 - 数据库表/列 snake_case + 全中文 COMMENT；金额以**分**（BIGINT）存储。
 - 层间依赖构造器注入（Lombok `@RequiredArgsConstructor` + final 字段），禁止业务代码自取依赖。
 - 前端零外链第三方资源（字体走 `@fontsource/*` 自托管）；设计 token：主色 `#17D1A7`、hover `#0FB389`、文本 `#0B0B0C`、次要 `#6B7280`、背景 `#FFFFFF`/`#F4F8F6`、分隔线 `#E5E7EB`、卡片圆角 8px、按钮 6px、药丸 999px、间距 4 的倍数。
-- 数据库连用户现有的独立 MySQL 服务：真实凭据只写在 gitignore 的 `mise.local.toml` `[env]`（mise 跑 task 时自动注入环境变量），仓库只提交 `mise.local.example.toml` 模板；`application.yml` 用 `${MYSQL_HOST}` 等占位符。**执行涉及真实数据库的验证步骤前，若 `mise.local.toml` 不存在，先停下向用户要连接信息。**
+- 数据库连用户现有的独立 MySQL 服务：`src/main/resources/application.yml`（提交）只放非敏感默认值；真实连接配置写在 `apps/api/config/application.yml`（**gitignore，且在 resources 之外、不会被打进 jar**），Spring Boot 自动发现工作目录下的 `config/application.yml` 并覆盖 classpath 配置；仓库只提交 `apps/api/config/application.example.yml` 模板。**执行涉及真实数据库的验证步骤前，若 `apps/api/config/application.yml` 不存在，先停下向用户要连接信息。**
 - 测试不起 Spring 上下文：service 层用 Mockito 纯单测，controller 层用 `MockMvcBuilders.standaloneSetup`（规避 Boot 4 测试切片注解包路径变动）。
 - 提交信息中文，结尾带 `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`。
 
 ---
 
-### Task 1: 仓库基建（.gitignore / mise.toml / MySQL 连接模板）
+### Task 1: 仓库基建（.gitignore / mise.toml）
 
 **Files:**
 - Create: `.gitignore`
 - Create: `mise.toml`
-- Create: `mise.local.example.toml`
 
 **Interfaces:**
 - Consumes: 无
-- Produces: `mise run install|install-web|run-api|run-web|build-api|build-web|test-api` 任务；环境变量约定 `MYSQL_HOST` / `MYSQL_PORT` / `MYSQL_DATABASE` / `MYSQL_USER` / `MYSQL_PASSWORD`（由 gitignore 的 `mise.local.toml` 提供，Task 2 的 `application.yml` 消费）
+- Produces: `mise run install|install-web|run-api|run-web|build-api|build-web|test-api` 任务；gitignore 已排除 `apps/api/config/application.yml`（Task 2 的本地连接配置落这里）
 
 - [ ] **Step 1: 写 `.gitignore`**
 
@@ -49,8 +48,10 @@ node_modules/
 dist/
 target/
 
-# 本地环境文件（含数据库凭据的 mise.local.toml 绝不入库）
-mise.local.toml
+# 本地数据库连接配置（jar 外的 Spring 外置配置，含凭据绝不入库；example 模板会提交）
+apps/api/config/application.yml
+
+# 本地环境文件
 *.local
 ```
 
@@ -105,21 +106,7 @@ dir = "apps/api"
 run = "mvn test"
 ```
 
-- [ ] **Step 3: 写 `mise.local.example.toml`（连接模板，复制为 `mise.local.toml` 填真实值）**
-
-```toml
-# 复制本文件为 mise.local.toml 并填入你的 MySQL 连接信息。
-# mise.local.toml 已被 .gitignore 排除，真实凭据不会入库；
-# mise 运行任何 task（如 run-api）时会自动把 [env] 注入环境变量。
-[env]
-MYSQL_HOST = "127.0.0.1"
-MYSQL_PORT = "3306"
-MYSQL_DATABASE = "mintpop_shop"
-MYSQL_USER = "填用户名"
-MYSQL_PASSWORD = "填密码"
-```
-
-- [ ] **Step 4: 验证工具链**
+- [ ] **Step 3: 验证工具链**
 
 ```bash
 mise install
@@ -128,11 +115,11 @@ mise ls
 
 预期：`mise install` 装齐 java/maven/node/pnpm 四个工具，`mise ls` 显示钉住的版本。
 
-- [ ] **Step 5: 提交**
+- [ ] **Step 4: 提交**
 
 ```bash
-git add .gitignore mise.toml mise.local.example.toml
-git commit -m "chore: 仓库基建——mise 工具链、MySQL 连接模板、gitignore
+git add .gitignore mise.toml
+git commit -m "chore: 仓库基建——mise 工具链与 gitignore
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 ```
@@ -144,12 +131,14 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 **Files:**
 - Create: `apps/api/pom.xml`
 - Create: `apps/api/src/main/java/com/mintpop/shop/ShopApplication.java`
-- Create: `apps/api/src/main/resources/application.yml`
+- Create: `apps/api/src/main/resources/application.yml`（提交，仅非敏感默认值）
+- Create: `apps/api/config/application.example.yml`（提交，连接模板）
+- Create: `apps/api/config/application.yml`（gitignore，真实连接配置，由用户提供内容）
 - Create: `apps/api/src/main/resources/db/migration/V1__schema.sql`
 - Create: `apps/api/src/main/resources/db/migration/V2__seed.sql`
 
 **Interfaces:**
-- Consumes: Task 1 约定的环境变量 `MYSQL_HOST` / `MYSQL_PORT` / `MYSQL_DATABASE` / `MYSQL_USER` / `MYSQL_PASSWORD`（来自用户填写的 `mise.local.toml`）
+- Consumes: Task 1 的 gitignore 规则（`apps/api/config/application.yml` 不入库）
 - Produces: 可启动的 Spring Boot 应用（端口 8080）；三张表 `product_group` / `product` / `shop_order` 及种子数据；Java 包根 `com.mintpop.shop`
 
 - [ ] **Step 1: 写 `apps/api/pom.xml`**
@@ -259,22 +248,36 @@ public class ShopApplication {
 }
 ```
 
-- [ ] **Step 3: 写 `application.yml`**
+- [ ] **Step 3: 写配置文件（提交的默认值 + 外置连接配置）**
+
+`apps/api/src/main/resources/application.yml`（提交，**不含任何数据库凭据**）：
 
 ```yaml
+# 仅非敏感默认值；数据库连接写在 jar 外的 config/application.yml（gitignore，见 config/application.example.yml）。
+# Spring Boot 自动发现工作目录下的 config/application.yml 并覆盖本文件同名配置。
 spring:
   application:
     name: mintpop-shop-api
-  datasource:
-    # 连接信息全部来自环境变量（由 gitignore 的 mise.local.toml 注入），真实凭据不入库；
-    # createDatabaseIfNotExist：账号有建库权限时自动创建目标库
-    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:mintpop_shop}?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
-    username: ${MYSQL_USER}
-    password: ${MYSQL_PASSWORD}
 
 server:
   port: 8080
 ```
+
+`apps/api/config/application.example.yml`（提交，模板）：
+
+```yaml
+# 复制本文件为同目录 application.yml 并填入你的 MySQL 连接信息。
+# config/application.yml 已被 .gitignore 排除，且位于 src/main/resources 之外、不会被打进 jar。
+# mise run run-api 的工作目录是 apps/api，Spring Boot 启动时会自动读取 ./config/application.yml。
+spring:
+  datasource:
+    # createDatabaseIfNotExist：账号有建库权限时自动创建目标库
+    url: jdbc:mysql://127.0.0.1:3306/mintpop_shop?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: 填用户名
+    password: 填密码
+```
+
+`apps/api/config/application.yml`（**不提交**）：内容同模板，由用户提供真实 host:端口、库名、账号、密码后填入。执行到本步时若用户尚未给连接信息，先创建模板副本并停下向用户索要。
 
 （Flyway 在 classpath 上默认启用，迁移目录用默认 `classpath:db/migration`。）
 
@@ -347,7 +350,7 @@ INSERT INTO product (group_id, name, description, price_cents, on_sale) VALUES
 
 - [ ] **Step 6: 启动验证（建表 + 种子数据落库）**
 
-前置：`mise.local.toml` 已由用户填好真实连接信息（不存在则先停下向用户索要）。
+前置：`apps/api/config/application.yml` 已填好真实连接信息（不存在则先停下向用户索要）。
 
 ```bash
 mise run run-api
@@ -2130,7 +2133,7 @@ MintPop 品牌商店：前端分组展示商品，点击购买创建待支付订
 
 ## 快速开始
 
-1. 复制 `mise.local.example.toml` 为 `mise.local.toml`，填入你的 MySQL 连接信息（该文件已被 gitignore，凭据不入库；账号有建库权限时会自动创建 `mintpop_shop` 库）。
+1. 复制 `apps/api/config/application.example.yml` 为同目录 `application.yml`，填入你的 MySQL 连接信息（该文件已被 gitignore 且在 jar 之外，凭据不入库；账号有建库权限时会自动创建 `mintpop_shop` 库）。
 2. 依次执行：
 
 ​```bash
