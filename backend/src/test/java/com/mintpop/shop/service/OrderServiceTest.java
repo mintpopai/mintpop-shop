@@ -9,6 +9,7 @@ import com.mintpop.shop.mapper.ProductMapper;
 import com.mintpop.shop.mapper.ShopOrderMapper;
 import com.mintpop.shop.request.CreateOrderRequest;
 import com.mintpop.shop.response.CreateOrderResponse;
+import com.mintpop.shop.response.OrderItemResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,8 +18,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -35,17 +42,30 @@ class OrderServiceTest {
     private Product onSaleProduct() {
         Product p = new Product();
         p.setId(1L);
+        p.setName("薄荷精灵盲盒");
         p.setPriceCents(5900L);
         p.setOnSale(true);
         return p;
     }
 
+    private ShopOrder order(long productId, int quantity, long amountCents) {
+        ShopOrder o = new ShopOrder();
+        o.setOrderNo("MP20260713120000123456");
+        o.setProductId(productId);
+        o.setQuantity(quantity);
+        o.setAmountCents(amountCents);
+        o.setStatus(OrderStatusEnum.PENDING_PAYMENT);
+        o.setUserId(42L);
+        o.setCreatedAt(LocalDateTime.of(2026, 7, 13, 12, 0));
+        return o;
+    }
+
     @Test
-    @DisplayName("下单成功：金额=单价×数量，状态为待支付")
+    @DisplayName("下单成功：金额=单价×数量，状态待支付，绑定当前用户")
     void createOrderSuccess() {
         when(productMapper.selectById(1L)).thenReturn(onSaleProduct());
 
-        CreateOrderResponse resp = orderService.createOrder(new CreateOrderRequest(1L, 2));
+        CreateOrderResponse resp = orderService.createOrder(42L, new CreateOrderRequest(1L, 2));
 
         assertThat(resp.getAmountCents()).isEqualTo(11800L);
         assertThat(resp.getOrderNo()).startsWith("MP");
@@ -54,6 +74,7 @@ class OrderServiceTest {
         verify(shopOrderMapper).insert(captor.capture());
         assertThat(captor.getValue().getStatus()).isEqualTo(OrderStatusEnum.PENDING_PAYMENT);
         assertThat(captor.getValue().getQuantity()).isEqualTo(2);
+        assertThat(captor.getValue().getUserId()).isEqualTo(42L);
     }
 
     @Test
@@ -61,7 +82,7 @@ class OrderServiceTest {
     void productNotFoundThrows() {
         when(productMapper.selectById(99L)).thenReturn(null);
 
-        assertThatThrownBy(() -> orderService.createOrder(new CreateOrderRequest(99L, 1)))
+        assertThatThrownBy(() -> orderService.createOrder(42L, new CreateOrderRequest(99L, 1)))
                 .isInstanceOf(BizException.class)
                 .extracting(e -> ((BizException) e).getBizCode())
                 .isEqualTo(BizCodeEnum.PRODUCT_NOT_ON_SALE);
@@ -74,7 +95,32 @@ class OrderServiceTest {
         offSale.setOnSale(false);
         when(productMapper.selectById(1L)).thenReturn(offSale);
 
-        assertThatThrownBy(() -> orderService.createOrder(new CreateOrderRequest(1L, 1)))
+        assertThatThrownBy(() -> orderService.createOrder(42L, new CreateOrderRequest(1L, 1)))
                 .isInstanceOf(BizException.class);
+    }
+
+    @Test
+    @DisplayName("我的订单：带商品名与中文状态，商品已删除给占位文案")
+    void listMyOrdersJoinsProductName() {
+        when(shopOrderMapper.selectList(any())).thenReturn(
+                List.of(order(1L, 2, 11800L), order(99L, 1, 5900L)));
+        when(productMapper.selectByIds(anyCollection())).thenReturn(List.of(onSaleProduct()));
+
+        List<OrderItemResponse> result = orderService.listMyOrders(42L);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).getProductName()).isEqualTo("薄荷精灵盲盒");
+        assertThat(result.get(0).getStatus()).isEqualTo("PENDING_PAYMENT");
+        assertThat(result.get(0).getStatusLabel()).isEqualTo("待支付");
+        assertThat(result.get(1).getProductName()).isEqualTo("（商品已删除）");
+    }
+
+    @Test
+    @DisplayName("我的订单：无订单返回空列表，不查商品")
+    void listMyOrdersEmpty() {
+        when(shopOrderMapper.selectList(any())).thenReturn(List.of());
+
+        assertThat(orderService.listMyOrders(42L)).isEmpty();
+        verify(productMapper, never()).selectByIds(anyCollection());
     }
 }
