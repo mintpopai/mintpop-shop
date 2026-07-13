@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { createOrder, fetchGroups, type GroupWithProducts, type Product } from '../api'
+import {
+  createOrder,
+  fetchGroups,
+  UnauthorizedError,
+  type GroupWithProducts,
+  type Product,
+} from '../api'
+import { currentUser, gotoLogin } from '../auth'
 import { showToast } from '../toast'
 import ProductCard from '../components/ProductCard.vue'
 
@@ -26,11 +33,22 @@ onMounted(async () => {
 })
 
 async function buy(product: Product) {
+  // 下单必须登录：游客直接引导去统一登录
+  if (!currentUser.value) {
+    showToast('error', '请先登录后再购买')
+    gotoLogin()
+    return
+  }
   buyingProductId.value = product.id
   try {
     const result = await createOrder(product.id)
     showToast('success', `下单成功，订单号 ${result.orderNo}`)
   } catch (e) {
+    if (e instanceof UnauthorizedError) {
+      showToast('error', '会话已过期，请重新登录')
+      gotoLogin()
+      return
+    }
     showToast('error', e instanceof Error ? e.message : '下单失败，请稍后重试')
   } finally {
     buyingProductId.value = null
