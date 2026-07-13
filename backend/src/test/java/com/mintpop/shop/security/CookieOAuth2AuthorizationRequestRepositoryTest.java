@@ -29,6 +29,7 @@ class CookieOAuth2AuthorizationRequestRepositoryTest {
                 .attributes(attrs -> {
                     attrs.put("registration_id", "logto");
                     attrs.put("nonce", "nonce-raw");
+                    attrs.put("code_verifier", "pkce-verifier-xyz");
                 })
                 .build();
     }
@@ -59,6 +60,8 @@ class CookieOAuth2AuthorizationRequestRepositoryTest {
         assertThat(loaded.getAdditionalParameters()).containsEntry("nonce", "nonce-hash");
         assertThat(loaded.<String>getAttribute("registration_id")).isEqualTo("logto");
         assertThat(loaded.<String>getAttribute("nonce")).isEqualTo("nonce-raw");
+        assertThat(loaded.<String>getAttribute("code_verifier")).isEqualTo("pkce-verifier-xyz");
+        assertThat(loaded.getAuthorizationUri()).isEqualTo("https://auth.example.com/oidc/auth");
     }
 
     @Test
