@@ -28,7 +28,7 @@ public class ShopOrder {
     private Long amountCents;
     /** 订单状态 */
     private OrderStatusEnum status;
-    /** 下单用户ID，预留（接入注册后填写） */
+    /** 下单用户ID（shop_user.id；存量游客订单为空） */
     private Long userId;
     /** 创建时间（数据库默认值维护） */
     private LocalDateTime createdAt;
