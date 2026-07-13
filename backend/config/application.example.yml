@@ -1,0 +1,9 @@
+# 复制本文件为同目录 application.yml 并填入你的 MySQL 连接信息。
+# config/application.yml 已被 .gitignore 排除，且位于 src/main/resources 之外、不会被打进 jar。
+# mise run run-backend 的工作目录是 backend，Spring Boot 启动时会自动读取 ./config/application.yml。
+spring:
+  datasource:
+    # createDatabaseIfNotExist：账号有建库权限时自动创建目标库
+    url: jdbc:mysql://127.0.0.1:3306/mintpop_shop?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: 填用户名
+    password: 填密码

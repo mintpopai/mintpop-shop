@@ -1,0 +1,8 @@
+# 仅非敏感默认值；数据库连接写在 jar 外的 config/application.yml（gitignore，见 config/application.example.yml）。
+# Spring Boot 自动发现工作目录下的 config/application.yml 并覆盖本文件同名配置。
+spring:
+  application:
+    name: mintpop-shop-backend
+
+server:
+  port: 8080
