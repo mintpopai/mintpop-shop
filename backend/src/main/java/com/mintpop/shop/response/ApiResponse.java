@@ -1,5 +1,6 @@
 package com.mintpop.shop.response;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.mintpop.shop.enumeration.BizCodeEnum;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -32,6 +33,12 @@ public class ApiResponse<T> {
         return new ApiResponse<>(bizCode.getCode(), null, bizCode.getMessage());
     }
 
+    /**
+     * 该方法是给 Java 调用方用的辅助判断，不参与序列化。
+     * 由于 Lombok @Data 生成的 getter，Jackson 会将其误当作 JavaBean 属性，
+     * 加 @JsonIgnore 排除序列化，守住 code/data/msg 三字段的契约。
+     */
+    @JsonIgnore
     public boolean isSuccess() {
         return code != null && code == 0;
     }

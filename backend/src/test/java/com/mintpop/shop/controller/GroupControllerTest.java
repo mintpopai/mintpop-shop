@@ -42,6 +42,7 @@ class GroupControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data[0].name").value("盲盒系列"))
-                .andExpect(jsonPath("$.data[0].products[0].priceCents").value(5900));
+                .andExpect(jsonPath("$.data[0].products[0].priceCents").value(5900))
+                .andExpect(jsonPath("$.success").doesNotExist());
     }
 }
