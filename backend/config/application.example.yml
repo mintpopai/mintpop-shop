@@ -7,3 +7,24 @@ spring:
     url: jdbc:mysql://127.0.0.1:3306/mintpop_shop?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
     username: 填用户名
     password: 填密码
+
+  # —— 统一账号中心（Logto，OIDC）——参数向账号中心管理员申请 ——
+  security:
+    oauth2:
+      client:
+        provider:
+          logto:
+            issuer-uri: 填issuer（形如 https://账号中心域名/oidc）
+        registration:
+          logto:
+            client-id: 填client_id
+            client-secret: 填client_secret
+            scope: openid,profile,email
+            # 回调路径按统一账号接入规范固定为 /auth/callback，不要改
+            redirect-uri: "{baseUrl}/auth/callback"
+
+# —— 自签会话（BFF）——
+app:
+  auth:
+    # HS256 会话签名密钥，至少 32 字节：openssl rand -base64 48
+    session-secret: 填会话签名密钥
