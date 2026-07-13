@@ -1,6 +1,7 @@
 # IDE 与本地工具
 .idea/
 .claude/
+.superpowers/
 .DS_Store
 
 # 构建产物与依赖
