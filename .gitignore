@@ -14,3 +14,6 @@ backend/config/application.yml
 
 # 本地环境文件
 *.local
+
+# AI 过程文档（本地保留，不入库）
+docs/superpowers/
