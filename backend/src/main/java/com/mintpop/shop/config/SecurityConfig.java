@@ -29,13 +29,17 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // 会话 Cookie 为 SameSite=Lax，浏览器已拦截跨站写请求，无需 CSRF token
+                // 会话 Cookie 为 SameSite=Lax：跨站 POST 不携带 Cookie，写接口天然免疫 CSRF。
+                // 已知取舍：Lax 放行顶级 GET 导航，GET /auth/logout 可被第三方页面强制触发（仅骚扰级
+                // 登出、无数据风险），接受该风险；后续接支付若引入 GET 写操作需重新评估。
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // 登出走 AuthController 的 GET /auth/logout，禁用框架默认 POST /logout
                 .logout(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/me", "/api/orders", "/api/orders/**").authenticated()
+                        // 白名单式：/api 下默认需登录，公开接口显式放行——新增接口忘登记时默认安全
+                        .requestMatchers("/api/groups").permitAll()
+                        .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
                 .oauth2Login(login -> login
                         // 握手中间态存 Cookie（只对本浏览器有效），不落服务端 session

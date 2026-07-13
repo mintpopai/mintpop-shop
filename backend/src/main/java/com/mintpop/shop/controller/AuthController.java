@@ -34,7 +34,10 @@ public class AuthController {
         response.sendRedirect("/oauth2/authorization/" + REGISTRATION_ID);
     }
 
-    /** 登出：清本地会话 Cookie，再跳账号中心 end-session 单点登出（无 end-session 则直接回前端） */
+    /**
+     * 登出：清本地会话 Cookie，再跳账号中心 end-session 单点登出（无 end-session 则直接回前端）
+     * （已知取舍：GET 形态可被跨站强制触发登出，风险仅骚扰级，已接受）
+     */
     @GetMapping("/auth/logout")
     public void logout(HttpServletRequest request, HttpServletResponse response) throws IOException {
         ResponseCookie expired = ResponseCookie.from(AuthProperties.SESSION_COOKIE_NAME, "")

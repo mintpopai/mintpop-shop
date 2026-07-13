@@ -71,4 +71,10 @@ class SecurityChainTest {
         mockMvc.perform(get("/api/me").cookie(new Cookie("mp_session", "token-1")))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    @DisplayName("未登记的 /api 新接口默认需登录（白名单姿态）")
+    void unregisteredApiPathRequiresAuthByDefault() throws Exception {
+        mockMvc.perform(get("/api/anything-new")).andExpect(status().isUnauthorized());
+    }
 }
