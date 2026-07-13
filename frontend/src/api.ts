@@ -28,11 +28,17 @@ export interface CreateOrderResult {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, {
-    headers: { 'Content-Type': 'application/json' },
-    ...init,
-  })
-  const body = (await res.json()) as ApiResponse<T>
+  let body: ApiResponse<T>
+  try {
+    const res = await fetch(path, {
+      headers: { 'Content-Type': 'application/json' },
+      ...init,
+    })
+    body = (await res.json()) as ApiResponse<T>
+  } catch {
+    // 网络失败 / 响应非 JSON：不把原始英文报错透给用户
+    throw new Error('网络异常，请稍后重试')
+  }
   if (body.code !== 0) {
     throw new Error(body.msg ?? '请求失败，请稍后重试')
   }

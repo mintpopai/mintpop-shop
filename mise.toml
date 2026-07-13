@@ -6,7 +6,7 @@ pnpm = "11.12.0"
 
 # —— 安装 ——
 [tasks.install]
-description = "安装全部组件依赖（api 由 Maven 构建时自动解析，无需单独安装）"
+description = "安装全部组件依赖（backend 由 Maven 构建时自动解析，无需单独安装）"
 depends = ["install-frontend"]
 
 [tasks.install-frontend]
