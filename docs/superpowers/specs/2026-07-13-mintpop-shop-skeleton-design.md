@@ -12,9 +12,9 @@
 
 | 项 | 选型 | 理由 |
 |---|---|---|
-| 后端 | Spring Boot 3.x 单体（Java 21，Maven） | 当前需求用 Spring Cloud Alibaba（Nacos/Gateway 等）属于过度设计；单体按模块分包，将来拆微服务成本低 |
+| 后端 | Spring Boot 4.x 单体（Java 21，Maven；实施时已核实为 4.1.0） | 当前需求用 Spring Cloud Alibaba（Nacos/Gateway 等）属于过度设计；单体按模块分包，将来拆微服务成本低 |
 | ORM | MyBatis-Plus | 阿里系事实标准，与 mapper 分层规范契合 |
-| 数据库 | MySQL 8（本地 Docker Compose 拉起） | 电商标配；DDL 带中文注释 |
+| 数据库 | MySQL（连接用户现有的独立 MySQL 服务，不随仓库拉起） | 电商标配；DDL 带中文注释；连接凭据走 gitignore 的 `mise.local.toml`，仓库只提交 example 模板 |
 | 迁移 | Flyway | DDL 与种子数据版本化，启动即建表带数据 |
 | 前端 | Vue 3 + Vite + TypeScript | 不引重型 UI 库，按 MintPop 设计基线手写轻量样式 token |
 | 工具链 | mise 统一（java/maven/node/pnpm 钉具体版本，实施时锁定最新稳定版） | 单一来源、可复现 |
@@ -24,15 +24,17 @@
 ```
 mintpop-shop/
 ├── mise.toml               # 唯一工具链与命令入口（仅根目录一份）
-├── docker-compose.yml      # 本地 MySQL（healthcheck 必带，版本/端口参数化）
-├── .gitignore              # 排除 .idea/ .claude/ node_modules/ target/ 等
+├── mise.local.example.toml # MySQL 连接环境变量模板（复制为 mise.local.toml 填真实凭据，后者 gitignore）
+├── .gitignore              # 排除 .idea/ .claude/ mise.local.toml node_modules/ target/ 等
 ├── apps/
 │   ├── web/                # Vue 3 + Vite + TS 前端
-│   └── api/                # Spring Boot 3 单体后端
+│   └── api/                # Spring Boot 单体后端
 └── docs/
 ```
 
-mise tasks（动作-组件命名）：`install`（聚合）、`install-web`、`install-api`、`run-web`、`run-api`、`build-web`、`build-api`、`up`/`down`（本地 MySQL）。CI/发版 workflow 本期不做（骨架阶段无发布需求），后续按 `monorepo-cicd-naming.md` 补。
+mise tasks（动作-组件命名）：`install`（聚合）、`install-web`、`run-web`、`run-api`、`build-web`、`build-api`、`test-api`。CI/发版 workflow 本期不做（骨架阶段无发布需求），后续按 `monorepo-cicd-naming.md` 补。
+
+数据库连接：连用户现有的独立 MySQL 服务。`application.yml` 用 `${MYSQL_HOST}` 等占位符读环境变量，真实值写在 gitignore 的 `mise.local.toml` `[env]` 里（mise 运行 task 时自动注入）；JDBC URL 带 `createDatabaseIfNotExist=true`，账号有建库权限时自动建 `mintpop_shop` 库。
 
 ## 四、数据库设计（snake_case + 全中文 COMMENT）
 
@@ -82,4 +84,4 @@ Flyway：`V1__schema.sql`（建表）+ `V2__seed.sql`（3 个分组、每组 3~4
 
 ## 九、验收标准
 
-`mise run up`（MySQL）→ `mise run run-api` → `mise run run-web` 三条命令后，浏览器打开页面能看到分组与种子商品，点击购买弹出订单号，`shop_order` 表新增一行 `PENDING_PAYMENT` 记录。
+复制 `mise.local.example.toml` 为 `mise.local.toml` 填好 MySQL 连接信息后，`mise run run-api` + `mise run run-web` 两条命令，浏览器打开页面能看到分组与种子商品，点击购买弹出订单号，`shop_order` 表新增一行 `PENDING_PAYMENT` 记录。

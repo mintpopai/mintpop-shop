@@ -4,9 +4,9 @@
 
 **Goal:** 打出 MintPop 商店骨架——前端分组展示商品、点击购买后端落库建待支付订单。
 
-**Architecture:** monorepo（`apps/web` Vue 3 前端 + `apps/api` Spring Boot 4 单体后端），MySQL 8 由 Docker Compose 拉起，Flyway 管 DDL 与种子数据，统一 `ApiResponse<T>` 返回。前端单页：分组 pill 导航 + 商品卡片网格 + 购买 toast。
+**Architecture:** monorepo（`apps/web` Vue 3 前端 + `apps/api` Spring Boot 4 单体后端），连接用户现有的独立 MySQL 服务（凭据走 gitignore 的 `mise.local.toml` 环境变量，仓库只提交 example 模板），Flyway 管 DDL 与种子数据，统一 `ApiResponse<T>` 返回。前端单页：分组 pill 导航 + 商品卡片网格 + 购买 toast。
 
-**Tech Stack:** Spring Boot 4.1.0（Java 21 / Maven）、MyBatis-Plus 3.5.17（`mybatis-plus-spring-boot4-starter`）、Flyway、MySQL 8.4、Vue 3.5 + Vite 8 + TypeScript 5.9、Fontsource 自托管字体、mise 统一工具链。
+**Tech Stack:** Spring Boot 4.1.0（Java 21 / Maven）、MyBatis-Plus 3.5.17（`mybatis-plus-spring-boot4-starter`）、Flyway、MySQL（用户现有服务）、Vue 3.5 + Vite 8 + TypeScript 5.9、Fontsource 自托管字体、mise 统一工具链。
 
 ## Global Constraints
 
@@ -19,22 +19,22 @@
 - 数据库表/列 snake_case + 全中文 COMMENT；金额以**分**（BIGINT）存储。
 - 层间依赖构造器注入（Lombok `@RequiredArgsConstructor` + final 字段），禁止业务代码自取依赖。
 - 前端零外链第三方资源（字体走 `@fontsource/*` 自托管）；设计 token：主色 `#17D1A7`、hover `#0FB389`、文本 `#0B0B0C`、次要 `#6B7280`、背景 `#FFFFFF`/`#F4F8F6`、分隔线 `#E5E7EB`、卡片圆角 8px、按钮 6px、药丸 999px、间距 4 的倍数。
-- `docker-compose.yml`：无 `build:` 段、必带 healthcheck、镜像 tag 与宿主端口 `${VAR:-default}` 参数化、不写 `version:` 键。
+- 数据库连用户现有的独立 MySQL 服务：真实凭据只写在 gitignore 的 `mise.local.toml` `[env]`（mise 跑 task 时自动注入环境变量），仓库只提交 `mise.local.example.toml` 模板；`application.yml` 用 `${MYSQL_HOST}` 等占位符。**执行涉及真实数据库的验证步骤前，若 `mise.local.toml` 不存在，先停下向用户要连接信息。**
 - 测试不起 Spring 上下文：service 层用 Mockito 纯单测，controller 层用 `MockMvcBuilders.standaloneSetup`（规避 Boot 4 测试切片注解包路径变动）。
 - 提交信息中文，结尾带 `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`。
 
 ---
 
-### Task 1: 仓库基建（.gitignore / mise.toml / docker-compose.yml）
+### Task 1: 仓库基建（.gitignore / mise.toml / MySQL 连接模板）
 
 **Files:**
 - Create: `.gitignore`
 - Create: `mise.toml`
-- Create: `docker-compose.yml`
+- Create: `mise.local.example.toml`
 
 **Interfaces:**
 - Consumes: 无
-- Produces: `mise run up|down|install|install-web|run-api|run-web|build-api|build-web|test-api` 任务；MySQL 库 `mintpop_shop`（用户 `shop` / 密码 `shop123`，宿主端口默认 3306）
+- Produces: `mise run install|install-web|run-api|run-web|build-api|build-web|test-api` 任务；环境变量约定 `MYSQL_HOST` / `MYSQL_PORT` / `MYSQL_DATABASE` / `MYSQL_USER` / `MYSQL_PASSWORD`（由 gitignore 的 `mise.local.toml` 提供，Task 2 的 `application.yml` 消费）
 
 - [ ] **Step 1: 写 `.gitignore`**
 
@@ -49,7 +49,8 @@ node_modules/
 dist/
 target/
 
-# 本地环境文件
+# 本地环境文件（含数据库凭据的 mise.local.toml 绝不入库）
+mise.local.toml
 *.local
 ```
 
@@ -74,15 +75,6 @@ flag "--frozen" help="按 lockfile 精确安装、不更新 lockfile（CI/Docker
 '''
 dir = "apps/web"
 run = "pnpm install ${usage_frozen:+--frozen-lockfile}"
-
-# —— 本地基础设施 ——
-[tasks.up]
-description = "启动本地 MySQL（等待 healthcheck 通过）"
-run = "docker compose up -d --wait"
-
-[tasks.down]
-description = "停止本地 MySQL"
-run = "docker compose down"
 
 # —— 运行 ——
 [tasks.run-api]
@@ -113,50 +105,34 @@ dir = "apps/api"
 run = "mvn test"
 ```
 
-- [ ] **Step 3: 写 `docker-compose.yml`**
+- [ ] **Step 3: 写 `mise.local.example.toml`（连接模板，复制为 `mise.local.toml` 填真实值）**
 
-```yaml
-# 本地开发基础设施：仅 MySQL。应用本体直接用 mise run run-api / run-web 跑，不进 compose。
-services:
-  mysql:
-    image: mysql:${MYSQL_TAG:-8.4}
-    container_name: mintpop-shop-mysql
-    restart: unless-stopped
-    ports:
-      - "${MYSQL_PORT:-3306}:3306"
-    environment:
-      MYSQL_ROOT_PASSWORD: root123
-      MYSQL_DATABASE: mintpop_shop
-      MYSQL_USER: shop
-      MYSQL_PASSWORD: shop123
-    volumes:
-      - mysql-data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot123"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
-volumes:
-  mysql-data:
+```toml
+# 复制本文件为 mise.local.toml 并填入你的 MySQL 连接信息。
+# mise.local.toml 已被 .gitignore 排除，真实凭据不会入库；
+# mise 运行任何 task（如 run-api）时会自动把 [env] 注入环境变量。
+[env]
+MYSQL_HOST = "127.0.0.1"
+MYSQL_PORT = "3306"
+MYSQL_DATABASE = "mintpop_shop"
+MYSQL_USER = "填用户名"
+MYSQL_PASSWORD = "填密码"
 ```
 
-- [ ] **Step 4: 验证工具链与 MySQL**
+- [ ] **Step 4: 验证工具链**
 
 ```bash
 mise install
-mise run up
-docker compose ps
+mise ls
 ```
 
-预期：`mise install` 装齐四个工具；`docker compose ps` 显示 mysql 容器 `healthy`。
+预期：`mise install` 装齐 java/maven/node/pnpm 四个工具，`mise ls` 显示钉住的版本。
 
 - [ ] **Step 5: 提交**
 
 ```bash
-git add .gitignore mise.toml docker-compose.yml
-git commit -m "chore: 仓库基建——mise 工具链、本地 MySQL compose、gitignore
+git add .gitignore mise.toml mise.local.example.toml
+git commit -m "chore: 仓库基建——mise 工具链、MySQL 连接模板、gitignore
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 ```
@@ -173,7 +149,7 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 - Create: `apps/api/src/main/resources/db/migration/V2__seed.sql`
 
 **Interfaces:**
-- Consumes: Task 1 的 MySQL（`jdbc:mysql://localhost:3306/mintpop_shop`，shop/shop123）
+- Consumes: Task 1 约定的环境变量 `MYSQL_HOST` / `MYSQL_PORT` / `MYSQL_DATABASE` / `MYSQL_USER` / `MYSQL_PASSWORD`（来自用户填写的 `mise.local.toml`）
 - Produces: 可启动的 Spring Boot 应用（端口 8080）；三张表 `product_group` / `product` / `shop_order` 及种子数据；Java 包根 `com.mintpop.shop`
 
 - [ ] **Step 1: 写 `apps/api/pom.xml`**
@@ -290,15 +266,17 @@ spring:
   application:
     name: mintpop-shop-api
   datasource:
-    url: jdbc:mysql://localhost:3306/mintpop_shop?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
-    username: shop
-    password: shop123
+    # 连接信息全部来自环境变量（由 gitignore 的 mise.local.toml 注入），真实凭据不入库；
+    # createDatabaseIfNotExist：账号有建库权限时自动创建目标库
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:mintpop_shop}?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: ${MYSQL_USER}
+    password: ${MYSQL_PASSWORD}
 
 server:
   port: 8080
 ```
 
-（本地开发凭据非密钥，直接入库；Flyway 在 classpath 上默认启用，迁移目录用默认 `classpath:db/migration`。）
+（Flyway 在 classpath 上默认启用，迁移目录用默认 `classpath:db/migration`。）
 
 - [ ] **Step 4: 写 `V1__schema.sql`**
 
@@ -369,14 +347,13 @@ INSERT INTO product (group_id, name, description, price_cents, on_sale) VALUES
 
 - [ ] **Step 6: 启动验证（建表 + 种子数据落库）**
 
+前置：`mise.local.toml` 已由用户填好真实连接信息（不存在则先停下向用户索要）。
+
 ```bash
-mise run up
-cd apps/api && mvn spring-boot:run
-# 另开终端等日志出现 “Started ShopApplication” 后：
-docker compose exec mysql mysql -ushop -pshop123 mintpop_shop -e "SHOW TABLES; SELECT COUNT(*) AS products FROM product;"
+mise run run-api
 ```
 
-预期：三张表 + `flyway_schema_history`；`products` = 10。验证后停掉应用。
+预期：启动日志出现 Flyway `Migrating schema ... to version "1 - schema"`、`"2 - seed"`、`Successfully applied 2 migrations`，随后 `Started ShopApplication`。验证后停掉应用。（若本机装有 mysql 客户端，可选加验：`SHOW TABLES` 应有三张表 + `flyway_schema_history`，`product` 表 10 行。）
 
 - [ ] **Step 7: 提交**
 
@@ -1010,8 +987,7 @@ Expected: 全部 PASS。
 - [ ] **Step 7: 联调冒烟（真实数据库）**
 
 ```bash
-mise run up
-cd apps/api && mvn spring-boot:run
+mise run run-api
 # 另开终端：
 curl -s http://localhost:8080/api/groups
 ```
@@ -1460,14 +1436,13 @@ Expected: 全部 PASS。
 - [ ] **Step 7: 联调冒烟（真实数据库）**
 
 ```bash
-mise run up
-cd apps/api && mvn spring-boot:run
+mise run run-api
 # 另开终端：
 curl -s -X POST http://localhost:8080/api/orders -H "Content-Type: application/json" -d '{"productId":1,"quantity":2}'
-docker compose exec mysql mysql -ushop -pshop123 mintpop_shop -e "SELECT order_no, quantity, amount_cents, status FROM shop_order;"
+curl -s -X POST http://localhost:8080/api/orders -H "Content-Type: application/json" -d '{"productId":999,"quantity":1}'
 ```
 
-预期：返回 `code:0` 带 `orderNo`；表里新增一行 `PENDING_PAYMENT`、`amount_cents=11800`。验证后停掉应用。
+预期：第一条返回 `code:0`、`orderNo` 以 `MP` 开头、`amountCents:11800`（insert 成功才有返回）；第二条返回 `code:210001`。验证后停掉应用。（有 mysql 客户端可选加验 `shop_order` 表新增一行 `PENDING_PAYMENT`。）
 
 - [ ] **Step 8: 提交**
 
@@ -2127,7 +2102,6 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 - [ ] **Step 1: 端到端验收（对照设计文档验收标准）**
 
 ```bash
-mise run up
 mise run run-api   # 终端 1，等 “Started ShopApplication”
 mise run run-web   # 终端 2
 ```
@@ -2137,7 +2111,7 @@ mise run run-web   # 终端 2
 1. 页面显示 MintPop 词标、3 个分组 pill、当前分组商品卡片（种子数据）；
 2. 已下架商品「复古街机盲盒」不出现；
 3. 点击任意商品「购买」→ 弹出成功 toast 并显示订单号；
-4. `docker compose exec mysql mysql -ushop -pshop123 mintpop_shop -e "SELECT order_no, status FROM shop_order ORDER BY id DESC LIMIT 1;"` 显示新订单，状态 `PENDING_PAYMENT`。
+4. 再点一次购买，两次订单号不同（每次都真实落库）；有 mysql 客户端可选加验 `shop_order` 表最新一行状态为 `PENDING_PAYMENT`。
 
 任一项不符则回到对应 Task 修复后重验。
 
@@ -2150,27 +2124,28 @@ MintPop 品牌商店：前端分组展示商品，点击购买创建待支付订
 
 ## 技术栈
 
-- **apps/api**：Spring Boot 4 单体（Java 21 / Maven）+ MyBatis-Plus + Flyway + MySQL 8
+- **apps/api**：Spring Boot 4 单体（Java 21 / Maven）+ MyBatis-Plus + Flyway + MySQL
 - **apps/web**：Vue 3 + Vite + TypeScript（字体 Fontsource 自托管）
 - 工具链与命令统一由根 `mise.toml` 管理
 
 ## 快速开始
 
+1. 复制 `mise.local.example.toml` 为 `mise.local.toml`，填入你的 MySQL 连接信息（该文件已被 gitignore，凭据不入库；账号有建库权限时会自动创建 `mintpop_shop` 库）。
+2. 依次执行：
+
 ​```bash
 mise install          # 安装工具链（java/maven/node/pnpm）
 mise run install      # 安装项目依赖
-mise run up           # 启动本地 MySQL（Docker）
-mise run run-api      # 终端 1：启动后端（8080）
+mise run run-api      # 终端 1：启动后端（8080，Flyway 自动建表并写入种子数据）
 mise run run-web      # 终端 2：启动前端（5173，/api 代理到 8080）
 ​```
 
-打开 http://localhost:5173 即可看到商店页面（Flyway 自动建表并写入种子数据）。
+打开 http://localhost:5173 即可看到商店页面。
 
 ## 常用命令
 
 | 命令 | 说明 |
 |---|---|
-| `mise run up` / `down` | 启动 / 停止本地 MySQL |
 | `mise run run-api` / `run-web` | 启动后端 / 前端 |
 | `mise run test-api` | 后端单元测试 |
 | `mise run build-api` / `build-web` | 构建后端 jar / 前端产物 |
