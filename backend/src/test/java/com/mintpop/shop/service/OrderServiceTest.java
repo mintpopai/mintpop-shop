@@ -1,5 +1,8 @@
 package com.mintpop.shop.service;
 
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.mintpop.shop.entity.Product;
 import com.mintpop.shop.entity.ShopOrder;
 import com.mintpop.shop.enumeration.BizCodeEnum;
@@ -10,6 +13,8 @@ import com.mintpop.shop.mapper.ShopOrderMapper;
 import com.mintpop.shop.request.CreateOrderRequest;
 import com.mintpop.shop.response.CreateOrderResponse;
 import com.mintpop.shop.response.OrderItemResponse;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +36,13 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class OrderServiceTest {
+
+    /** 纯单测无 MyBatis 容器，需手动注册实体元数据，lambda 条件才能渲染出 SQL 段与参数 */
+    @BeforeAll
+    static void initTableInfo() {
+        TableInfoHelper.initTableInfo(
+                new MapperBuilderAssistant(new MybatisConfiguration(), ""), ShopOrder.class);
+    }
 
     @Mock
     private ProductMapper productMapper;
@@ -100,13 +112,23 @@ class OrderServiceTest {
     }
 
     @Test
-    @DisplayName("我的订单：带商品名与中文状态，商品已删除给占位文案")
+    @SuppressWarnings("unchecked")
+    @DisplayName("我的订单：查询按当前用户过滤，带商品名与中文状态，商品已删除给占位文案")
     void listMyOrdersJoinsProductName() {
         when(shopOrderMapper.selectList(any())).thenReturn(
                 List.of(order(1L, 2, 11800L), order(99L, 1, 5900L)));
         when(productMapper.selectByIds(anyCollection())).thenReturn(List.of(onSaleProduct()));
 
         List<OrderItemResponse> result = orderService.listMyOrders(42L);
+
+        // 锁定查询条件确实按 userId 过滤（防止退化成查全表）。
+        // 注：MyBatis-Plus 的条件参数惰性收集，先渲染 SQL 段（getSqlSegment）参数表才有值。
+        ArgumentCaptor<LambdaQueryWrapper<ShopOrder>> wrapperCaptor =
+                ArgumentCaptor.forClass(LambdaQueryWrapper.class);
+        verify(shopOrderMapper).selectList(wrapperCaptor.capture());
+        LambdaQueryWrapper<ShopOrder> wrapper = wrapperCaptor.getValue();
+        assertThat(wrapper.getSqlSegment()).contains("user_id");
+        assertThat(wrapper.getParamNameValuePairs()).containsValue(42L);
 
         assertThat(result).hasSize(2);
         assertThat(result.get(0).getProductName()).isEqualTo("薄荷精灵盲盒");
