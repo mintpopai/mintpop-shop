@@ -1,0 +1,15 @@
+# IDE 与本地工具
+.idea/
+.claude/
+.DS_Store
+
+# 构建产物与依赖
+node_modules/
+dist/
+target/
+
+# 本地数据库连接配置（jar 外的 Spring 外置配置，含凭据绝不入库；example 模板会提交）
+backend/config/application.yml
+
+# 本地环境文件
+*.local

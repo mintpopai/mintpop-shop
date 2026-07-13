@@ -1,0 +1,46 @@
+[tools]
+java = "temurin-21.0.11+10.0.LTS"
+maven = "3.9.16"
+node = "24.18.0"
+pnpm = "11.12.0"
+
+# —— 安装 ——
+[tasks.install]
+description = "安装全部组件依赖（api 由 Maven 构建时自动解析，无需单独安装）"
+depends = ["install-frontend"]
+
+[tasks.install-frontend]
+description = "安装 前端依赖"
+usage = '''
+flag "--frozen" help="按 lockfile 精确安装、不更新 lockfile（CI/Docker 用）"
+'''
+dir = "frontend"
+run = "pnpm install ${usage_frozen:+--frozen-lockfile}"
+
+# —— 运行 ——
+[tasks.run-backend]
+description = "启动 后端（Spring Boot，端口 8080）"
+dir = "backend"
+run = "mvn spring-boot:run"
+
+[tasks.run-frontend]
+description = "启动 前端开发服务器（Vite，/api 代理到 8080）"
+dir = "frontend"
+run = "pnpm vite"
+
+# —— 构建 ——
+[tasks.build-backend]
+description = "构建 后端 jar"
+dir = "backend"
+run = "mvn -DskipTests package"
+
+[tasks.build-frontend]
+description = "类型检查并构建 前端产物"
+dir = "frontend"
+run = "pnpm vue-tsc --noEmit && pnpm vite build"
+
+# —— 质量 ——
+[tasks.test-backend]
+description = "运行 后端单元测试"
+dir = "backend"
+run = "mvn test"
