@@ -11,12 +11,16 @@ import com.mintpop.shop.mapper.ShopOrderMapper;
 import com.mintpop.shop.request.CreateOrderRequest;
 import com.mintpop.shop.response.CreateOrderResponse;
 import com.mintpop.shop.response.OrderItemResponse;
+import com.mintpop.shop.util.I18nUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -33,6 +37,7 @@ public class OrderService {
 
     private final ProductMapper productMapper;
     private final ShopOrderMapper shopOrderMapper;
+    private final MessageSource messageSource;
 
     /**
      * 创建待支付订单：校验商品存在且上架，金额=单价×数量，绑定当前登录用户。
@@ -56,7 +61,7 @@ public class OrderService {
     }
 
     /**
-     * 我的订单列表：按下单时间倒序，带商品名与中文状态。
+     * 我的订单列表：按下单时间倒序，商品名与状态标签按请求语言下发。
      */
     public List<OrderItemResponse> listMyOrders(Long userId) {
         List<ShopOrder> orders = shopOrderMapper.selectList(new LambdaQueryWrapper<ShopOrder>()
@@ -66,18 +71,21 @@ public class OrderService {
         if (orders.isEmpty()) {
             return List.of();
         }
+        Locale locale = LocaleContextHolder.getLocale();
+        boolean english = I18nUtil.isEnglish();
         Set<Long> productIds = orders.stream().map(ShopOrder::getProductId).collect(Collectors.toSet());
-        // TODO(Task 4)：临时按中文列取值，订单接口整体 i18n 化时按请求语言取列。
         Map<Long, String> productNameById = productMapper.selectByIds(productIds).stream()
-                .collect(Collectors.toMap(Product::getId, Product::getNameZh));
+                .collect(Collectors.toMap(Product::getId,
+                        p -> I18nUtil.pick(english, p.getNameEn(), p.getNameZh())));
+        String deletedPlaceholder = messageSource.getMessage("order.product-deleted", null, locale);
         return orders.stream()
                 .map(o -> new OrderItemResponse(
                         o.getOrderNo(),
-                        productNameById.getOrDefault(o.getProductId(), "（商品已删除）"),
+                        productNameById.getOrDefault(o.getProductId(), deletedPlaceholder),
                         o.getQuantity(),
                         o.getAmountCents(),
                         o.getStatus().name(),
-                        o.getStatus().getLabel(),
+                        messageSource.getMessage(o.getStatus().getLabelKey(), null, locale),
                         o.getCreatedAt()))
                 .toList();
     }

@@ -13,18 +13,22 @@ import com.mintpop.shop.mapper.ShopOrderMapper;
 import com.mintpop.shop.request.CreateOrderRequest;
 import com.mintpop.shop.response.CreateOrderResponse;
 import com.mintpop.shop.response.OrderItemResponse;
+import com.mintpop.shop.support.TestMessages;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.i18n.LocaleContextHolder;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -48,13 +52,24 @@ class OrderServiceTest {
     private ProductMapper productMapper;
     @Mock
     private ShopOrderMapper shopOrderMapper;
-    @InjectMocks
     private OrderService orderService;
+
+    @BeforeEach
+    void setUp() {
+        orderService = new OrderService(productMapper, shopOrderMapper, TestMessages.create());
+        LocaleContextHolder.setLocale(Locale.SIMPLIFIED_CHINESE);
+    }
+
+    @AfterEach
+    void resetLocale() {
+        LocaleContextHolder.resetLocaleContext();
+    }
 
     private Product onSaleProduct() {
         Product p = new Product();
         p.setId(1L);
         p.setNameZh("薄荷精灵盲盒");
+        p.setNameEn("Mint Sprite Blind Box");
         p.setPriceCents(5900L);
         p.setOnSale(true);
         return p;
@@ -144,5 +159,20 @@ class OrderServiceTest {
 
         assertThat(orderService.listMyOrders(42L)).isEmpty();
         verify(productMapper, never()).selectByIds(anyCollection());
+    }
+
+    @Test
+    @DisplayName("英文请求：商品名、状态标签、已删除占位均为英文")
+    void listMyOrdersEnglish() {
+        LocaleContextHolder.setLocale(Locale.US);
+        when(shopOrderMapper.selectList(any())).thenReturn(
+                List.of(order(1L, 2, 11800L), order(99L, 1, 5900L)));
+        when(productMapper.selectByIds(anyCollection())).thenReturn(List.of(onSaleProduct()));
+
+        List<OrderItemResponse> result = orderService.listMyOrders(42L);
+
+        assertThat(result.get(0).getProductName()).isEqualTo("Mint Sprite Blind Box");
+        assertThat(result.get(0).getStatusLabel()).isEqualTo("Awaiting payment");
+        assertThat(result.get(1).getProductName()).isEqualTo("(Product removed)");
     }
 }
