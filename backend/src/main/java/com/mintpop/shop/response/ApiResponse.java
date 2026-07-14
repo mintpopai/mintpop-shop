@@ -29,8 +29,8 @@ public class ApiResponse<T> {
         return new ApiResponse<>(0, null, null);
     }
 
-    public static <T> ApiResponse<T> fail(BizCodeEnum bizCode) {
-        return new ApiResponse<>(bizCode.getCode(), null, bizCode.getMessage());
+    public static <T> ApiResponse<T> fail(BizCodeEnum bizCode, String msg) {
+        return new ApiResponse<>(bizCode.getCode(), null, msg);
     }
 
     /**

@@ -12,7 +12,7 @@ public class BizException extends RuntimeException {
     private final BizCodeEnum bizCode;
 
     public BizException(BizCodeEnum bizCode) {
-        super(bizCode.getMessage());
+        super(bizCode.name());
         this.bizCode = bizCode;
     }
 }

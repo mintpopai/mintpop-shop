@@ -4,6 +4,7 @@ import com.mintpop.shop.exception.GlobalExceptionHandler;
 import com.mintpop.shop.response.GroupWithProductsResponse;
 import com.mintpop.shop.response.ProductResponse;
 import com.mintpop.shop.service.GroupService;
+import com.mintpop.shop.support.TestMessages;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,7 @@ class GroupControllerTest {
     void setUp() {
         groupService = mock(GroupService.class);
         mockMvc = MockMvcBuilders.standaloneSetup(new GroupController(groupService))
-                .setControllerAdvice(new GlobalExceptionHandler())
+                .setControllerAdvice(new GlobalExceptionHandler(TestMessages.create()))
                 .build();
     }
 

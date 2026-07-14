@@ -7,6 +7,7 @@ import com.mintpop.shop.response.CreateOrderResponse;
 import com.mintpop.shop.response.OrderItemResponse;
 import com.mintpop.shop.security.CurrentUserIdArgumentResolver;
 import com.mintpop.shop.service.OrderService;
+import com.mintpop.shop.support.TestMessages;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -41,7 +42,7 @@ class OrderControllerTest {
         orderService = mock(OrderService.class);
         mockMvc = MockMvcBuilders.standaloneSetup(new OrderController(orderService))
                 .setCustomArgumentResolvers(new CurrentUserIdArgumentResolver())
-                .setControllerAdvice(new GlobalExceptionHandler())
+                .setControllerAdvice(new GlobalExceptionHandler(TestMessages.create()))
                 .build();
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(
@@ -86,11 +87,27 @@ class OrderControllerTest {
                 .thenThrow(new BizException(BizCodeEnum.PRODUCT_NOT_ON_SALE));
 
         mockMvc.perform(post("/api/orders")
+                        .header("Accept-Language", "zh-CN")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"productId\":999,\"quantity\":1}"))
+                        .content("{\"productId\":9,\"quantity\":1}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(210001))
                 .andExpect(jsonPath("$.msg").value("商品不存在或已下架"));
+    }
+
+    @Test
+    @DisplayName("Accept-Language 为 en-US 时错误信息为英文")
+    void productNotOnSaleEnglishMsg() throws Exception {
+        when(orderService.createOrder(eq(42L), ArgumentMatchers.any()))
+                .thenThrow(new BizException(BizCodeEnum.PRODUCT_NOT_ON_SALE));
+
+        mockMvc.perform(post("/api/orders")
+                        .header("Accept-Language", "en-US")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"productId\":9,\"quantity\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(210001))
+                .andExpect(jsonPath("$.msg").value("Product not found or off sale"));
     }
 
     @Test

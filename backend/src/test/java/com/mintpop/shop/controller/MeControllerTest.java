@@ -4,6 +4,7 @@ import com.mintpop.shop.exception.GlobalExceptionHandler;
 import com.mintpop.shop.response.MeResponse;
 import com.mintpop.shop.security.CurrentUserIdArgumentResolver;
 import com.mintpop.shop.service.UserService;
+import com.mintpop.shop.support.TestMessages;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -32,7 +33,7 @@ class MeControllerTest {
         userService = mock(UserService.class);
         mockMvc = MockMvcBuilders.standaloneSetup(new MeController(userService))
                 .setCustomArgumentResolvers(new CurrentUserIdArgumentResolver())
-                .setControllerAdvice(new GlobalExceptionHandler())
+                .setControllerAdvice(new GlobalExceptionHandler(TestMessages.create()))
                 .build();
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(
