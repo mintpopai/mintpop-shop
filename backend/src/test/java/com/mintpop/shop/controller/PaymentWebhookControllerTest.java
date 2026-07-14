@@ -7,7 +7,6 @@ import com.stripe.exception.SignatureVerificationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -91,6 +90,18 @@ class PaymentWebhookControllerTest {
         when(stripeGateway.parseWebhookEvent(anyString(), anyString())).thenReturn(event);
         doThrow(new RuntimeException("db down"))
                 .when(paymentService).handleWebhook(any());
+
+        mockMvc.perform(post(PATH)
+                        .header("Stripe-Signature", "sig")
+                        .content("{}"))
+                .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    @DisplayName("解析阶段非验签异常回 500（不能逃逸成 200）")
+    void parseFailureReturns500() throws Exception {
+        when(stripeGateway.parseWebhookEvent(anyString(), anyString()))
+                .thenThrow(new RuntimeException("webhook secret 未配置"));
 
         mockMvc.perform(post(PATH)
                         .header("Stripe-Signature", "sig")

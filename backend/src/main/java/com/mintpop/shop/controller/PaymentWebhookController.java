@@ -45,6 +45,10 @@ public class PaymentWebhookController {
         } catch (SignatureVerificationException e) {
             log.warn("Stripe webhook 验签失败", e);
             return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            // 密钥未配置等意外异常：回 500 让 Stripe 重试，绝不能逃逸给全局 advice 变 200
+            log.error("Stripe webhook 解析失败", e);
+            return ResponseEntity.internalServerError().build();
         }
         try {
             paymentService.handleWebhook(event);
