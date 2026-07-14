@@ -1,3 +1,5 @@
+import { locale, t } from './i18n'
+
 /** 后端统一返回结构：code=0 成功，非 0 失败取 msg */
 export interface ApiResponse<T> {
   code: number
@@ -49,7 +51,7 @@ export interface OrderItem {
 /** 未登录/会话过期（HTTP 401），调用方据此引导登录 */
 export class UnauthorizedError extends Error {
   constructor() {
-    super('未登录或会话已过期')
+    super(t('api.unauthorized'))
   }
 }
 
@@ -57,12 +59,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response
   try {
     res = await fetch(path, {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Accept-Language': locale },
       ...init,
     })
   } catch {
     // 网络失败：不把原始英文报错透给用户
-    throw new Error('网络异常，请稍后重试')
+    throw new Error(t('api.network'))
   }
   // 鉴权中间件的 401 是唯一非 200 业务入口，转成类型化错误
   if (res.status === 401) {
@@ -72,10 +74,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     body = (await res.json()) as ApiResponse<T>
   } catch {
-    throw new Error('网络异常，请稍后重试')
+    throw new Error(t('api.network'))
   }
   if (body.code !== 0) {
-    throw new Error(body.msg ?? '请求失败，请稍后重试')
+    throw new Error(body.msg ?? t('api.requestFailed'))
   }
   return body.data as T
 }

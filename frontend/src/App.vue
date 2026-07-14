@@ -2,14 +2,20 @@
 import { onMounted, ref } from 'vue'
 import { currentUser, gotoLogin, gotoLogout } from './auth'
 import { showToast, toast } from './toast'
+import { locale, setLocale, t } from './i18n'
 
 const menuOpen = ref(false)
+
+/** 中英互切：写偏好后整页刷新 */
+function toggleLocale() {
+  setLocale(locale === 'zh-CN' ? 'en-US' : 'zh-CN')
+}
 
 onMounted(() => {
   // OIDC 握手失败会回跳 ?login_error=1：提示后清掉参数
   const params = new URLSearchParams(window.location.search)
   if (params.get('login_error')) {
-    showToast('error', '登录未完成，请重试')
+    showToast('error', t('app.loginFailed'))
     params.delete('login_error')
     const query = params.toString()
     history.replaceState(null, '', window.location.pathname + (query ? `?${query}` : ''))
@@ -31,8 +37,11 @@ onMounted(() => {
     </RouterLink>
 
     <nav class="auth-area">
+      <button type="button" class="lang-btn" @click="toggleLocale">
+        {{ locale === 'zh-CN' ? 'EN' : '中文' }}
+      </button>
       <button v-if="!currentUser" type="button" class="login-btn" @click="gotoLogin">
-        登录
+        {{ $t('app.login') }}
       </button>
       <div v-else class="user-menu">
         <button type="button" class="user-trigger" @click="menuOpen = !menuOpen">
@@ -48,8 +57,8 @@ onMounted(() => {
           <span class="nickname">{{ currentUser.nickname ?? currentUser.email }}</span>
         </button>
         <div v-if="menuOpen" class="menu" @click="menuOpen = false">
-          <RouterLink to="/orders" class="menu-item">我的订单</RouterLink>
-          <button type="button" class="menu-item" @click="gotoLogout">退出登录</button>
+          <RouterLink to="/orders" class="menu-item">{{ $t('app.myOrders') }}</RouterLink>
+          <button type="button" class="menu-item" @click="gotoLogout">{{ $t('app.logout') }}</button>
         </div>
       </div>
     </nav>
@@ -98,6 +107,25 @@ onMounted(() => {
 
 .auth-area {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lang-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-ink);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.lang-btn:hover {
+  border-color: var(--color-brand);
+  color: var(--color-brand-deep);
 }
 
 .login-btn {

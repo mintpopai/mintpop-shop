@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { fetchMyOrders, formatPrice, UnauthorizedError, type OrderItem } from '../api'
 import { gotoLogin } from '../auth'
+import { t } from '../i18n'
 
 const orders = ref<OrderItem[]>([])
 const loading = ref(true)
@@ -15,7 +16,7 @@ onMounted(async () => {
       gotoLogin()
       return
     }
-    loadError.value = e instanceof Error ? e.message : '加载失败，请稍后重试'
+    loadError.value = e instanceof Error ? e.message : t('common.loadFailed')
   } finally {
     loading.value = false
   }
@@ -29,24 +30,24 @@ function formatTime(iso: string): string {
 
 <template>
   <main class="page">
-    <h2 class="title">我的订单</h2>
+    <h2 class="title">{{ $t('orders.title') }}</h2>
 
-    <p v-if="loading" class="hint">加载中……</p>
+    <p v-if="loading" class="hint">{{ $t('common.loading') }}</p>
     <p v-else-if="loadError" class="hint error">{{ loadError }}</p>
     <p v-else-if="orders.length === 0" class="hint">
-      还没有订单，<RouterLink to="/" class="link">去逛逛</RouterLink>
+      {{ $t('orders.empty') }}<RouterLink to="/" class="link">{{ $t('orders.goShopping') }}</RouterLink>
     </p>
 
     <ul v-else class="order-list">
       <li v-for="order in orders" :key="order.orderNo" class="order-card">
         <div class="order-main">
           <span class="product-name">{{ order.productName }}</span>
-          <span class="order-no">订单号 {{ order.orderNo }}</span>
+          <span class="order-no">{{ $t('orders.orderNo', { orderNo: order.orderNo }) }}</span>
         </div>
         <div class="order-side">
           <span class="amount">{{ formatPrice(order.amountCents) }}</span>
           <span class="meta">
-            数量 {{ order.quantity }} · {{ order.statusLabel }} · {{ formatTime(order.createdAt) }}
+            {{ $t('orders.quantity', { n: order.quantity }) }} · {{ order.statusLabel }} · {{ formatTime(order.createdAt) }}
           </span>
         </div>
       </li>

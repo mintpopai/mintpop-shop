@@ -9,6 +9,7 @@ import {
 } from '../api'
 import { currentUser, gotoLogin } from '../auth'
 import { showToast } from '../toast'
+import { t } from '../i18n'
 import ProductCard from '../components/ProductCard.vue'
 
 const groups = ref<GroupWithProducts[]>([])
@@ -26,7 +27,7 @@ onMounted(async () => {
     groups.value = await fetchGroups()
     activeGroupId.value = groups.value[0]?.id ?? null
   } catch (e) {
-    loadError.value = e instanceof Error ? e.message : '加载失败，请稍后重试'
+    loadError.value = e instanceof Error ? e.message : t('common.loadFailed')
   } finally {
     loading.value = false
   }
@@ -35,21 +36,21 @@ onMounted(async () => {
 async function buy(product: Product) {
   // 下单必须登录：游客直接引导去统一登录
   if (!currentUser.value) {
-    showToast('error', '请先登录后再购买')
+    showToast('error', t('shop.loginRequired'))
     gotoLogin()
     return
   }
   buyingProductId.value = product.id
   try {
     const result = await createOrder(product.id)
-    showToast('success', `下单成功，订单号 ${result.orderNo}`)
+    showToast('success', t('shop.orderSuccess', { orderNo: result.orderNo }))
   } catch (e) {
     if (e instanceof UnauthorizedError) {
-      showToast('error', '会话已过期，请重新登录')
+      showToast('error', t('shop.sessionExpired'))
       gotoLogin()
       return
     }
-    showToast('error', e instanceof Error ? e.message : '下单失败，请稍后重试')
+    showToast('error', e instanceof Error ? e.message : t('shop.orderFailed'))
   } finally {
     buyingProductId.value = null
   }
@@ -58,11 +59,11 @@ async function buy(product: Product) {
 
 <template>
   <main class="page">
-    <p v-if="loading" class="hint">加载中……</p>
+    <p v-if="loading" class="hint">{{ $t('common.loading') }}</p>
     <p v-else-if="loadError" class="hint error">{{ loadError }}</p>
 
     <template v-else>
-      <nav class="group-nav" aria-label="商品分组">
+      <nav class="group-nav" :aria-label="$t('shop.groupNav')">
         <button
           v-for="group in groups"
           :key="group.id"
@@ -85,7 +86,7 @@ async function buy(product: Product) {
         />
       </section>
       <p v-if="activeGroup && activeGroup.products.length === 0" class="hint">
-        该分组暂无上架商品
+        {{ $t('shop.emptyGroup') }}
       </p>
     </template>
   </main>

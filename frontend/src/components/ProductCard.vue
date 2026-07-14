@@ -22,7 +22,7 @@ const emit = defineEmits<{ buy: [product: Product] }>()
           :disabled="buying"
           @click="emit('buy', product)"
         >
-          {{ buying ? '下单中…' : '购买' }}
+          {{ buying ? $t('product.buying') : $t('product.buy') }}
         </button>
       </div>
     </div>
