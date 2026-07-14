@@ -31,6 +31,10 @@ onMounted(() => {
 onUnmounted(() => clearInterval(timer))
 
 async function check() {
+  // 快速短路：已定格后不再重复检查
+  if (stage.value !== 'confirming') {
+    return
+  }
   attempts += 1
   try {
     const result = await verifyOrder(orderNo)
@@ -54,6 +58,10 @@ async function check() {
 }
 
 function finish(next: Stage) {
+  // 终态守卫：只允许从 confirming 迁出一次，过期的慢响应不得翻转已定格的结果
+  if (stage.value !== 'confirming') {
+    return
+  }
   clearInterval(timer)
   stage.value = next
 }
