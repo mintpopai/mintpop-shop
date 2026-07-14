@@ -3,6 +3,13 @@
 spring:
   application:
     name: mintpop-shop-backend
+  web:
+    # Accept-Language 缺失或无法识别时的默认语言
+    locale: zh-CN
+  messages:
+    basename: messages
+    # 关闭系统语言回退：未支持语言一律落到中文兜底 bundle，不受服务器系统语言影响
+    fallback-to-system-locale: false
 
 server:
   port: 8080
