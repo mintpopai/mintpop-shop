@@ -7,6 +7,7 @@
     "@fontsource/fredoka": "^5.2.10",
     "@fontsource/inter": "^5.2.8",
     "vue": "^3.5.39",
+    "vue-i18n": "^11.4.6",
     "vue-router": "^4.6.0"
   },
   "devDependencies": {

@@ -1,0 +1,36 @@
+{
+  "app": {
+    "login": "Sign in",
+    "myOrders": "My Orders",
+    "logout": "Sign out",
+    "loginFailed": "Sign-in was not completed, please try again"
+  },
+  "common": {
+    "loading": "Loading…",
+    "loadFailed": "Failed to load, please try again later"
+  },
+  "shop": {
+    "groupNav": "Product groups",
+    "emptyGroup": "No products on sale in this group",
+    "loginRequired": "Please sign in before purchasing",
+    "orderSuccess": "Order placed, order No. {orderNo}",
+    "sessionExpired": "Session expired, please sign in again",
+    "orderFailed": "Failed to place order, please try again later"
+  },
+  "orders": {
+    "title": "My Orders",
+    "empty": "No orders yet. ",
+    "goShopping": "Go shopping",
+    "orderNo": "Order No. {orderNo}",
+    "quantity": "Qty {n}"
+  },
+  "product": {
+    "buy": "Buy",
+    "buying": "Ordering…"
+  },
+  "api": {
+    "network": "Network error, please try again later",
+    "requestFailed": "Request failed, please try again later",
+    "unauthorized": "Not signed in or session expired"
+  }
+}
