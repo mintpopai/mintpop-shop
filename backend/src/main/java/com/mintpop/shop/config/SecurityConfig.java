@@ -60,7 +60,7 @@ public class SecurityConfig {
                         // 回调路径按统一账号接入规范固定为 /auth/callback
                         .redirectionEndpoint(re -> re.baseUri("/auth/callback"))
                         .successHandler(oidcLoginSuccessHandler)
-                        // 握手失败（用户取消/state 不符等）：记录原因后回前端带标记，由前端中文提示
+                        // 握手失败（用户取消/state 不符等）：记录原因后回前端带标记，由前端按语言提示
                         .failureHandler((request, response, exception) -> {
                             log.warn("OIDC 登录失败", exception);
                             response.sendRedirect(authProperties.getFrontendBaseUrl() + "?login_error=1");

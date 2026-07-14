@@ -16,12 +16,12 @@ import lombok.NoArgsConstructor;
 public class CreateOrderRequest {
 
     /** 商品ID */
-    @NotNull(message = "商品ID不能为空")
+    @NotNull(message = "{biz.validation.product-id-required}")
     private Long productId;
 
     /** 购买数量（1~99） */
-    @NotNull(message = "购买数量不能为空")
-    @Min(value = 1, message = "购买数量至少为 1")
-    @Max(value = 99, message = "购买数量最多为 99")
+    @NotNull(message = "{biz.validation.quantity-required}")
+    @Min(value = 1, message = "{biz.validation.quantity-min}")
+    @Max(value = 99, message = "{biz.validation.quantity-max}")
     private Integer quantity;
 }

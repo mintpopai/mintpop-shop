@@ -22,7 +22,7 @@ public class OrderItemResponse {
     private Long amountCents;
     /** 订单状态（SCREAMING_SNAKE_CASE） */
     private String status;
-    /** 订单状态中文描述 */
+    /** 订单状态展示文案（按请求语言） */
     private String statusLabel;
     /** 下单时间 */
     private LocalDateTime createdAt;

@@ -59,8 +59,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response
   try {
     res = await fetch(path, {
-      headers: { 'Content-Type': 'application/json', 'Accept-Language': locale },
       ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept-Language': locale,
+        ...init?.headers,
+      },
     })
   } catch {
     // 网络失败：不把原始英文报错透给用户
