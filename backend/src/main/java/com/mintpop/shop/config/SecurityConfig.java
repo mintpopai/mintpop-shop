@@ -5,6 +5,7 @@ import com.mintpop.shop.security.OidcLoginSuccessHandler;
 import com.mintpop.shop.security.SessionCookieAuthFilter;
 import com.mintpop.shop.service.SessionTokenService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -21,6 +22,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 /**
  * 安全配置（BFF）：OIDC 只管登录握手，日常鉴权走自签会话 Cookie，全程无服务端 session。
  */
+@Slf4j
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
@@ -54,9 +56,11 @@ public class SecurityConfig {
                         // 回调路径按统一账号接入规范固定为 /auth/callback
                         .redirectionEndpoint(re -> re.baseUri("/auth/callback"))
                         .successHandler(oidcLoginSuccessHandler)
-                        // 握手失败（用户取消/state 不符等）：回前端带标记，由前端中文提示
-                        .failureHandler((request, response, exception) ->
-                                response.sendRedirect(authProperties.getFrontendBaseUrl() + "?login_error=1")))
+                        // 握手失败（用户取消/state 不符等）：记录原因后回前端带标记，由前端中文提示
+                        .failureHandler((request, response, exception) -> {
+                            log.warn("OIDC 登录失败", exception);
+                            response.sendRedirect(authProperties.getFrontendBaseUrl() + "?login_error=1");
+                        }))
                 // 未登录访问受保护接口：返回 401（规范允许鉴权中间件用原生状态码），不重定向登录页
                 .exceptionHandling(eh -> eh.authenticationEntryPoint(
                         new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
