@@ -63,6 +63,11 @@ mise run run-frontend      # 终端 2：启动前端（5173，/api 代理到 808
 | `GET /api/orders` | 需登录 | 我的订单列表（倒序） |
 | `GET /auth/login` | — | 跳转统一账号中心登录（OIDC） |
 | `GET /auth/logout` | — | 登出（清会话 + 账号中心单点登出） |
+| `GET /api/payment/checkout-info` | 需登录 | 收银台信息——可用支付方式 + Stripe publishable key |
+| `POST /api/payment/orders/{orderNo}/intent` | 需登录 + 归属校验 | 懒创建/复用支付意图，返回 `client_secret` |
+| `POST /api/payment/orders/verify` | 需登录 + 归属校验 | 主动核实并推进支付状态（轮询用） |
+| `POST /api/payment/orders/{orderNo}/cancel` | 需登录 + 归属校验 | 取消订单 |
+| `POST /api/v1/payment/webhook/stripe` | 验签，无登录态 | Stripe 事件回调 |
 
 登录采用 MintPop 统一账号中心（Logto，OIDC 授权码 + PKCE）：后端为机密客户端（BFF），登录后自签会话 JWT（只含内部 userid）写 HttpOnly Cookie，账号中心 token 不进浏览器；用户主键为本地 `shop_user.id`，与账号中心 `sub` 通过 `user_identity` 映射表关联。
 
