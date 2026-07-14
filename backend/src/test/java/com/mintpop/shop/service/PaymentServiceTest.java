@@ -1,6 +1,10 @@
 package com.mintpop.shop.service;
 
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.mintpop.shop.client.StripeGateway;
+import com.mintpop.shop.client.StripeWebhookEvent;
 import com.mintpop.shop.config.PaymentProperties;
 import com.mintpop.shop.entity.Product;
 import com.mintpop.shop.entity.ShopOrder;
@@ -11,8 +15,11 @@ import com.mintpop.shop.mapper.ProductMapper;
 import com.mintpop.shop.mapper.ShopOrderMapper;
 import com.mintpop.shop.response.CheckoutInfoResponse;
 import com.mintpop.shop.response.PaymentIntentResponse;
+import com.mintpop.shop.response.VerifyOrderResponse;
 import com.stripe.model.PaymentIntent;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -32,12 +39,20 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class PaymentServiceTest {
+
+    /** 纯单测无 MyBatis 容器，需手动注册实体元数据（与 OrderServiceTest 相同处理） */
+    @BeforeAll
+    static void initTableInfo() {
+        TableInfoHelper.initTableInfo(
+                new MapperBuilderAssistant(new MybatisConfiguration(), ""), ShopOrder.class);
+    }
 
     @Mock
     private ShopOrderMapper shopOrderMapper;
@@ -202,5 +217,145 @@ class PaymentServiceTest {
                 .isInstanceOf(BizException.class)
                 .extracting(e -> ((BizException) e).getBizCode())
                 .isEqualTo(BizCodeEnum.ORDER_NOT_PAYABLE);
+    }
+
+    private StripeWebhookEvent succeededEvent(long amount) {
+        return new StripeWebhookEvent("payment_intent.succeeded",
+                "pi_123", "MP20260714120000123456", amount, "cny");
+    }
+
+    @Test
+    @DisplayName("webhook 成功事件：金额币种相符则条件置 PAID")
+    void webhookSucceededSettlesPaid() {
+        ShopOrder order = pendingOrder();
+        order.setPaymentProvider("stripe");
+        order.setPaymentTradeNo("pi_123");
+        when(shopOrderMapper.selectOne(any())).thenReturn(order);
+        when(shopOrderMapper.update(isNull(), any())).thenReturn(1);
+
+        paymentService.handleWebhook(succeededEvent(11800L));
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<LambdaUpdateWrapper<ShopOrder>> captor =
+                ArgumentCaptor.forClass(LambdaUpdateWrapper.class);
+        verify(shopOrderMapper).update(isNull(), captor.capture());
+        // 条件 UPDATE：where 含 order_no 与 status IN（幂等钥匙），set 置 PAID
+        String sql = captor.getValue().getSqlSegment();
+        assertThat(sql).contains("order_no").contains("status").contains("IN");
+        assertThat(captor.getValue().getSqlSet()).contains("status").contains("paid_at");
+    }
+
+    @Test
+    @DisplayName("webhook 金额不符：拒绝入账，不发 UPDATE")
+    void webhookAmountMismatchRejected() {
+        ShopOrder order = pendingOrder();
+        order.setPaymentProvider("stripe");
+        order.setPaymentTradeNo("pi_123");
+        when(shopOrderMapper.selectOne(any())).thenReturn(order);
+
+        paymentService.handleWebhook(succeededEvent(9900L));
+
+        verify(shopOrderMapper, never()).update(isNull(), any());
+    }
+
+    @Test
+    @DisplayName("webhook 查无此单：静默忽略（由控制器回 2xx 止住重试）")
+    void webhookUnknownOrderIgnored() {
+        when(shopOrderMapper.selectOne(any())).thenReturn(null);
+        paymentService.handleWebhook(succeededEvent(11800L));
+        verify(shopOrderMapper, never()).update(isNull(), any());
+    }
+
+    @Test
+    @DisplayName("webhook 重放：条件 UPDATE 影响 0 行即视为已处理，不抛错")
+    void webhookReplayIsIdempotent() {
+        ShopOrder order = pendingOrder();
+        order.setStatus(OrderStatusEnum.PAID);
+        order.setPaymentProvider("stripe");
+        order.setPaymentTradeNo("pi_123");
+        when(shopOrderMapper.selectOne(any())).thenReturn(order);
+        when(shopOrderMapper.update(isNull(), any())).thenReturn(0);
+
+        paymentService.handleWebhook(succeededEvent(11800L));
+        // 不抛异常即为通过
+    }
+
+    @Test
+    @DisplayName("webhook 失败事件：仅 PENDING 置 FAILED")
+    void webhookFailedMarksFailed() {
+        paymentService.handleWebhook(new StripeWebhookEvent(
+                "payment_intent.payment_failed", "pi_123",
+                "MP20260714120000123456", 11800L, "cny"));
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<LambdaUpdateWrapper<ShopOrder>> captor =
+                ArgumentCaptor.forClass(LambdaUpdateWrapper.class);
+        verify(shopOrderMapper).update(isNull(), captor.capture());
+        assertThat(captor.getValue().getSqlSet()).contains("status");
+    }
+
+    @Test
+    @DisplayName("webhook 无关事件类型：忽略")
+    void webhookIrrelevantTypeIgnored() {
+        paymentService.handleWebhook(new StripeWebhookEvent(
+                "charge.refunded", "pi_123", "MP20260714120000123456", 11800L, "cny"));
+        verify(shopOrderMapper, never()).update(isNull(), any());
+    }
+
+    @Test
+    @DisplayName("verify：网关侧已成功则推进 PAID 并返回最新状态")
+    void verifySettlesWhenGatewaySucceeded() {
+        ShopOrder order = pendingOrder();
+        order.setPaymentProvider("stripe");
+        order.setPaymentTradeNo("pi_123");
+        ShopOrder paid = pendingOrder();
+        paid.setStatus(OrderStatusEnum.PAID);
+        // 第一次查单（校验归属）返回待支付，入账后重查返回已支付
+        when(shopOrderMapper.selectOne(any())).thenReturn(order, paid);
+        PaymentIntent pi = intent("pi_123", "succeeded", "pi_123_secret");
+        pi.setAmount(11800L);
+        pi.setCurrency("cny");
+        when(stripeGateway.retrievePaymentIntent("pi_123")).thenReturn(pi);
+        when(shopOrderMapper.update(isNull(), any())).thenReturn(1);
+
+        VerifyOrderResponse resp = paymentService.verify(42L, "MP20260714120000123456");
+
+        assertThat(resp.getStatus()).isEqualTo("PAID");
+    }
+
+    @Test
+    @DisplayName("verify：未发起过支付（无交易号）直接返回当前状态，不打网关")
+    void verifyWithoutIntentReturnsCurrentStatus() {
+        when(shopOrderMapper.selectOne(any())).thenReturn(pendingOrder());
+
+        VerifyOrderResponse resp = paymentService.verify(42L, "MP20260714120000123456");
+
+        assertThat(resp.getStatus()).isEqualTo("PENDING");
+        verify(stripeGateway, never()).retrievePaymentIntent(anyString());
+    }
+
+    @Test
+    @DisplayName("cancel：待支付订单条件置 CANCELLED")
+    void cancelPendingOrder() {
+        when(shopOrderMapper.selectOne(any())).thenReturn(pendingOrder());
+        when(shopOrderMapper.update(isNull(), any())).thenReturn(1);
+
+        paymentService.cancel(42L, "MP20260714120000123456");
+
+        verify(shopOrderMapper).update(isNull(), any());
+    }
+
+    @Test
+    @DisplayName("cancel：已支付订单不可取消，410005")
+    void cancelPaidOrderRejected() {
+        ShopOrder order = pendingOrder();
+        order.setStatus(OrderStatusEnum.PAID);
+        when(shopOrderMapper.selectOne(any())).thenReturn(order);
+        when(shopOrderMapper.update(isNull(), any())).thenReturn(0);
+
+        assertThatThrownBy(() -> paymentService.cancel(42L, "MP20260714120000123456"))
+                .isInstanceOf(BizException.class)
+                .extracting(e -> ((BizException) e).getBizCode())
+                .isEqualTo(BizCodeEnum.ORDER_NOT_CANCELLABLE);
     }
 }

@@ -1,7 +1,9 @@
 package com.mintpop.shop.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.mintpop.shop.client.StripeGateway;
+import com.mintpop.shop.client.StripeWebhookEvent;
 import com.mintpop.shop.config.PaymentProperties;
 import com.mintpop.shop.entity.Product;
 import com.mintpop.shop.entity.ShopOrder;
@@ -12,12 +14,14 @@ import com.mintpop.shop.mapper.ProductMapper;
 import com.mintpop.shop.mapper.ShopOrderMapper;
 import com.mintpop.shop.response.CheckoutInfoResponse;
 import com.mintpop.shop.response.PaymentIntentResponse;
+import com.mintpop.shop.response.VerifyOrderResponse;
 import com.mintpop.shop.util.I18nUtil;
 import com.stripe.model.PaymentIntent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +38,10 @@ public class PaymentService {
 
     /** 支付处理方标识（落库 payment_provider） */
     static final String PROVIDER_STRIPE = "stripe";
+
+    /** webhook 只处理的两个事件类型 */
+    private static final String EVENT_SUCCEEDED = "payment_intent.succeeded";
+    private static final String EVENT_FAILED = "payment_intent.payment_failed";
 
     /** 我方支付子方式 → Stripe payment_method_types（品牌映射表，逐字一致） */
     private static final Map<String, String> PM_TYPE_MAPPING =
@@ -109,5 +117,96 @@ public class PaymentService {
             throw new BizException(BizCodeEnum.ORDER_NOT_FOUND);
         }
         return order;
+    }
+
+    /**
+     * 处理 webhook 事件（成单唯一真相源）。除签名错误外这里不抛业务异常：
+     * 查无此单/重放/无关事件一律静默成功，由控制器回 2xx 止住 Stripe 重试。
+     */
+    public void handleWebhook(StripeWebhookEvent event) {
+        if (event.orderNo() == null) {
+            return;
+        }
+        switch (event.type()) {
+            case EVENT_SUCCEEDED -> settlePaid(event.orderNo(), event.intentId(),
+                    event.amountMinorUnit(), event.currency());
+            case EVENT_FAILED -> markFailed(event.orderNo());
+            default -> { /* 无关事件：忽略 */ }
+        }
+    }
+
+    /**
+     * 主动向网关核实并推进状态（前端轮询用），与 webhook 共用 settlePaid，天然幂等。
+     */
+    public VerifyOrderResponse verify(Long userId, String orderNo) {
+        ShopOrder order = requireOwnOrder(userId, orderNo);
+        boolean settleable = order.getStatus() == OrderStatusEnum.PENDING
+                || order.getStatus() == OrderStatusEnum.FAILED;
+        if (settleable && order.getPaymentTradeNo() != null) {
+            PaymentIntent intent = stripeGateway.retrievePaymentIntent(order.getPaymentTradeNo());
+            if ("succeeded".equals(intent.getStatus())) {
+                settlePaid(orderNo, intent.getId(), intent.getAmount(), intent.getCurrency());
+                order = requireOwnOrder(userId, orderNo);
+            }
+        }
+        return new VerifyOrderResponse(order.getOrderNo(), order.getStatus().name());
+    }
+
+    /** 取消订单：仅待支付/支付失败可取消（条件 UPDATE，0 行即状态不允许） */
+    public void cancel(Long userId, String orderNo) {
+        requireOwnOrder(userId, orderNo);
+        int rows = shopOrderMapper.update(null, new LambdaUpdateWrapper<ShopOrder>()
+                .eq(ShopOrder::getOrderNo, orderNo)
+                .in(ShopOrder::getStatus, OrderStatusEnum.PENDING, OrderStatusEnum.FAILED)
+                .set(ShopOrder::getStatus, OrderStatusEnum.CANCELLED));
+        if (rows == 0) {
+            throw new BizException(BizCodeEnum.ORDER_NOT_CANCELLABLE);
+        }
+    }
+
+    /**
+     * 幂等入账：先校验 provider 与金额/币种（最小单位整数，直接相等比较），
+     * 再条件 UPDATE 置 PAID——允许来源 PENDING/FAILED/CANCELLED（重试成功、取消竞态时
+     * 钱已收必须入账），影响 0 行即已处理过，静默返回。
+     */
+    private void settlePaid(String orderNo, String intentId, Long amountMinorUnit, String currency) {
+        ShopOrder order = shopOrderMapper.selectOne(new LambdaQueryWrapper<ShopOrder>()
+                .eq(ShopOrder::getOrderNo, orderNo));
+        if (order == null) {
+            log.warn("入账查无此单，忽略 orderNo={}", orderNo);
+            return;
+        }
+        if (order.getPaymentProvider() != null
+                && !PROVIDER_STRIPE.equals(order.getPaymentProvider())) {
+            log.warn("入账 provider 不符，拒绝 orderNo={} provider={}", orderNo,
+                    order.getPaymentProvider());
+            return;
+        }
+        if (!Objects.equals(amountMinorUnit, order.getAmountCents())
+                || currency == null
+                || !paymentProperties.getCurrency().equalsIgnoreCase(currency)) {
+            log.warn("入账金额/币种与订单不符，拒绝 orderNo={} amount={} currency={} 订单金额={}",
+                    orderNo, amountMinorUnit, currency, order.getAmountCents());
+            return;
+        }
+        int rows = shopOrderMapper.update(null, new LambdaUpdateWrapper<ShopOrder>()
+                .eq(ShopOrder::getOrderNo, orderNo)
+                .in(ShopOrder::getStatus, OrderStatusEnum.PENDING, OrderStatusEnum.FAILED,
+                        OrderStatusEnum.CANCELLED)
+                .set(ShopOrder::getStatus, OrderStatusEnum.PAID)
+                .set(ShopOrder::getPaidAt, LocalDateTime.now())
+                .set(ShopOrder::getPaymentProvider, PROVIDER_STRIPE)
+                .set(ShopOrder::getPaymentTradeNo, intentId));
+        if (rows == 0) {
+            log.info("入账重放（已处理过），忽略 orderNo={}", orderNo);
+        }
+    }
+
+    /** 支付尝试失败：仅 PENDING → FAILED（FAILED 仍可续付，不影响重试成功后入账） */
+    private void markFailed(String orderNo) {
+        shopOrderMapper.update(null, new LambdaUpdateWrapper<ShopOrder>()
+                .eq(ShopOrder::getOrderNo, orderNo)
+                .eq(ShopOrder::getStatus, OrderStatusEnum.PENDING)
+                .set(ShopOrder::getStatus, OrderStatusEnum.FAILED));
     }
 }
