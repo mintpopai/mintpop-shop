@@ -4,6 +4,7 @@ import com.mintpop.shop.config.PaymentProperties;
 import com.mintpop.shop.enumeration.BizCodeEnum;
 import com.mintpop.shop.exception.BizException;
 import com.stripe.StripeClient;
+import com.stripe.exception.EventDataObjectDeserializationException;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Event;
@@ -77,7 +78,8 @@ public class StripeGateway {
 
     /**
      * webhook 验签并解出业务字段。验签失败抛 SignatureVerificationException（调用方回 400）；
-     * 事件对象反序列化失败（API 版本漂移）不视为错误，返回只带类型的事件由服务层忽略。
+     * 事件对象反序列化失败（API 版本漂移、Stripe API 不兼容等）捕获精确异常后记日志，
+     * 返回只带类型的事件由服务层忽略。
      */
     public StripeWebhookEvent parseWebhookEvent(String payload, String signatureHeader)
             throws SignatureVerificationException {
@@ -91,7 +93,7 @@ public class StripeGateway {
             if (object instanceof PaymentIntent pi) {
                 intent = pi;
             }
-        } catch (Exception e) {
+        } catch (EventDataObjectDeserializationException e) {
             log.warn("webhook 事件对象反序列化失败 eventType={}", event.getType(), e);
         }
         if (intent == null) {
