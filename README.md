@@ -29,6 +29,9 @@ mise run run-frontend      # 终端 2：启动前端（5173，/api 代理到 808
 | `mise run run-backend` / `run-frontend` | 启动后端 / 前端 |
 | `mise run test-backend` | 后端单元测试 |
 | `mise run build-backend` / `build-frontend` | 构建后端 jar / 前端产物 |
+| `mise run image-backend` / `image-frontend` | 本地构建后端 / 前端 Docker 镜像 |
+| `mise run release-backend` / `release-frontend` | 发版（校验→打 tag→推送，tag 触发发布 workflow） |
+| `mise run up` / `down` | 以 docker-compose 启停已发布镜像 |
 
 ## 接口
 
@@ -44,5 +47,22 @@ mise run run-frontend      # 终端 2：启动前端（5173，/api 代理到 808
 | `GET /auth/logout` | — | 登出（清会话 + 账号中心单点登出） |
 
 登录采用 MintPop 统一账号中心（Logto，OIDC 授权码 + PKCE）：后端为机密客户端（BFF），登录后自签会话 JWT（只含内部 userid）写 HttpOnly Cookie，账号中心 token 不进浏览器；用户主键为本地 `shop_user.id`，与账号中心 `sub` 通过 `user_identity` 映射表关联。
+
+## CI/CD 与发版
+
+- **CI**：push main / PR 触发 `CI Backend` / `CI Frontend`（按目录过滤），复用 `Quality *` 质量门禁（后端 `mvn test`，前端类型检查+构建）。
+- **发版**：`mise run release-backend [vX.Y.Z] ["更新说明"]`（frontend 同理）。脚本校验通过后同步版本号文件、打 `<组件>-vX.Y.Z` tag 并推送；tag 触发 `Release *` workflow：质量门禁 → 构建镜像推 `ghcr.io/mintpopai/mintpop-shop/<组件>` → 创建 GitHub Release（tag 注释置顶 + 按类型过滤的变更日志）。缺省版本号取最新稳定 tag 的 patch+1；带说明时打 annotated tag。
+- **通知**：`Action Notify` 把各流水线结果推飞书私聊，需在仓库 Secrets 配 `FEISHU_APP_ID` / `FEISHU_APP_SECRET` / `FEISHU_RECEIVE_ID`。
+
+## 部署
+
+部署机安装 Docker 后，取仓库根的 `docker-compose.yml` 与一份填好的 `application.yml`（参照 `backend/config/application.example.yml`，MySQL 用外部实例）放同一目录：
+
+```bash
+docker login ghcr.io          # 私有镜像时需要
+BACKEND_TAG=0.1.0 FRONTEND_TAG=0.1.0 docker compose up -d   # 缺省 latest；端口用 APP_PORT 覆盖（默认 80）
+```
+
+前端 nginx 是唯一入口：静态资源 + 反代 `/api`、`/auth` 到 backend（backend 不映射宿主端口，满足「8080 仅经反代可达」）；SPA 深链已 fallback 到 `index.html`。
 
 部署注意：后端 8080 端口须仅经反向代理可达、不可直接暴露公网（已启用 `forward-headers-strategy: framework`，直连时 `X-Forwarded-*` 可被伪造）；生产反代需将前端深链（如 `/orders`）fallback 到 `index.html`。另外自签会话为无状态 JWT，登出仅清浏览器 Cookie、无服务端吊销，被窃 token 在有效期（默认 7 天）内仍有效，全员强制下线的手段是更换 `session-secret`。
