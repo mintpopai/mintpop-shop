@@ -6,8 +6,13 @@ pnpm = "11.12.0"
 
 # —— 安装 ——
 [tasks.install]
-description = "安装全部组件依赖（backend 由 Maven 构建时自动解析，无需单独安装）"
-depends = ["install-frontend"]
+description = "安装全部组件依赖"
+depends = ["install-backend", "install-frontend"]
+
+[tasks.install-backend]
+description = "预热 后端 Maven 依赖（Docker 依赖层缓存用；本地按需）"
+dir = "backend"
+run = "mvn -B -q dependency:go-offline"
 
 [tasks.install-frontend]
 description = "安装 前端依赖"
@@ -28,6 +33,14 @@ description = "启动 前端开发服务器（Vite，/api 代理到 8080）"
 dir = "frontend"
 run = "pnpm vite"
 
+[tasks.up]
+description = "启动 compose 部署（拉取已发布镜像运行）"
+run = "docker compose up -d"
+
+[tasks.down]
+description = "停止 compose 部署"
+run = "docker compose down"
+
 # —— 构建 ——
 [tasks.build-backend]
 description = "构建 后端 jar"
@@ -39,8 +52,33 @@ description = "类型检查并构建 前端产物"
 dir = "frontend"
 run = "pnpm vue-tsc --noEmit && pnpm vite build"
 
+[tasks.image-backend]
+description = "构建 后端镜像（backend/Dockerfile，mise 多阶段，context=仓库根）"
+run = "docker build -f backend/Dockerfile -t mintpop-shop-backend:local ."
+
+[tasks.image-frontend]
+description = "构建 前端镜像（frontend/Dockerfile，mise 多阶段，context=仓库根）"
+run = "docker build -f frontend/Dockerfile -t mintpop-shop-frontend:local ."
+
 # —— 质量 ——
 [tasks.test-backend]
 description = "运行 后端单元测试"
 dir = "backend"
 run = "mvn test"
+
+# —— 发版 ——
+[tasks.release-backend]
+description = "发版 后端：校验→同步 pom 版本→打 tag→推送（tag 触发 Release Backend）"
+usage = '''
+arg "[arg1]" help="版本号（vX.Y.Z）或更新说明，单参数按形状消歧；缺省取最新稳定 tag 的 patch+1"
+arg "[arg2]" help="更新说明（第一个参数为版本号时用）"
+'''
+run = 'scripts/release.sh backend "${usage_arg1:-}" "${usage_arg2:-}"'
+
+[tasks.release-frontend]
+description = "发版 前端：校验→同步 package.json 版本→打 tag→推送（tag 触发 Release Frontend）"
+usage = '''
+arg "[arg1]" help="版本号（vX.Y.Z）或更新说明，单参数按形状消歧；缺省取最新稳定 tag 的 patch+1"
+arg "[arg2]" help="更新说明（第一个参数为版本号时用）"
+'''
+run = 'scripts/release.sh frontend "${usage_arg1:-}" "${usage_arg2:-}"'
