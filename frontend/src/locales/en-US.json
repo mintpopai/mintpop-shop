@@ -23,7 +23,9 @@
     "empty": "No orders yet. ",
     "goShopping": "Go shopping",
     "orderNo": "Order No. {orderNo}",
-    "quantity": "Qty {n}"
+    "quantity": "Qty {n}",
+    "goPay": "Pay now",
+    "cancel": "Cancel order"
   },
   "product": {
     "buy": "Buy",

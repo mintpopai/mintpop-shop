@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { fetchMyOrders, formatPrice, UnauthorizedError, type OrderItem } from '../api'
+import { cancelOrder, fetchMyOrders, formatPrice, UnauthorizedError, type OrderItem } from '../api'
 import { gotoLogin } from '../auth'
 import { t } from '../i18n'
+import { showToast } from '../toast'
 
 const orders = ref<OrderItem[]>([])
 const loading = ref(true)
@@ -21,6 +22,24 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+/** 待支付/支付失败的订单可去支付、可取消 */
+function isPayable(order: OrderItem): boolean {
+  return order.status === 'PENDING' || order.status === 'FAILED'
+}
+
+async function onCancel(order: OrderItem) {
+  if (!window.confirm(t('payment.cancelConfirm'))) {
+    return
+  }
+  try {
+    await cancelOrder(order.orderNo)
+    showToast('success', t('payment.cancelled'))
+    orders.value = await fetchMyOrders()
+  } catch (e) {
+    showToast('error', e instanceof Error ? e.message : t('api.requestFailed'))
+  }
+}
 
 /** 后端 ISO 时间（如 2026-07-13T12:00:00）转「2026-07-13 12:00」 */
 function formatTime(iso: string): string {
@@ -49,6 +68,14 @@ function formatTime(iso: string): string {
           <span class="meta">
             {{ $t('orders.quantity', { n: order.quantity }) }} · {{ order.statusLabel }} · {{ formatTime(order.createdAt) }}
           </span>
+          <div v-if="isPayable(order)" class="order-actions">
+            <RouterLink :to="`/pay/${order.orderNo}`" class="pay-link">
+              {{ $t('orders.goPay') }}
+            </RouterLink>
+            <button type="button" class="cancel-link" @click="onCancel(order)">
+              {{ $t('orders.cancel') }}
+            </button>
+          </div>
         </div>
       </li>
     </ul>
@@ -134,5 +161,36 @@ function formatTime(iso: string): string {
 .meta {
   font-size: 13px;
   color: var(--color-ink-secondary);
+}
+
+.order-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.pay-link {
+  padding: 6px 16px;
+  border-radius: var(--radius-button);
+  background: var(--color-brand);
+  color: #ffffff;
+  font-size: 13px;
+}
+
+.pay-link:hover {
+  background: var(--color-brand-deep);
+}
+
+.cancel-link {
+  border: none;
+  background: none;
+  color: var(--color-ink-secondary);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.cancel-link:hover {
+  color: #b91c1c;
 }
 </style>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   createOrder,
   fetchGroups,
@@ -12,6 +13,7 @@ import { showToast } from '../toast'
 import { t } from '../i18n'
 import ProductCard from '../components/ProductCard.vue'
 
+const router = useRouter()
 const groups = ref<GroupWithProducts[]>([])
 const activeGroupId = ref<number | null>(null)
 const loading = ref(true)
@@ -43,7 +45,7 @@ async function buy(product: Product) {
   buyingProductId.value = product.id
   try {
     const result = await createOrder(product.id)
-    showToast('success', t('shop.orderSuccess', { orderNo: result.orderNo }))
+    await router.push(`/pay/${result.orderNo}`)
   } catch (e) {
     if (e instanceof UnauthorizedError) {
       showToast('error', t('shop.sessionExpired'))
