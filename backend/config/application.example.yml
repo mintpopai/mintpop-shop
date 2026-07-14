@@ -31,3 +31,13 @@ app:
     # 以下为可选项及默认值，不改可不写：
     # session-ttl: 7d            # 会话有效期
     # frontend-base-url: /       # 登录/登出完成后回跳的前端地址（同源部署用默认值即可）
+
+# —— 支付（Stripe）——密钥只写进真实 config/application.yml，绝不进仓库 ——
+payment:
+  stripe:
+    secret-key: 填Stripe密钥（sk_ 开头）
+    webhook-secret: 填Stripe webhook签名密钥（whsec_ 开头）
+    publishable-key: 填Stripe publishable key（pk_ 开头）
+    # 以下为可选项及默认值，不改可不写：
+    # currency: CNY                        # 结算币种（3 位 ISO）
+    # supported-types: card,alipay,wxpay   # 启用的支付子方式

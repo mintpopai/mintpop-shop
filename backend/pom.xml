@@ -64,6 +64,12 @@
             <version>${jjwt.version}</version>
             <scope>runtime</scope>
         </dependency>
+        <!-- Stripe 支付网关 SDK -->
+        <dependency>
+            <groupId>com.stripe</groupId>
+            <artifactId>stripe-java</artifactId>
+            <version>33.1.0</version>
+        </dependency>
         <!-- Spring Boot 4 起 Flyway 自动装配拆分进独立 starter，仅有 flyway-core 在 classpath
              不会触发 FlywayAutoConfiguration，必须显式引入本 starter -->
         <dependency>

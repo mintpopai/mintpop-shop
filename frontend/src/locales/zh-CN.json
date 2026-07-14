@@ -23,11 +23,51 @@
     "empty": "还没有订单，",
     "goShopping": "去逛逛",
     "orderNo": "订单号 {orderNo}",
-    "quantity": "数量 {n}"
+    "quantity": "数量 {n}",
+    "goPay": "去支付",
+    "cancel": "取消订单"
   },
   "product": {
     "buy": "购买",
     "buying": "下单中…"
+  },
+  "payment": {
+    "title": "收银台",
+    "orderSummary": "订单信息",
+    "payAmount": "应付金额",
+    "paymentMethod": "支付方式",
+    "poweredBy": "由 {provider} 安全处理",
+    "securityNote": "微信支付与支付宝均通过 {provider} 安全处理，到账与额度一致。",
+    "methodWxpay": "微信支付",
+    "methodAlipay": "支付宝",
+    "methodCard": "银行卡",
+    "methodScanDesc": "扫码即时到账",
+    "methodCardDesc": "Visa · 万事达",
+    "confirmPay": "确认支付",
+    "submitting": "下单中…",
+    "stripePay": "立即支付",
+    "processing": "正在确认支付",
+    "scanWithWechat": "请用微信扫码支付",
+    "scanWithAlipay": "请用支付宝扫码支付",
+    "qrExpiry": "二维码有效期：{time}",
+    "qrExpired": "二维码已过期",
+    "regenerateQr": "重新获取二维码",
+    "cancelOrder": "取消订单",
+    "cancelConfirm": "确定取消该订单吗？",
+    "cancelled": "订单已取消",
+    "notPayable": "该订单当前不可支付",
+    "viewOrders": "查看我的订单",
+    "result": {
+      "confirming": "正在确认支付结果…",
+      "success": "支付成功",
+      "successDesc": "订单已完成支付，可在我的订单中查看。",
+      "pending": "支付结果待确认",
+      "pendingDesc": "暂未确认到支付结果，请稍后在订单列表查看。",
+      "failed": "支付未完成",
+      "failedDesc": "本次支付未完成，你可以回到订单重新支付。",
+      "backToOrders": "查看我的订单",
+      "backToShop": "继续逛逛"
+    }
   },
   "api": {
     "network": "网络异常，请稍后重试",

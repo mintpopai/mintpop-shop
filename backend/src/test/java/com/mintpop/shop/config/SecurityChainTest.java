@@ -83,6 +83,14 @@ class SecurityChainTest {
     }
 
     @Test
+    @DisplayName("Stripe webhook 路径公开：未登录不是 401（自身安全靠验签）")
+    void stripeWebhookIsPublic() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .post("/api/v1/payment/webhook/stripe"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     @DisplayName("授权请求带 prompt=login：点登录必须重新走账号中心登录页")
     void authorizationRequestForcesLoginPrompt() throws Exception {
         when(clientRegistrationRepository.findByRegistrationId("logto")).thenReturn(

@@ -12,7 +12,12 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum OrderStatusEnum {
 
-    PENDING_PAYMENT("PENDING_PAYMENT", "order.status.pending-payment");
+    PENDING("PENDING", "order.status.pending"),
+    PAID("PAID", "order.status.paid"),
+    COMPLETED("COMPLETED", "order.status.completed"),
+    CANCELLED("CANCELLED", "order.status.cancelled"),
+    EXPIRED("EXPIRED", "order.status.expired"),
+    FAILED("FAILED", "order.status.failed");
 
     /** 持久化到数据库的取值 */
     @EnumValue

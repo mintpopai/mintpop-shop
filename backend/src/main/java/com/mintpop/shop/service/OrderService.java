@@ -53,7 +53,7 @@ public class OrderService {
         order.setProductId(product.getId());
         order.setQuantity(request.getQuantity());
         order.setAmountCents(product.getPriceCents() * request.getQuantity());
-        order.setStatus(OrderStatusEnum.PENDING_PAYMENT);
+        order.setStatus(OrderStatusEnum.PENDING);
         order.setUserId(userId);
         shopOrderMapper.insert(order);
 

@@ -1,6 +1,6 @@
 # MintPop Shop
 
-MintPop 品牌商店：前端分组展示商品，点击购买创建待支付订单。注册与支付由统一文档另行接入（订单表已预留 `user_id` 与状态扩展）。
+MintPop 品牌商店：前端分组展示商品，点击购买创建待支付订单。登录与支付均按 MintPop 统一规范接入（订单表已预留扩展）。
 
 ## 技术栈
 
@@ -21,6 +21,24 @@ mise run run-frontend      # 终端 2：启动前端（5173，/api 代理到 808
 ```
 
 打开 http://localhost:5173 即可看到商店页面。
+
+## 支付（Stripe）
+
+按 MintPop 统一支付接入规范接入：后端 PaymentIntent + webhook，前端拍平「微信支付 / 支付宝 / 银行卡」三个选项。
+
+- **配置**：Stripe 密钥写在 jar 外 `backend/config/application.yml`（见 `application.example.yml` 的 `payment.stripe` 段），不进仓库。
+- **Webhook**：Stripe Dashboard 给站点配置端点 `POST /api/v1/payment/webhook/stripe`，只需订阅
+  `payment_intent.succeeded` 与 `payment_intent.payment_failed` 两个事件；签名密钥填入 `webhook-secret`。
+- **本地联调**：用 Stripe CLI 把事件转发到本地后端：
+
+  ```bash
+  stripe listen --forward-to localhost:8080/api/v1/payment/webhook/stripe
+  ```
+
+  命令输出的 `whsec_...` 填入本地 `config/application.yml` 的 `webhook-secret`。
+  测试卡号 `4242 4242 4242 4242`（任意未来有效期/CVC）；微信/支付宝在测试模式下扫码会进入 Stripe 模拟授权页。
+
+> 若日后在前端启用 CSP 头，需在 `script-src` / `frame-src` 中放行 `https://*.stripe.com`。
 
 ## 常用命令
 
@@ -45,6 +63,11 @@ mise run run-frontend      # 终端 2：启动前端（5173，/api 代理到 808
 | `GET /api/orders` | 需登录 | 我的订单列表（倒序） |
 | `GET /auth/login` | — | 跳转统一账号中心登录（OIDC） |
 | `GET /auth/logout` | — | 登出（清会话 + 账号中心单点登出） |
+| `GET /api/payment/checkout-info` | 需登录 | 收银台信息——可用支付方式 + Stripe publishable key |
+| `POST /api/payment/orders/{orderNo}/intent` | 需登录 + 归属校验 | 懒创建/复用支付意图，返回 `client_secret` |
+| `POST /api/payment/orders/verify` | 需登录 + 归属校验 | 主动核实并推进支付状态（轮询用） |
+| `POST /api/payment/orders/{orderNo}/cancel` | 需登录 + 归属校验 | 取消订单 |
+| `POST /api/v1/payment/webhook/stripe` | 验签，无登录态 | Stripe 事件回调 |
 
 登录采用 MintPop 统一账号中心（Logto，OIDC 授权码 + PKCE）：后端为机密客户端（BFF），登录后自签会话 JWT（只含内部 userid）写 HttpOnly Cookie，账号中心 token 不进浏览器；用户主键为本地 `shop_user.id`，与账号中心 `sub` 通过 `user_identity` 映射表关联。
 
