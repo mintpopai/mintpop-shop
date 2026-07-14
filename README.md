@@ -22,6 +22,24 @@ mise run run-frontend      # 终端 2：启动前端（5173，/api 代理到 808
 
 打开 http://localhost:5173 即可看到商店页面。
 
+## 支付（Stripe）
+
+按 MintPop 统一支付接入规范接入：后端 PaymentIntent + webhook，前端拍平「微信支付 / 支付宝 / 银行卡」三个选项。
+
+- **配置**：Stripe 密钥写在 jar 外 `backend/config/application.yml`（见 `application.example.yml` 的 `payment.stripe` 段），不进仓库。
+- **Webhook**：Stripe Dashboard 给站点配置端点 `POST /api/v1/payment/webhook/stripe`，只需订阅
+  `payment_intent.succeeded` 与 `payment_intent.payment_failed` 两个事件；签名密钥填入 `webhook-secret`。
+- **本地联调**：用 Stripe CLI 把事件转发到本地后端：
+
+  ```bash
+  stripe listen --forward-to localhost:8080/api/v1/payment/webhook/stripe
+  ```
+
+  命令输出的 `whsec_...` 填入本地 `config/application.yml` 的 `webhook-secret`。
+  测试卡号 `4242 4242 4242 4242`（任意未来有效期/CVC）；微信/支付宝在测试模式下扫码会进入 Stripe 模拟授权页。
+
+> 若日后在前端启用 CSP 头，需在 `script-src` / `frame-src` 中放行 `https://*.stripe.com`。
+
 ## 常用命令
 
 | 命令 | 说明 |
