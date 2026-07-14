@@ -49,6 +49,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 白名单式：/api 下默认需登录，公开接口显式放行——新增接口忘登记时默认安全
                         .requestMatchers("/api/groups").permitAll()
+                        // Stripe webhook：无登录态，安全性由请求体验签保证
+                        .requestMatchers("/api/v1/payment/webhook/stripe").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
                 .oauth2Login(login -> login
