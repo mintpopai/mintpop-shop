@@ -48,6 +48,28 @@ export interface OrderItem {
   createdAt: string
 }
 
+/** 收银台信息（镜像后端 CheckoutInfoResponse） */
+export interface CheckoutInfo {
+  methods: string[]
+  stripePublishableKey: string | null
+}
+
+/** 支付意图（镜像后端 PaymentIntentResponse） */
+export interface PaymentIntentInfo {
+  orderNo: string
+  clientSecret: string
+  amountCents: number
+  currency: string
+  productName: string
+  quantity: number
+}
+
+/** 订单支付核实结果（镜像后端 VerifyOrderResponse） */
+export interface VerifyResult {
+  orderNo: string
+  status: string
+}
+
 /** 未登录/会话过期（HTTP 401），调用方据此引导登录 */
 export class UnauthorizedError extends Error {
   constructor() {
@@ -107,6 +129,29 @@ export function fetchMe(): Promise<Me> {
 /** 我的订单列表 */
 export function fetchMyOrders(): Promise<OrderItem[]> {
   return request<OrderItem[]>('/api/orders')
+}
+
+/** 收银台信息：可用支付方式 + Stripe publishable key */
+export function fetchCheckoutInfo(): Promise<CheckoutInfo> {
+  return request<CheckoutInfo>('/api/payment/checkout-info')
+}
+
+/** 懒创建/复用支付意图（支付页加载时调用） */
+export function createPaymentIntent(orderNo: string): Promise<PaymentIntentInfo> {
+  return request<PaymentIntentInfo>(`/api/payment/orders/${orderNo}/intent`, { method: 'POST' })
+}
+
+/** 主动核实订单支付状态（轮询用） */
+export function verifyOrder(orderNo: string): Promise<VerifyResult> {
+  return request<VerifyResult>('/api/payment/orders/verify', {
+    method: 'POST',
+    body: JSON.stringify({ orderNo }),
+  })
+}
+
+/** 取消订单（仅待支付/支付失败可取消） */
+export function cancelOrder(orderNo: string): Promise<null> {
+  return request<null>(`/api/payment/orders/${orderNo}/cancel`, { method: 'POST' })
 }
 
 /** 分转元展示 */
