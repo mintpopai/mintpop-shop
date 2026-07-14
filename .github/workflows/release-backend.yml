@@ -1,0 +1,115 @@
+name: Release Backend
+
+on:
+  push:
+    tags: ["backend-v*"]
+  workflow_dispatch: # 手动逃生口（紧急重推/回滚验证），只推 sha 标签、不建 Release
+
+concurrency:
+  group: release-backend
+  cancel-in-progress: false
+
+jobs:
+  # 门禁内置到发版：本仓直推 main，构建/推送前必须先过质量检查
+  verify:
+    uses: ./.github/workflows/quality-backend.yml
+
+  build-push:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE: ghcr.io/${{ github.repository }}/backend
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+      - name: 设置 Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: 登录 GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: 生成镜像标签与元数据
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}},value=${{ github.ref_name }},match=backend-v(.+)
+            type=sha,enable=${{ github.ref_type != 'tag' }}
+          flavor: |
+            latest=auto
+      - name: 构建并推送镜像
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  github-release:
+    needs: build-push
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 检出代码（全量历史，COMMIT 模式需要）
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 生成分类变更日志
+        id: changelog
+        uses: mikepenz/release-changelog-builder-action@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          mode: COMMIT
+          configurationJson: |
+            {
+              "categories": [
+                { "title": "## 新功能", "labels": ["feat"] },
+                { "title": "## 修复", "labels": ["fix"] },
+                { "title": "## 性能", "labels": ["perf"] },
+                { "title": "## 重构", "labels": ["refactor"] },
+                { "title": "## 回滚", "labels": ["revert"] }
+              ],
+              "label_extractor": [
+                {
+                  "pattern": "^(feat|fix|perf|refactor|revert|build|chore|ci|docs|style|test)[^:]*:.*",
+                  "target": "$1",
+                  "on_property": "title"
+                }
+              ],
+              "tag_resolver": {
+                "method": "sort",
+                "filter": { "pattern": "backend-v.+" }
+              },
+              "template": "#{{CHANGELOG}}"
+            }
+      - name: 组装 Release 正文（tag 注释置顶 + 空正文兜底）
+        env:
+          TAG: ${{ github.ref_name }}
+          CHANGELOG: ${{ steps.changelog.outputs.changelog }}
+        run: |
+          : > notes.md
+          if [ "$(git cat-file -t "$TAG")" = "tag" ]; then
+            git tag -l --format='%(contents)' "$TAG" >> notes.md; printf '\n\n' >> notes.md
+          fi
+          printf '%s\n' "$CHANGELOG" >> notes.md
+          if [ -z "$(tr -d '[:space:]' < notes.md)" ]; then
+            echo "- 本次无面向用户的变更" > notes.md
+          fi
+          echo "RELEASE_NAME=MintPop Shop backend v${TAG#backend-v}" >> "$GITHUB_ENV"
+      - name: 创建 GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ env.RELEASE_NAME }}
+          body_path: notes.md
