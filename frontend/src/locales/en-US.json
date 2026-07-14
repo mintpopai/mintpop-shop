@@ -1,6 +1,7 @@
 {
   "app": {
     "login": "Sign in",
+    "contact": "Contact",
     "myOrders": "My Orders",
     "logout": "Sign out",
     "loginFailed": "Sign-in was not completed, please try again"

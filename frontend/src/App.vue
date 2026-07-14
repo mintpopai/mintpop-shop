@@ -6,6 +6,9 @@ import { locale, setLocale, t } from './i18n'
 
 const menuOpen = ref(false)
 
+/** 联系方式页在官网（mintpop.ai），按当前语言指向对应路径 */
+const contactUrl = locale === 'zh-CN' ? 'https://mintpop.ai/zh/contact/' : 'https://mintpop.ai/contact/'
+
 /** 中英互切：写偏好后整页刷新 */
 function toggleLocale() {
   setLocale(locale === 'zh-CN' ? 'en-US' : 'zh-CN')
@@ -37,6 +40,9 @@ onMounted(() => {
     </RouterLink>
 
     <nav class="auth-area">
+      <a class="contact-link" :href="contactUrl" target="_blank" rel="noopener">
+        {{ $t('app.contact') }}
+      </a>
       <button type="button" class="lang-btn" @click="toggleLocale">
         {{ locale === 'zh-CN' ? 'EN' : '中文' }}
       </button>
@@ -110,6 +116,16 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.contact-link {
+  font-size: 14px;
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.contact-link:hover {
+  color: var(--color-brand-deep);
 }
 
 .lang-btn {

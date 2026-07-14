@@ -1,6 +1,7 @@
 {
   "app": {
     "login": "登录",
+    "contact": "联系方式",
     "myOrders": "我的订单",
     "logout": "退出登录",
     "loginFailed": "登录未完成，请重试"
