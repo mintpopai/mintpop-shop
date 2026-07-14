@@ -11,6 +11,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -25,6 +28,7 @@ public class SecurityConfig {
     private final AuthProperties authProperties;
     private final SessionTokenService sessionTokenService;
     private final OidcLoginSuccessHandler oidcLoginSuccessHandler;
+    private final ClientRegistrationRepository clientRegistrationRepository;
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -43,8 +47,10 @@ public class SecurityConfig {
                         .anyRequest().permitAll())
                 .oauth2Login(login -> login
                         // 握手中间态存 Cookie（只对本浏览器有效），不落服务端 session
-                        .authorizationEndpoint(ae -> ae.authorizationRequestRepository(
-                                new CookieOAuth2AuthorizationRequestRepository()))
+                        .authorizationEndpoint(ae -> ae
+                                .authorizationRequestResolver(forceLoginAuthorizationRequestResolver())
+                                .authorizationRequestRepository(
+                                        new CookieOAuth2AuthorizationRequestRepository()))
                         // 回调路径按统一账号接入规范固定为 /auth/callback
                         .redirectionEndpoint(re -> re.baseUri("/auth/callback"))
                         .successHandler(oidcLoginSuccessHandler)
@@ -57,5 +63,17 @@ public class SecurityConfig {
                 .addFilterBefore(new SessionCookieAuthFilter(sessionTokenService),
                         UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    /**
+     * 授权请求追加 prompt=login（OIDC 标准参数）：点「登录」必须重新走账号中心登录页，
+     * 不因账号中心已有会话而静默放行——产品决策：登录动作必须显式。
+     */
+    private OAuth2AuthorizationRequestResolver forceLoginAuthorizationRequestResolver() {
+        DefaultOAuth2AuthorizationRequestResolver resolver = new DefaultOAuth2AuthorizationRequestResolver(
+                clientRegistrationRepository, "/oauth2/authorization");
+        resolver.setAuthorizationRequestCustomizer(customizer ->
+                customizer.additionalParameters(params -> params.put("prompt", "login")));
+        return resolver;
     }
 }

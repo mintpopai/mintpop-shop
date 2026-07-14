@@ -12,14 +12,18 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Optional;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -76,5 +80,24 @@ class SecurityChainTest {
     @DisplayName("未登记的 /api 新接口默认需登录（白名单姿态）")
     void unregisteredApiPathRequiresAuthByDefault() throws Exception {
         mockMvc.perform(get("/api/anything-new")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("授权请求带 prompt=login：点登录必须重新走账号中心登录页")
+    void authorizationRequestForcesLoginPrompt() throws Exception {
+        when(clientRegistrationRepository.findByRegistrationId("logto")).thenReturn(
+                ClientRegistration.withRegistrationId("logto")
+                        .clientId("client-1")
+                        .clientSecret("secret-1")
+                        .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                        .redirectUri("{baseUrl}/auth/callback")
+                        .authorizationUri("https://auth.example.com/oidc/auth")
+                        .tokenUri("https://auth.example.com/oidc/token")
+                        .scope("openid")
+                        .build());
+
+        mockMvc.perform(get("/oauth2/authorization/logto"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", containsString("prompt=login")));
     }
 }
