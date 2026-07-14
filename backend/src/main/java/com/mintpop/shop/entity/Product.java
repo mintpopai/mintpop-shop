@@ -19,10 +19,14 @@ public class Product {
     private Long id;
     /** 所属分组ID */
     private Long groupId;
-    /** 商品名 */
-    private String name;
-    /** 商品描述 */
-    private String description;
+    /** 商品名（中文） */
+    private String nameZh;
+    /** 商品名（英文），空串回退中文 */
+    private String nameEn;
+    /** 商品描述（中文） */
+    private String descriptionZh;
+    /** 商品描述（英文），空回退中文 */
+    private String descriptionEn;
     /** 价格，单位分 */
     private Long priceCents;
     /** 商品图URL，可空 */

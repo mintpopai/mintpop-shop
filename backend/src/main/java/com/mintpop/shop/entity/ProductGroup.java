@@ -17,8 +17,10 @@ public class ProductGroup {
     /** 主键 */
     @TableId(type = IdType.AUTO)
     private Long id;
-    /** 分组名 */
-    private String name;
+    /** 分组名（中文） */
+    private String nameZh;
+    /** 分组名（英文），空串回退中文 */
+    private String nameEn;
     /** 排序号，小的在前 */
     private Integer sortOrder;
     /** 创建时间（数据库默认值维护） */

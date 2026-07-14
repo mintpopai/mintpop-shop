@@ -67,8 +67,9 @@ public class OrderService {
             return List.of();
         }
         Set<Long> productIds = orders.stream().map(ShopOrder::getProductId).collect(Collectors.toSet());
+        // TODO(Task 4)：临时按中文列取值，订单接口整体 i18n 化时按请求语言取列。
         Map<Long, String> productNameById = productMapper.selectByIds(productIds).stream()
-                .collect(Collectors.toMap(Product::getId, Product::getName));
+                .collect(Collectors.toMap(Product::getId, Product::getNameZh));
         return orders.stream()
                 .map(o -> new OrderItemResponse(
                         o.getOrderNo(),

@@ -2,6 +2,7 @@ package com.mintpop.shop.response;
 
 import com.mintpop.shop.entity.Product;
 import com.mintpop.shop.entity.ProductGroup;
+import com.mintpop.shop.util.I18nUtil;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -21,8 +22,9 @@ public class GroupWithProductsResponse {
     /** 分组下上架商品列表 */
     private List<ProductResponse> products;
 
-    public static GroupWithProductsResponse of(ProductGroup group, List<Product> products) {
-        return new GroupWithProductsResponse(group.getId(), group.getName(),
-                products.stream().map(ProductResponse::of).toList());
+    public static GroupWithProductsResponse of(ProductGroup group, List<Product> products, boolean english) {
+        return new GroupWithProductsResponse(group.getId(),
+                I18nUtil.pick(english, group.getNameEn(), group.getNameZh()),
+                products.stream().map(p -> ProductResponse.of(p, english)).toList());
     }
 }

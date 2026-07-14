@@ -54,7 +54,7 @@ class OrderServiceTest {
     private Product onSaleProduct() {
         Product p = new Product();
         p.setId(1L);
-        p.setName("薄荷精灵盲盒");
+        p.setNameZh("薄荷精灵盲盒");
         p.setPriceCents(5900L);
         p.setOnSale(true);
         return p;
