@@ -1,0 +1,8 @@
+# 白名单式：pattern 相对仓库根（context 根），与本文件所在目录无关
+*
+!mise.toml
+!backend
+backend/target
+# 本地外置配置含凭据，绝不进构建上下文
+backend/config
+**/.git
