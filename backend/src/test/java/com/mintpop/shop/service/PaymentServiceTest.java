@@ -207,6 +207,23 @@ class PaymentServiceTest {
     }
 
     @Test
+    @DisplayName("支付失败的订单可续付：FAILED 状态放行并复用交易号")
+    void failedOrderIsPayable() {
+        ShopOrder order = pendingOrder();
+        order.setStatus(OrderStatusEnum.FAILED);
+        order.setPaymentProvider("stripe");
+        order.setPaymentTradeNo("pi_old");
+        when(shopOrderMapper.selectOne(any())).thenReturn(order);
+        when(productMapper.selectById(1L)).thenReturn(product());
+        when(stripeGateway.retrievePaymentIntent("pi_old"))
+                .thenReturn(intent("pi_old", "requires_payment_method", "pi_old_secret"));
+
+        PaymentIntentResponse resp = paymentService.getOrCreateIntent(42L, "MP20260714120000123456");
+
+        assertThat(resp.getClientSecret()).isEqualTo("pi_old_secret");
+    }
+
+    @Test
     @DisplayName("已支付订单不可再发起支付：410002")
     void paidOrderNotPayable() {
         ShopOrder order = pendingOrder();
