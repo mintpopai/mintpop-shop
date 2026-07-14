@@ -1,0 +1,20 @@
+name: CI Backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "mise.toml"
+      - ".github/workflows/ci-backend.yml"
+      - ".github/workflows/quality-backend.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - "mise.toml"
+      - ".github/workflows/ci-backend.yml"
+      - ".github/workflows/quality-backend.yml"
+
+jobs:
+  quality:
+    uses: ./.github/workflows/quality-backend.yml
