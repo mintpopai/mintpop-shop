@@ -81,7 +81,7 @@ class OrderServiceTest {
         o.setProductId(productId);
         o.setQuantity(quantity);
         o.setAmountCents(amountCents);
-        o.setStatus(OrderStatusEnum.PENDING_PAYMENT);
+        o.setStatus(OrderStatusEnum.PENDING);
         o.setUserId(42L);
         o.setCreatedAt(LocalDateTime.of(2026, 7, 13, 12, 0));
         return o;
@@ -99,7 +99,7 @@ class OrderServiceTest {
 
         ArgumentCaptor<ShopOrder> captor = ArgumentCaptor.forClass(ShopOrder.class);
         verify(shopOrderMapper).insert(captor.capture());
-        assertThat(captor.getValue().getStatus()).isEqualTo(OrderStatusEnum.PENDING_PAYMENT);
+        assertThat(captor.getValue().getStatus()).isEqualTo(OrderStatusEnum.PENDING);
         assertThat(captor.getValue().getQuantity()).isEqualTo(2);
         assertThat(captor.getValue().getUserId()).isEqualTo(42L);
     }
@@ -147,7 +147,7 @@ class OrderServiceTest {
 
         assertThat(result).hasSize(2);
         assertThat(result.get(0).getProductName()).isEqualTo("薄荷精灵盲盒");
-        assertThat(result.get(0).getStatus()).isEqualTo("PENDING_PAYMENT");
+        assertThat(result.get(0).getStatus()).isEqualTo("PENDING");
         assertThat(result.get(0).getStatusLabel()).isEqualTo("待支付");
         assertThat(result.get(1).getProductName()).isEqualTo("（商品已删除）");
     }

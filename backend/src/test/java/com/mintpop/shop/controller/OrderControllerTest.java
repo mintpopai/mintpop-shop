@@ -115,7 +115,7 @@ class OrderControllerTest {
     void listMyOrdersReturnsOwnOrders() throws Exception {
         when(orderService.listMyOrders(42L)).thenReturn(List.of(new OrderItemResponse(
                 "MP20260713120000123456", "薄荷精灵盲盒", 2, 11800L,
-                "PENDING_PAYMENT", "待支付", LocalDateTime.of(2026, 7, 13, 12, 0))));
+                "PENDING", "待支付", LocalDateTime.of(2026, 7, 13, 12, 0))));
 
         mockMvc.perform(get("/api/orders"))
                 .andExpect(status().isOk())
