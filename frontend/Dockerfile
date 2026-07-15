@@ -7,8 +7,9 @@ ENV MISE_DATA_DIR=/mise MISE_CONFIG_DIR=/mise MISE_CACHE_DIR=/mise/cache \
     MISE_INSTALL_PATH=/usr/local/bin/mise PATH=/mise/shims:$PATH
 # 关掉 mise run 跑 task 前的「自动装全部 [tools]」：本镜像只显式装 node/pnpm
 ENV MISE_TASK_RUN_AUTO_INSTALL=false
+# libatomic1：mise 装的 pnpm 二进制依赖 libatomic.so.1，debian slim 底座不自带
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl git ca-certificates \
+    && apt-get install -y --no-install-recommends curl git ca-certificates libatomic1 \
     && rm -rf /var/lib/apt/lists/* \
     && curl https://mise.run | sh
 
