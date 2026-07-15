@@ -69,7 +69,7 @@ class PaymentControllerTest {
     @DisplayName("发起支付意图带上当前用户与路径单号")
     void createIntent() throws Exception {
         when(paymentService.getOrCreateIntent(42L, "MP1"))
-                .thenReturn(new PaymentIntentResponse("MP1", "pi_secret", 11800L, "CNY",
+                .thenReturn(new PaymentIntentResponse("MP1", "pi_secret", 11800L, "USD",
                         "薄荷精灵盲盒", 2));
 
         mockMvc.perform(post("/api/payment/orders/MP1/intent"))

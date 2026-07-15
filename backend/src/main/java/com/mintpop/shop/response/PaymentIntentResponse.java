@@ -14,9 +14,9 @@ public class PaymentIntentResponse {
     private String orderNo;
     /** Stripe client_secret */
     private String clientSecret;
-    /** 应付金额（最小货币单位，CNY 即分） */
+    /** 应付金额（最小货币单位，USD 即美分） */
     private Long amountCents;
-    /** 币种（3 位 ISO，如 CNY） */
+    /** 币种（3 位 ISO，如 USD） */
     private String currency;
     /** 商品名（按请求语言） */
     private String productName;

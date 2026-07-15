@@ -36,7 +36,7 @@ public class StripeGateway {
 
     /**
      * 创建 PaymentIntent（品牌硬约定：幂等键 pi-<单号>、Metadata.orderId、微信必带 client=web）。
-     * 金额直接取订单 amount_cents——数据库存的就是最小货币单位（CNY 分），不做 *100 之类换算。
+     * 金额直接取订单 amount_cents——数据库存的就是最小货币单位（USD 美分），不做 *100 之类换算。
      */
     public PaymentIntent createPaymentIntent(String orderNo, long amountMinorUnit,
                                              String subject, List<String> paymentMethodTypes) {

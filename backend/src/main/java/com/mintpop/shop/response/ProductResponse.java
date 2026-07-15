@@ -18,7 +18,7 @@ public class ProductResponse {
     private String name;
     /** 商品描述 */
     private String description;
-    /** 价格，单位分 */
+    /** 价格，单位美分 */
     private Long priceCents;
     /** 商品图URL，可空 */
     private String imageUrl;

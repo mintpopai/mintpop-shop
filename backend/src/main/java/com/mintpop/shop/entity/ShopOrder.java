@@ -24,7 +24,7 @@ public class ShopOrder {
     private Long productId;
     /** 购买数量 */
     private Integer quantity;
-    /** 订单金额，单位分 */
+    /** 订单金额，单位美分 */
     private Long amountCents;
     /** 订单状态 */
     private OrderStatusEnum status;

@@ -17,7 +17,7 @@ public class PaymentProperties {
     /** Stripe publishable key（前端初始化 Stripe.js 用，非敏感） */
     private String publishableKey;
     /** 结算币种（3 位 ISO） */
-    private String currency = "CNY";
+    private String currency = "USD";
     /** 启用的支付子方式，逗号分隔（我方命名：card/alipay/wxpay） */
     private String supportedTypes = "card,alipay,wxpay";
 

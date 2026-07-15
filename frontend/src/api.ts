@@ -154,7 +154,7 @@ export function cancelOrder(orderNo: string): Promise<null> {
   return request<null>(`/api/payment/orders/${orderNo}/cancel`, { method: 'POST' })
 }
 
-/** 分转元展示 */
+/** 美分转美元展示 */
 export function formatPrice(cents: number): string {
-  return `¥${(cents / 100).toFixed(2)}`
+  return `$${(cents / 100).toFixed(2)}`
 }

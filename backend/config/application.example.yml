@@ -39,5 +39,5 @@ payment:
     webhook-secret: 填Stripe webhook签名密钥（whsec_ 开头）
     publishable-key: 填Stripe publishable key（pk_ 开头）
     # 以下为可选项及默认值，不改可不写：
-    # currency: CNY                        # 结算币种（3 位 ISO）
+    # currency: USD                        # 结算币种（3 位 ISO）
     # supported-types: card,alipay,wxpay   # 启用的支付子方式

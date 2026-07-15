@@ -136,7 +136,7 @@ class PaymentServiceTest {
 
         assertThat(resp.getClientSecret()).isEqualTo("pi_123_secret");
         assertThat(resp.getAmountCents()).isEqualTo(11800L);
-        assertThat(resp.getCurrency()).isEqualTo("CNY");
+        assertThat(resp.getCurrency()).isEqualTo("USD");
         assertThat(resp.getProductName()).isEqualTo("薄荷精灵盲盒");
 
         // 映射表逐字：card,alipay,wxpay → card,alipay,wechat_pay
@@ -238,7 +238,7 @@ class PaymentServiceTest {
 
     private StripeWebhookEvent succeededEvent(long amount) {
         return new StripeWebhookEvent("payment_intent.succeeded",
-                "pi_123", "MP20260714120000123456", amount, "cny");
+                "pi_123", "MP20260714120000123456", amount, "usd");
     }
 
     @Test
@@ -302,7 +302,7 @@ class PaymentServiceTest {
     void webhookFailedMarksFailed() {
         paymentService.handleWebhook(new StripeWebhookEvent(
                 "payment_intent.payment_failed", "pi_123",
-                "MP20260714120000123456", 11800L, "cny"));
+                "MP20260714120000123456", 11800L, "usd"));
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<LambdaUpdateWrapper<ShopOrder>> captor =
@@ -315,7 +315,7 @@ class PaymentServiceTest {
     @DisplayName("webhook 无关事件类型：忽略")
     void webhookIrrelevantTypeIgnored() {
         paymentService.handleWebhook(new StripeWebhookEvent(
-                "charge.refunded", "pi_123", "MP20260714120000123456", 11800L, "cny"));
+                "charge.refunded", "pi_123", "MP20260714120000123456", 11800L, "usd"));
         verify(shopOrderMapper, never()).update(isNull(), any());
     }
 
@@ -331,7 +331,7 @@ class PaymentServiceTest {
         when(shopOrderMapper.selectOne(any())).thenReturn(order, paid);
         PaymentIntent pi = intent("pi_123", "succeeded", "pi_123_secret");
         pi.setAmount(11800L);
-        pi.setCurrency("cny");
+        pi.setCurrency("usd");
         when(stripeGateway.retrievePaymentIntent("pi_123")).thenReturn(pi);
         when(shopOrderMapper.update(isNull(), any())).thenReturn(1);
 

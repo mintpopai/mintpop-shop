@@ -18,7 +18,7 @@ public class OrderItemResponse {
     private String productName;
     /** 购买数量 */
     private Integer quantity;
-    /** 订单金额，单位分 */
+    /** 订单金额，单位美分 */
     private Long amountCents;
     /** 订单状态（SCREAMING_SNAKE_CASE） */
     private String status;

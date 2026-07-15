@@ -27,7 +27,7 @@ public class Product {
     private String descriptionZh;
     /** 商品描述（英文），空回退中文 */
     private String descriptionEn;
-    /** 价格，单位分 */
+    /** 价格，单位美分 */
     private Long priceCents;
     /** 商品图URL，可空 */
     private String imageUrl;

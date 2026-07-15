@@ -12,6 +12,6 @@ public class CreateOrderResponse {
 
     /** 对外订单号 */
     private String orderNo;
-    /** 订单金额，单位分 */
+    /** 订单金额，单位美分 */
     private Long amountCents;
 }
