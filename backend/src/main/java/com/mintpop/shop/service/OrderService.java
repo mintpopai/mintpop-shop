@@ -90,9 +90,10 @@ public class OrderService {
                 .toList();
     }
 
-    /** 订单号：MP + 时间戳 + 6 位随机数（骨架阶段单机够用） */
+    /** 订单号：mintpopshop_ + 时间戳 + 6 位随机数（骨架阶段单机够用）；
+     * 前缀带业务线全名，多业务共用 Stripe 账户时人眼可辨来源 */
     private String generateOrderNo() {
-        return "MP" + ORDER_NO_TS.format(LocalDateTime.now())
+        return "mintpopshop_" + ORDER_NO_TS.format(LocalDateTime.now())
                 + ThreadLocalRandom.current().nextInt(100000, 1000000);
     }
 }

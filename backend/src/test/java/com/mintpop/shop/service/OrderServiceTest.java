@@ -95,7 +95,7 @@ class OrderServiceTest {
         CreateOrderResponse resp = orderService.createOrder(42L, new CreateOrderRequest(1L, 2));
 
         assertThat(resp.getAmountCents()).isEqualTo(11800L);
-        assertThat(resp.getOrderNo()).startsWith("MP");
+        assertThat(resp.getOrderNo()).startsWith("mintpopshop_");
 
         ArgumentCaptor<ShopOrder> captor = ArgumentCaptor.forClass(ShopOrder.class);
         verify(shopOrderMapper).insert(captor.capture());
