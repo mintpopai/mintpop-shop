@@ -96,6 +96,11 @@ const accent = computed(() => ACCENTS[props.product.accent] ?? ACCENTS.MINT)
   pointer-events: none;
 }
 
+/* 有真实商品图时不叠点阵纹理 */
+.thumb:has(.photo)::after {
+  content: none;
+}
+
 .badge {
   position: absolute;
   top: 16px;

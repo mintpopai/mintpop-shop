@@ -119,7 +119,7 @@ onMounted(() => {
   background: var(--color-bg-page);
 }
 
-/* 当前路由高亮为浅灰胶囊（/ 用精确匹配，/orders 前缀匹配即可） */
+/* 当前路由高亮为浅灰胶囊：两项均精确匹配；日后若加 /orders 子路由，需改用 router-link-active 并对 / 单独处理 */
 .nav-item.router-link-exact-active {
   background: var(--color-bg-page);
   font-weight: 600;
@@ -216,7 +216,7 @@ onMounted(() => {
 }
 
 .user-trigger:hover {
-  background: var(--color-bg);
+  background: var(--color-bg-page);
 }
 
 .avatar {
