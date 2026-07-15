@@ -1,15 +1,33 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { formatPrice, type Product } from '../api'
 
-defineProps<{ product: Product; buying: boolean }>()
+const props = defineProps<{ product: Product; buying: boolean }>()
 const emit = defineEmits<{ buy: [product: Product] }>()
+
+/** accent 枚举 → 渐变色对与点缀色，未知值回退 MINT（与后端约定一致） */
+const ACCENTS: Record<string, { from: string; to: string; ink: string }> = {
+  MINT: { from: '#d9f7ec', to: '#b7f0dd', ink: '#0fb389' },
+  VIOLET: { from: '#e6e1fb', to: '#d3ccf7', ink: '#6d5bd0' },
+  SKY: { from: '#ddebfa', to: '#c5ddf6', ink: '#2f7fd1' },
+  AMBER: { from: '#faeeda', to: '#f6e2c0', ink: '#c07f1f' },
+  ROSE: { from: '#fae3e7', to: '#f6ccd4', ink: '#d04a68' },
+}
+
+const accent = computed(() => ACCENTS[props.product.accent] ?? ACCENTS.MINT)
 </script>
 
 <template>
   <article class="card">
-    <div class="thumb">
-      <img v-if="product.imageUrl" :src="product.imageUrl" :alt="product.name" />
-      <span v-else class="placeholder" aria-hidden="true">{{ product.name.charAt(0) }}</span>
+    <div
+      class="thumb"
+      :style="{ background: `linear-gradient(135deg, ${accent.from}, ${accent.to})` }"
+    >
+      <span v-if="product.badge" class="badge">{{ product.badge }}</span>
+      <img v-if="product.imageUrl" class="photo" :src="product.imageUrl" :alt="product.name" />
+      <span v-else class="placeholder" :style="{ color: accent.ink }" aria-hidden="true">
+        {{ product.name.charAt(0) }}
+      </span>
     </div>
     <div class="body">
       <h3 class="name">{{ product.name }}</h3>
@@ -22,6 +40,20 @@ const emit = defineEmits<{ buy: [product: Product] }>()
           :disabled="buying"
           @click="emit('buy', product)"
         >
+          <svg
+            class="buy-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="9" cy="21" r="1" />
+            <circle cx="20" cy="21" r="1" />
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+          </svg>
           {{ buying ? $t('product.buying') : $t('product.buy') }}
         </button>
       </div>
@@ -34,56 +66,81 @@ const emit = defineEmits<{ buy: [product: Product] }>()
   display: flex;
   flex-direction: column;
   background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-card);
+  border-radius: 20px;
   overflow: hidden;
-  transition: box-shadow 0.15s ease;
+  box-shadow: 0 2px 10px rgba(11, 11, 12, 0.05);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
 }
 
 .card:hover {
-  box-shadow: 0 4px 16px rgba(11, 11, 12, 0.08);
+  box-shadow: 0 10px 28px rgba(11, 11, 12, 0.1);
+  transform: translateY(-2px);
 }
 
+/* 图形区：accent 渐变（内联 style）+ 点阵纹理 + 角标 */
 .thumb {
-  aspect-ratio: 4 / 3;
-  background: var(--color-bg-cloud);
+  position: relative;
+  aspect-ratio: 16 / 10;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.thumb img {
+.thumb::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 0 55%;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.5) 1.5px, transparent 1.5px);
+  background-size: 14px 14px;
+  mask-image: linear-gradient(to right, transparent, #000 60%);
+  pointer-events: none;
+}
+
+.badge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(11, 11, 12, 0.08);
+}
+
+.photo {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  max-width: 100%;
 }
 
-/* 无图占位：薄荷色圆底 + 商品首字 */
+/* 无图占位：白色大圆 + accent 色商品首字 */
 .placeholder {
-  width: 72px;
-  height: 72px;
+  width: 108px;
+  height: 108px;
   border-radius: var(--radius-pill);
-  background: var(--color-brand);
-  color: #ffffff;
-  font-size: 32px;
+  background: var(--color-bg);
+  font-family: 'Fredoka', 'Inter', sans-serif;
+  font-size: 40px;
   font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 8px 20px rgba(11, 11, 12, 0.08);
 }
 
 .body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 16px;
+  padding: 20px;
   flex: 1;
 }
 
 .name {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 17px;
+  font-weight: 700;
 }
 
 .desc {
@@ -100,14 +157,17 @@ const emit = defineEmits<{ buy: [product: Product] }>()
 }
 
 .price {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 700;
 }
 
 .buy-btn {
-  padding: 8px 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
   border: none;
-  border-radius: var(--radius-button);
+  border-radius: 12px;
   background: var(--color-brand);
   color: #ffffff;
   font-size: 14px;
@@ -115,6 +175,12 @@ const emit = defineEmits<{ buy: [product: Product] }>()
   font-family: inherit;
   cursor: pointer;
   transition: background 0.15s ease;
+  box-shadow: 0 6px 16px rgba(23, 209, 167, 0.35);
+}
+
+.buy-icon {
+  width: 15px;
+  height: 15px;
 }
 
 .buy-btn:hover:not(:disabled) {
