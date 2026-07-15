@@ -42,7 +42,7 @@ class PaymentWebhookControllerTest {
     @DisplayName("验签通过：处理事件并回 200")
     void validEventReturns200() throws Exception {
         StripeWebhookEvent event = new StripeWebhookEvent(
-                "payment_intent.succeeded", "pi_1", "MP1", 11800L, "usd");
+                "payment_intent.succeeded", "pi_1", "MP1", "shop", 11800L, "usd");
         when(stripeGateway.parseWebhookEvent(anyString(), eq("sig-header"))).thenReturn(event);
 
         mockMvc.perform(post(PATH)
@@ -86,7 +86,7 @@ class PaymentWebhookControllerTest {
     @DisplayName("业务处理抛异常回 500（让 Stripe 重试，绝不能被包装成 200）")
     void handlerFailureReturns500() throws Exception {
         StripeWebhookEvent event = new StripeWebhookEvent(
-                "payment_intent.succeeded", "pi_1", "MP1", 11800L, "usd");
+                "payment_intent.succeeded", "pi_1", "MP1", "shop", 11800L, "usd");
         when(stripeGateway.parseWebhookEvent(anyString(), anyString())).thenReturn(event);
         doThrow(new RuntimeException("db down"))
                 .when(paymentService).handleWebhook(any());

@@ -20,6 +20,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * Stripe SDK 唯一封装点：创建/检索 PaymentIntent、webhook 验签。
@@ -44,7 +45,12 @@ public class StripeGateway {
                 .setAmount(amountMinorUnit)
                 .setCurrency(properties.getCurrency().toLowerCase(Locale.ROOT))
                 .setDescription(subject)
-                .putMetadata("orderId", orderNo);
+                .putMetadata("orderId", orderNo)
+                .putMetadata("product", properties.getProductCode());
+        String suffix = properties.getStatementDescriptorSuffix();
+        if (paymentMethodTypes.contains("card") && suffix != null && !suffix.isBlank()) {
+            builder.setStatementDescriptorSuffix(suffix);
+        }
         paymentMethodTypes.forEach(builder::addPaymentMethodType);
         if (paymentMethodTypes.contains("wechat_pay")) {
             builder.setPaymentMethodOptions(
@@ -97,10 +103,12 @@ public class StripeGateway {
             log.warn("webhook 事件对象反序列化失败 eventType={}", event.getType(), e);
         }
         if (intent == null) {
-            return new StripeWebhookEvent(event.getType(), null, null, null, null);
+            return new StripeWebhookEvent(event.getType(), null, null, null, null, null);
         }
+        Map<String, String> metadata = intent.getMetadata();
         return new StripeWebhookEvent(event.getType(), intent.getId(),
-                intent.getMetadata() == null ? null : intent.getMetadata().get("orderId"),
+                metadata == null ? null : metadata.get("orderId"),
+                metadata == null ? null : metadata.get("product"),
                 intent.getAmount(), intent.getCurrency());
     }
 

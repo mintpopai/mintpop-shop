@@ -238,7 +238,7 @@ class PaymentServiceTest {
 
     private StripeWebhookEvent succeededEvent(long amount) {
         return new StripeWebhookEvent("payment_intent.succeeded",
-                "pi_123", "MP20260714120000123456", amount, "usd");
+                "pi_123", "MP20260714120000123456", "shop", amount, "usd");
     }
 
     @Test
@@ -302,7 +302,7 @@ class PaymentServiceTest {
     void webhookFailedMarksFailed() {
         paymentService.handleWebhook(new StripeWebhookEvent(
                 "payment_intent.payment_failed", "pi_123",
-                "MP20260714120000123456", 11800L, "usd"));
+                "MP20260714120000123456", "shop", 11800L, "usd"));
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<LambdaUpdateWrapper<ShopOrder>> captor =
@@ -315,8 +315,27 @@ class PaymentServiceTest {
     @DisplayName("webhook 无关事件类型：忽略")
     void webhookIrrelevantTypeIgnored() {
         paymentService.handleWebhook(new StripeWebhookEvent(
-                "charge.refunded", "pi_123", "MP20260714120000123456", 11800L, "usd"));
+                "charge.refunded", "pi_123", "MP20260714120000123456", "shop", 11800L, "usd"));
         verify(shopOrderMapper, never()).update(isNull(), any());
+    }
+
+    @Test
+    @DisplayName("webhook 别的业务线事件（账户级广播）：静默跳过，不查单不入账")
+    void webhookForeignProductSkipped() {
+        paymentService.handleWebhook(new StripeWebhookEvent(
+                "payment_intent.succeeded", "pi_x", "OTHER-001", "blog", 11800L, "usd"));
+        verify(shopOrderMapper, never()).selectOne(any());
+        verify(shopOrderMapper, never()).update(isNull(), any());
+    }
+
+    @Test
+    @DisplayName("webhook 无 product 标记（打标前的旧事件）：放行，走查单兜底")
+    void webhookLegacyEventWithoutProductClaimed() {
+        when(shopOrderMapper.selectOne(any())).thenReturn(null);
+        paymentService.handleWebhook(new StripeWebhookEvent(
+                "payment_intent.succeeded", "pi_123", "MP20260714120000123456",
+                null, 11800L, "usd"));
+        verify(shopOrderMapper).selectOne(any());
     }
 
     @Test

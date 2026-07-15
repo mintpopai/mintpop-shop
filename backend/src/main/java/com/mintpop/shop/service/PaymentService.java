@@ -127,6 +127,13 @@ public class PaymentService {
         if (event.orderNo() == null) {
             return;
         }
+        // 业务线认领：Stripe 事件是账户级广播，别的业务的事件静默跳过；
+        // 无 product 标记的事件（打标前创建的旧 intent）放行，交给后续查单兜底
+        if (event.product() != null
+                && !paymentProperties.getProductCode().equals(event.product())) {
+            log.debug("非本业务线事件，跳过 product={} orderNo={}", event.product(), event.orderNo());
+            return;
+        }
         switch (event.type()) {
             case EVENT_SUCCEEDED -> settlePaid(event.orderNo(), event.intentId(),
                     event.amountMinorUnit(), event.currency());
