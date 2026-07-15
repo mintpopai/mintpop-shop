@@ -4,7 +4,8 @@
     "contact": "联系方式",
     "myOrders": "我的订单",
     "logout": "退出登录",
-    "loginFailed": "登录未完成，请重试"
+    "loginFailed": "登录未完成，请重试",
+    "shop": "商店"
   },
   "common": {
     "loading": "加载中……",
@@ -16,7 +17,12 @@
     "loginRequired": "请先登录后再购买",
     "orderSuccess": "下单成功，订单号 {orderNo}",
     "sessionExpired": "会话已过期，请重新登录",
-    "orderFailed": "下单失败，请稍后重试"
+    "orderFailed": "下单失败，请稍后重试",
+    "heroBadge": "正规货源 · 即时发货 · 售后无忧",
+    "heroTitle1": "你想要的数字好物，",
+    "heroTitle2": "mintpop 一站配齐",
+    "heroDesc": "AI 工具、会员账号、软件订阅与各类数字商品，正规货源，稳定可靠，全天候客服。",
+    "productCount": "共 {n} 款商品"
   },
   "orders": {
     "title": "我的订单",

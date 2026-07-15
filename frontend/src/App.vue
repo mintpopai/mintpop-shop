@@ -28,16 +28,22 @@ onMounted(() => {
 
 <template>
   <header class="header">
-    <RouterLink to="/" class="wordmark-link">
-      <h1 class="wordmark">
-        <img
-          class="wordmark-img"
-          src="https://standards.mintpop.ai/assets/brand/wordmark/mintpop-wordmark-dark.png"
-          alt="MintPop"
-        />
-        <span class="wordmark-sub">Shop</span>
-      </h1>
-    </RouterLink>
+    <div class="header-left">
+      <RouterLink to="/" class="wordmark-link">
+        <h1 class="wordmark">
+          <img
+            class="wordmark-img"
+            src="https://standards.mintpop.ai/assets/brand/wordmark/mintpop-wordmark-dark.png"
+            alt="MintPop"
+          />
+          <span class="wordmark-sub">Shop</span>
+        </h1>
+      </RouterLink>
+      <nav class="main-nav">
+        <RouterLink to="/" class="nav-item">{{ $t('app.shop') }}</RouterLink>
+        <RouterLink to="/orders" class="nav-item">{{ $t('app.myOrders') }}</RouterLink>
+      </nav>
+    </div>
 
     <nav class="auth-area">
       <a class="contact-link" :href="contactUrl" target="_blank" rel="noopener">
@@ -63,7 +69,6 @@ onMounted(() => {
           <span class="nickname">{{ currentUser.nickname ?? currentUser.email }}</span>
         </button>
         <div v-if="menuOpen" class="menu" @click="menuOpen = false">
-          <RouterLink to="/orders" class="menu-item">{{ $t('app.myOrders') }}</RouterLink>
           <button type="button" class="menu-item" @click="gotoLogout">{{ $t('app.logout') }}</button>
         </div>
       </div>
@@ -85,7 +90,39 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 16px 32px;
+  background: var(--color-bg);
   border-bottom: 1px solid var(--color-border);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.main-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nav-item {
+  padding: 8px 18px;
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  color: var(--color-ink);
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.nav-item:hover {
+  background: var(--color-bg-page);
+}
+
+/* 当前路由高亮为浅灰胶囊：两项均精确匹配；日后若加 /orders 子路由，需改用 router-link-active 并对 / 单独处理 */
+.nav-item.router-link-exact-active {
+  background: var(--color-bg-page);
+  font-weight: 600;
 }
 
 .wordmark-link {
@@ -168,10 +205,10 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 8px;
-  border: none;
+  padding: 4px 12px 4px 4px;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
-  background: transparent;
+  background: var(--color-bg);
   font-family: inherit;
   font-size: 14px;
   color: var(--color-ink);
@@ -179,7 +216,7 @@ onMounted(() => {
 }
 
 .user-trigger:hover {
-  background: var(--color-bg);
+  background: var(--color-bg-page);
 }
 
 .avatar {

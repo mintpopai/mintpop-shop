@@ -65,18 +65,31 @@ async function buy(product: Product) {
     <p v-else-if="loadError" class="hint error">{{ loadError }}</p>
 
     <template v-else>
-      <nav class="group-nav" :aria-label="$t('shop.groupNav')">
-        <button
-          v-for="group in groups"
-          :key="group.id"
-          type="button"
-          class="pill"
-          :class="{ active: group.id === activeGroupId }"
-          @click="activeGroupId = group.id"
-        >
-          {{ group.name }}
-        </button>
-      </nav>
+      <section class="hero">
+        <span class="hero-badge">✦ {{ $t('shop.heroBadge') }}</span>
+        <h2 class="hero-title">
+          {{ $t('shop.heroTitle1') }}<br />{{ $t('shop.heroTitle2') }}
+        </h2>
+        <p class="hero-desc">{{ $t('shop.heroDesc') }}</p>
+      </section>
+
+      <div class="group-row">
+        <nav class="group-nav" :aria-label="$t('shop.groupNav')">
+          <button
+            v-for="group in groups"
+            :key="group.id"
+            type="button"
+            class="pill"
+            :class="{ active: group.id === activeGroupId }"
+            @click="activeGroupId = group.id"
+          >
+            {{ group.name }}
+          </button>
+        </nav>
+        <span v-if="activeGroup" class="group-count">
+          {{ $t('shop.productCount', { n: activeGroup.products.length }) }}
+        </span>
+      </div>
 
       <section v-if="activeGroup" class="grid" aria-live="polite">
         <ProductCard
@@ -96,9 +109,9 @@ async function buy(product: Product) {
 
 <style scoped>
 .page {
-  max-width: 1080px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 24px 32px 48px;
+  padding: 24px 32px 64px;
 }
 
 .hint {
@@ -110,16 +123,70 @@ async function buy(product: Product) {
   color: #b91c1c;
 }
 
-.group-nav {
+/* Hero：品牌绿渐变 + 右侧点阵纹理（纯 CSS，不引外部资源） */
+.hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  padding: 56px 56px 64px;
+  margin-bottom: 32px;
+  background: linear-gradient(120deg, #1fd8a4 0%, #0ec98f 55%, #0abf85 100%);
+  color: #ffffff;
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 0 55%;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.28) 1.5px, transparent 1.5px);
+  background-size: 16px 16px;
+  mask-image: linear-gradient(to right, transparent, #000 60%);
+  pointer-events: none;
+}
+
+.hero-badge {
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 20px;
+}
+
+.hero-title {
+  font-family: 'Fredoka', 'Inter', sans-serif;
+  font-size: 44px;
+  line-height: 1.25;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.hero-desc {
+  max-width: 560px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+/* 分组行：左 pill 导航，右商品计数 */
+.group-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   margin-bottom: 24px;
 }
 
+.group-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .pill {
-  padding: 8px 16px;
-  border: 1px solid var(--color-border);
+  padding: 12px 22px;
+  border: 1px solid transparent;
   border-radius: var(--radius-pill);
   background: var(--color-bg);
   color: var(--color-ink);
@@ -130,7 +197,6 @@ async function buy(product: Product) {
 }
 
 .pill:hover {
-  border-color: var(--color-brand);
   color: var(--color-brand-deep);
 }
 
@@ -140,15 +206,31 @@ async function buy(product: Product) {
 }
 
 .pill.active {
-  background: var(--color-brand);
-  border-color: var(--color-brand);
+  background: linear-gradient(120deg, #1fd8a4, #0abf85);
   color: #ffffff;
   font-weight: 500;
+  box-shadow: 0 6px 16px rgba(15, 179, 137, 0.35);
+}
+
+.group-count {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--color-ink-secondary);
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+@media (max-width: 720px) {
+  .hero {
+    padding: 36px 28px 44px;
+  }
+
+  .hero-title {
+    font-size: 30px;
+  }
 }
 </style>

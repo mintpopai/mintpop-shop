@@ -14,6 +14,10 @@ export interface Product {
   description: string | null
   priceCents: number
   imageUrl: string | null
+  /** 角标文案，空=不显示 */
+  badge: string | null
+  /** 卡片主题色（MINT/VIOLET/SKY/AMBER/ROSE），未知值前端回退 MINT */
+  accent: string
 }
 
 /** 分组含商品（镜像后端 GroupWithProductsResponse） */
