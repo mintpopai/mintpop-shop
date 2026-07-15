@@ -27,6 +27,12 @@ public class Product {
     private String descriptionZh;
     /** 商品描述（英文），空回退中文 */
     private String descriptionEn;
+    /** 角标（中文），空=不显示 */
+    private String badgeZh;
+    /** 角标（英文），空串回退中文 */
+    private String badgeEn;
+    /** 卡片主题色枚举：MINT/VIOLET/SKY/AMBER/ROSE */
+    private String accent;
     /** 价格，单位美分 */
     private Long priceCents;
     /** 商品图URL，可空 */

@@ -37,13 +37,15 @@ class GroupControllerTest {
     void listGroupsReturnsData() throws Exception {
         when(groupService.listGroupsWithProducts()).thenReturn(List.of(
                 new GroupWithProductsResponse(1L, "盲盒系列", List.of(
-                        new ProductResponse(11L, "薄荷精灵盲盒", "经典款", 5900L, null)))));
+                        new ProductResponse(11L, "薄荷精灵盲盒", "经典款", 5900L, null, "经典款", "MINT")))));
 
         mockMvc.perform(get("/api/groups"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data[0].name").value("盲盒系列"))
                 .andExpect(jsonPath("$.data[0].products[0].priceCents").value(5900))
+                .andExpect(jsonPath("$.data[0].products[0].badge").value("经典款"))
+                .andExpect(jsonPath("$.data[0].products[0].accent").value("MINT"))
                 .andExpect(jsonPath("$.success").doesNotExist());
     }
 }
