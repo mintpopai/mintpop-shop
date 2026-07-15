@@ -4,7 +4,8 @@
     "contact": "Contact",
     "myOrders": "My Orders",
     "logout": "Sign out",
-    "loginFailed": "Sign-in was not completed, please try again"
+    "loginFailed": "Sign-in was not completed, please try again",
+    "shop": "Shop"
   },
   "common": {
     "loading": "Loading…",
@@ -16,7 +17,12 @@
     "loginRequired": "Please sign in before purchasing",
     "orderSuccess": "Order placed, order No. {orderNo}",
     "sessionExpired": "Session expired, please sign in again",
-    "orderFailed": "Failed to place order, please try again later"
+    "orderFailed": "Failed to place order, please try again later",
+    "heroBadge": "Authentic sources · Instant delivery · Worry-free support",
+    "heroTitle1": "Everything digital you want,",
+    "heroTitle2": "all in one place at mintpop",
+    "heroDesc": "AI tools, membership accounts, software subscriptions and all kinds of digital goods — authentic sources, reliable and stable, with support around the clock.",
+    "productCount": "{n} products"
   },
   "orders": {
     "title": "My Orders",
