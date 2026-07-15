@@ -3,6 +3,8 @@ java = "temurin-21.0.11+10.0.LTS"
 maven = "3.9.16"
 node = "24.18.0"
 pnpm = "11.12.0"
+# Stripe CLI：本地联调 webhook 用（stripe listen 转发回调到本地，无需公网 IP）
+stripe = "1.43.8"
 
 # —— 安装 ——
 [tasks.install]
@@ -32,6 +34,10 @@ run = "mvn spring-boot:run"
 description = "启动 前端开发服务器（Vite，/api 代理到 8080）"
 dir = "frontend"
 run = "pnpm vite"
+
+[tasks.webhook-listen]
+description = "本地联调：把 Stripe 沙盒 webhook 事件转发到本地后端（首次先 stripe login；启动时打印的 whsec_ 填本地配置）"
+run = "stripe listen --forward-to localhost:8080/api/v1/payment/webhook/stripe --events payment_intent.succeeded,payment_intent.payment_failed"
 
 [tasks.up]
 description = "启动 compose 部署（拉取已发布镜像运行）"
