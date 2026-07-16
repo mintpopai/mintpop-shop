@@ -44,3 +44,10 @@ payment:
     # 以下为可选项及默认值，不改可不写：
     # currency: USD                        # 结算币种（3 位 ISO）
     # supported-types: card,alipay,wxpay   # 启用的支付子方式
+
+# —— 通知（飞书群自定义机器人）——整段可选：不配则不推送 ——
+# 获取方式：飞书群设置 → 群机器人 → 添加「自定义机器人」，安全设置勾选「签名校验」
+notify:
+  feishu:
+    webhook-url: 填机器人webhook地址（https://open.feishu.cn/open-apis/bot/v2/hook/ 开头）
+    secret: 填签名校验密钥
