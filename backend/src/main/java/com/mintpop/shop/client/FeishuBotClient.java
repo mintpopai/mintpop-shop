@@ -44,7 +44,7 @@ public class FeishuBotClient {
                 "elements", List.of(Map.of(
                         "tag", "div",
                         "text", Map.of("tag", "lark_md", "content", content))));
-        // 顺序敏感：飞书要求 timestamp/sign 与消息体同级
+        // 飞书要求 timestamp/sign 与 msg_type 同级（JSON 键序无语义，LinkedHashMap 仅为可读性）
         Map<String, Object> body = new LinkedHashMap<>();
         if (properties.getSecret() != null && !properties.getSecret().isBlank()) {
             long timestamp = Instant.now().getEpochSecond();

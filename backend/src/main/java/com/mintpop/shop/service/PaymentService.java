@@ -219,8 +219,16 @@ public class PaymentService {
             log.info("入账重放（已处理过），忽略 orderNo={}", orderNo);
             return;
         }
-        // 首次入账成功：异步推送飞书新订单提醒（尽力而为，通知失败不影响入账）
-        orderNotifyService.notifyOrderPaid(orderNo);
+        // 首次入账成功：异步推送飞书新订单提醒（尽力而为，通知失败不影响入账）。
+        // 前提：本方法无事务，上面的条件 UPDATE 已自动提交，异步线程重查必见 PAID 行——
+        // 若未来给本方法/handleWebhook 加 @Transactional，须改为提交后再触发，否则可能读到旧状态。
+        // try-catch 兜底任务「提交」阶段的异常（如停机中执行器已关闭抛 TaskRejectedException）：
+        // @Async 只消化任务执行中的异常，提交失败会同步冒回本线程，不能让它把 webhook 变 500。
+        try {
+            orderNotifyService.notifyOrderPaid(orderNo);
+        } catch (Exception e) {
+            log.warn("支付成功通知任务提交失败（不影响入账）orderNo={}", orderNo, e);
+        }
     }
 
     /** 支付尝试失败：仅 PENDING → FAILED（FAILED 仍可续付，不影响重试成功后入账） */
