@@ -22,6 +22,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -34,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -52,11 +54,14 @@ class OrderServiceTest {
     private ProductMapper productMapper;
     @Mock
     private ShopOrderMapper shopOrderMapper;
+    @Mock
+    private OrderExpiryService orderExpiryService;
     private OrderService orderService;
 
     @BeforeEach
     void setUp() {
-        orderService = new OrderService(productMapper, shopOrderMapper, TestMessages.create());
+        orderService = new OrderService(productMapper, shopOrderMapper, orderExpiryService,
+                TestMessages.create());
         LocaleContextHolder.setLocale(Locale.SIMPLIFIED_CHINESE);
     }
 
@@ -150,6 +155,18 @@ class OrderServiceTest {
         assertThat(result.get(0).getStatus()).isEqualTo("PENDING");
         assertThat(result.get(0).getStatusLabel()).isEqualTo("待支付");
         assertThat(result.get(1).getProductName()).isEqualTo("（商品已删除）");
+    }
+
+    @Test
+    @DisplayName("我的订单：查询前先批量懒惰过期该用户的超时订单")
+    void listMyOrdersExpiresTimedOutFirst() {
+        when(shopOrderMapper.selectList(any())).thenReturn(List.of());
+
+        orderService.listMyOrders(42L);
+
+        InOrder inOrder = inOrder(orderExpiryService, shopOrderMapper);
+        inOrder.verify(orderExpiryService).expireTimedOut(42L);
+        inOrder.verify(shopOrderMapper).selectList(any());
     }
 
     @Test

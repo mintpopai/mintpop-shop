@@ -50,6 +50,7 @@ public class PaymentService {
     private final ShopOrderMapper shopOrderMapper;
     private final ProductMapper productMapper;
     private final StripeGateway stripeGateway;
+    private final OrderExpiryService orderExpiryService;
     private final PaymentProperties paymentProperties;
 
     /** 收银台信息：未配置时下发空通道列表，前端据此禁用支付入口 */
@@ -69,6 +70,10 @@ public class PaymentService {
         ShopOrder order = requireOwnOrder(userId, orderNo);
         if (order.getStatus() != OrderStatusEnum.PENDING
                 && order.getStatus() != OrderStatusEnum.FAILED) {
+            throw new BizException(BizCodeEnum.ORDER_NOT_PAYABLE);
+        }
+        // 懒惰过期：超时未支付订单在此拦下，不再下发/创建支付凭据
+        if (orderExpiryService.expireIfTimedOut(order)) {
             throw new BizException(BizCodeEnum.ORDER_NOT_PAYABLE);
         }
         Product product = productMapper.selectById(order.getProductId());
@@ -154,7 +159,12 @@ public class PaymentService {
             if ("succeeded".equals(intent.getStatus())) {
                 settlePaid(orderNo, intent.getId(), intent.getAmount(), intent.getCurrency());
                 order = requireOwnOrder(userId, orderNo);
+                return new VerifyOrderResponse(order.getOrderNo(), order.getStatus().name());
             }
+        }
+        // 网关未成功才考虑懒惰过期：入账优先，钱已收的订单不允许被判过期
+        if (settleable && orderExpiryService.expireIfTimedOut(order)) {
+            order = requireOwnOrder(userId, orderNo);
         }
         return new VerifyOrderResponse(order.getOrderNo(), order.getStatus().name());
     }
@@ -173,8 +183,8 @@ public class PaymentService {
 
     /**
      * 幂等入账：先校验 provider 与金额/币种（最小单位整数，直接相等比较），
-     * 再条件 UPDATE 置 PAID——允许来源 PENDING/FAILED/CANCELLED（重试成功、取消竞态时
-     * 钱已收必须入账），影响 0 行即已处理过，静默返回。
+     * 再条件 UPDATE 置 PAID——允许来源 PENDING/FAILED/CANCELLED/EXPIRED（重试成功、
+     * 取消或懒惰过期竞态时钱已收必须入账），影响 0 行即已处理过，静默返回。
      */
     private void settlePaid(String orderNo, String intentId, Long amountMinorUnit, String currency) {
         ShopOrder order = shopOrderMapper.selectOne(new LambdaQueryWrapper<ShopOrder>()
@@ -199,7 +209,7 @@ public class PaymentService {
         int rows = shopOrderMapper.update(null, new LambdaUpdateWrapper<ShopOrder>()
                 .eq(ShopOrder::getOrderNo, orderNo)
                 .in(ShopOrder::getStatus, OrderStatusEnum.PENDING, OrderStatusEnum.FAILED,
-                        OrderStatusEnum.CANCELLED)
+                        OrderStatusEnum.CANCELLED, OrderStatusEnum.EXPIRED)
                 .set(ShopOrder::getStatus, OrderStatusEnum.PAID)
                 .set(ShopOrder::getPaidAt, LocalDateTime.now())
                 .set(ShopOrder::getPaymentProvider, PROVIDER_STRIPE)

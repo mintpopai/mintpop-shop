@@ -31,6 +31,9 @@ app:
     # 以下为可选项及默认值，不改可不写：
     # session-ttl: 7d            # 会话有效期
     # frontend-base-url: /       # 登录/登出完成后回跳的前端地址（同源部署用默认值即可）
+  # order 整段为可选项及默认值，不改可不写：
+  # order:
+  #   expire-minutes: 30         # 待支付订单的支付时限（分钟），超时懒惰过期为「已过期」
 
 # —— 支付（Stripe）——密钥只写进真实 config/application.yml，绝不进仓库 ——
 payment:

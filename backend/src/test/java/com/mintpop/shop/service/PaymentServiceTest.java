@@ -60,6 +60,8 @@ class PaymentServiceTest {
     private ProductMapper productMapper;
     @Mock
     private StripeGateway stripeGateway;
+    @Mock
+    private OrderExpiryService orderExpiryService;
     private PaymentProperties properties;
     private PaymentService paymentService;
 
@@ -68,7 +70,8 @@ class PaymentServiceTest {
         properties = new PaymentProperties();
         properties.setSecretKey("test-secret");
         properties.setPublishableKey("test-publishable");
-        paymentService = new PaymentService(shopOrderMapper, productMapper, stripeGateway, properties);
+        paymentService = new PaymentService(shopOrderMapper, productMapper, stripeGateway,
+                orderExpiryService, properties);
         // 断言中文商品名，需固定请求语言（与 OrderServiceTest 相同处理）
         LocaleContextHolder.setLocale(Locale.SIMPLIFIED_CHINESE);
     }
@@ -236,6 +239,22 @@ class PaymentServiceTest {
                 .isEqualTo(BizCodeEnum.ORDER_NOT_PAYABLE);
     }
 
+    @Test
+    @DisplayName("超时未支付订单发起支付：懒惰过期并拒绝（410002），不打网关")
+    void timedOutOrderExpiredAndNotPayable() {
+        ShopOrder order = pendingOrder();
+        when(shopOrderMapper.selectOne(any())).thenReturn(order);
+        when(orderExpiryService.expireIfTimedOut(order)).thenReturn(true);
+
+        assertThatThrownBy(() -> paymentService.getOrCreateIntent(42L, "MP20260714120000123456"))
+                .isInstanceOf(BizException.class)
+                .extracting(e -> ((BizException) e).getBizCode())
+                .isEqualTo(BizCodeEnum.ORDER_NOT_PAYABLE);
+
+        verify(stripeGateway, never()).createPaymentIntent(anyString(), anyLong(), anyString(), anyList());
+        verify(stripeGateway, never()).retrievePaymentIntent(anyString());
+    }
+
     private StripeWebhookEvent succeededEvent(long amount) {
         return new StripeWebhookEvent("payment_intent.succeeded",
                 "pi_123", "MP20260714120000123456", "shop", amount, "usd");
@@ -357,6 +376,66 @@ class PaymentServiceTest {
         VerifyOrderResponse resp = paymentService.verify(42L, "MP20260714120000123456");
 
         assertThat(resp.getStatus()).isEqualTo("PAID");
+    }
+
+    @Test
+    @DisplayName("verify：网关侧已成功则入账优先，超时也不过期（钱已收必须入账）")
+    void verifySettleWinsOverExpiry() {
+        ShopOrder order = pendingOrder();
+        order.setPaymentProvider("stripe");
+        order.setPaymentTradeNo("pi_123");
+        ShopOrder paid = pendingOrder();
+        paid.setStatus(OrderStatusEnum.PAID);
+        when(shopOrderMapper.selectOne(any())).thenReturn(order, paid);
+        PaymentIntent pi = intent("pi_123", "succeeded", "pi_123_secret");
+        pi.setAmount(11800L);
+        pi.setCurrency("usd");
+        when(stripeGateway.retrievePaymentIntent("pi_123")).thenReturn(pi);
+        when(shopOrderMapper.update(isNull(), any())).thenReturn(1);
+
+        VerifyOrderResponse resp = paymentService.verify(42L, "MP20260714120000123456");
+
+        assertThat(resp.getStatus()).isEqualTo("PAID");
+        verify(orderExpiryService, never()).expireIfTimedOut(any());
+    }
+
+    @Test
+    @DisplayName("verify：网关未成功且订单已超时，懒惰过期并返回 EXPIRED")
+    void verifyExpiresTimedOutOrder() {
+        ShopOrder order = pendingOrder();
+        ShopOrder expired = pendingOrder();
+        expired.setStatus(OrderStatusEnum.EXPIRED);
+        when(shopOrderMapper.selectOne(any())).thenReturn(order, expired);
+        when(orderExpiryService.expireIfTimedOut(order)).thenReturn(true);
+
+        VerifyOrderResponse resp = paymentService.verify(42L, "MP20260714120000123456");
+
+        assertThat(resp.getStatus()).isEqualTo("EXPIRED");
+    }
+
+    @Test
+    @DisplayName("webhook 成功事件打在已过期订单上：仍入账置 PAID（与取消竞态同理）")
+    void webhookSettlesExpiredOrder() {
+        ShopOrder order = pendingOrder();
+        order.setStatus(OrderStatusEnum.EXPIRED);
+        order.setPaymentProvider("stripe");
+        order.setPaymentTradeNo("pi_123");
+        when(shopOrderMapper.selectOne(any())).thenReturn(order);
+        when(shopOrderMapper.update(isNull(), any())).thenReturn(1);
+
+        paymentService.handleWebhook(succeededEvent(11800L));
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<LambdaUpdateWrapper<ShopOrder>> captor =
+                ArgumentCaptor.forClass(LambdaUpdateWrapper.class);
+        verify(shopOrderMapper).update(isNull(), captor.capture());
+        // 条件 UPDATE 的来源状态须包含 EXPIRED，钱已收的过期单才能入账
+        // （MyBatis-Plus 参数惰性收集，先渲染 where 与 set 段参数表才有值）
+        captor.getValue().getSqlSegment();
+        captor.getValue().getSqlSet();
+        assertThat(captor.getValue().getParamNameValuePairs())
+                .containsValue(OrderStatusEnum.EXPIRED)
+                .containsValue(OrderStatusEnum.PAID);
     }
 
     @Test

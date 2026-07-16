@@ -40,7 +40,7 @@ async function check() {
     const result = await verifyOrder(orderNo)
     if (isPaidStatus(result.status)) {
       finish('success')
-    } else if (result.status === 'FAILED' || result.status === 'CANCELLED') {
+    } else if (result.status === 'FAILED' || result.status === 'CANCELLED' || result.status === 'EXPIRED') {
       finish('failed')
     } else if (attempts >= MAX_ATTEMPTS) {
       finish('pending')

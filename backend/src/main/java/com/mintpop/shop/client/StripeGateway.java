@@ -13,6 +13,7 @@ import com.stripe.model.PaymentIntent;
 import com.stripe.model.StripeObject;
 import com.stripe.net.RequestOptions;
 import com.stripe.net.Webhook;
+import com.stripe.param.PaymentIntentCancelParams;
 import com.stripe.param.PaymentIntentCreateParams;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +24,7 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Stripe SDK 唯一封装点：创建/检索 PaymentIntent、webhook 验签。
+ * Stripe SDK 唯一封装点：创建/检索/取消 PaymentIntent、webhook 验签。
  * 业务分支不在这层，出错记日志后转业务异常，便于服务层用 fake 替换测试。
  */
 @Slf4j
@@ -69,6 +70,29 @@ public class StripeGateway {
         } catch (StripeException e) {
             log.error("创建 PaymentIntent 失败 orderNo={}", orderNo, e);
             throw new BizException(BizCodeEnum.PAYMENT_GATEWAY_ERROR);
+        }
+    }
+
+    /**
+     * 尽力而为取消 PaymentIntent（订单懒惰过期时撤掉 Stripe 侧支付凭据，令残留支付页失效）。
+     * 取消失败不抛错只记日志：竞态下该笔可能已 succeeded/processing（不可取消），
+     * 此时钱可能已收，由 webhook 入账兜底，本地过期状态不受影响。
+     */
+    public void cancelPaymentIntent(String intentId) {
+        // 尽力而为语义：支付未配置也不该让过期入口（订单列表等）失败
+        if (!properties.isConfigured()) {
+            log.warn("支付未配置，跳过取消 PaymentIntent intentId={}", intentId);
+            return;
+        }
+        try {
+            client().v1().paymentIntents().cancel(intentId,
+                    PaymentIntentCancelParams.builder()
+                            .setCancellationReason(
+                                    PaymentIntentCancelParams.CancellationReason.ABANDONED)
+                            .build());
+        } catch (StripeException e) {
+            log.warn("取消 PaymentIntent 失败（可能已支付/处理中，由 webhook 入账兜底）intentId={}",
+                    intentId, e);
         }
     }
 

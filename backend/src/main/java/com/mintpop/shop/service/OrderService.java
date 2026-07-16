@@ -37,6 +37,7 @@ public class OrderService {
 
     private final ProductMapper productMapper;
     private final ShopOrderMapper shopOrderMapper;
+    private final OrderExpiryService orderExpiryService;
     private final MessageSource messageSource;
 
     /**
@@ -64,6 +65,8 @@ public class OrderService {
      * 我的订单列表：按下单时间倒序，商品名与状态标签按请求语言下发。
      */
     public List<OrderItemResponse> listMyOrders(Long userId) {
+        // 懒惰过期：先把该用户超时未支付的订单批量置 EXPIRED，列表读到的即是最新状态
+        orderExpiryService.expireTimedOut(userId);
         List<ShopOrder> orders = shopOrderMapper.selectList(new LambdaQueryWrapper<ShopOrder>()
                 .eq(ShopOrder::getUserId, userId)
                 .orderByDesc(ShopOrder::getCreatedAt)
