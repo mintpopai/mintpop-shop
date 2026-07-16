@@ -8,6 +8,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 import java.util.LinkedHashMap;
 
@@ -16,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 class FeishuBotClientTest {
@@ -93,5 +95,15 @@ class FeishuBotClientTest {
 
         assertThatThrownBy(() -> client.sendCard("标题", fields()))
                 .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("HTTP 层错误（非 2xx）：按 RestClient 原生异常上抛，调用方整体 catch Exception 兜住")
+    void httpErrorPropagatesAsRestClientException() {
+        server.expect(requestTo(WEBHOOK))
+                .andRespond(withServerError());
+
+        assertThatThrownBy(() -> client.sendCard("标题", fields()))
+                .isInstanceOf(RestClientException.class);
     }
 }

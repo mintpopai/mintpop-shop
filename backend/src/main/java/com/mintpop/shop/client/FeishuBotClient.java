@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 
 /**
  * 飞书群自定义机器人客户端：只管「签名 + POST 卡片 + 校验响应 code」，不懂业务。
- * 发送失败抛 IllegalStateException，由调用方（异步通知服务）消化记日志。
+ * 响应 code 非 0 抛 IllegalStateException；HTTP/网络层错误（超时、非 2xx）按 RestClient 原生异常上抛——调用方须整体 catch Exception 消化记日志。
  */
 @Component
 public class FeishuBotClient {
