@@ -52,6 +52,7 @@ public class PaymentService {
     private final StripeGateway stripeGateway;
     private final OrderExpiryService orderExpiryService;
     private final PaymentProperties paymentProperties;
+    private final OrderNotifyService orderNotifyService;
 
     /** 收银台信息：未配置时下发空通道列表，前端据此禁用支付入口 */
     public CheckoutInfoResponse checkoutInfo() {
@@ -216,7 +217,10 @@ public class PaymentService {
                 .set(ShopOrder::getPaymentTradeNo, intentId));
         if (rows == 0) {
             log.info("入账重放（已处理过），忽略 orderNo={}", orderNo);
+            return;
         }
+        // 首次入账成功：异步推送飞书新订单提醒（尽力而为，通知失败不影响入账）
+        orderNotifyService.notifyOrderPaid(orderNo);
     }
 
     /** 支付尝试失败：仅 PENDING → FAILED（FAILED 仍可续付，不影响重试成功后入账） */

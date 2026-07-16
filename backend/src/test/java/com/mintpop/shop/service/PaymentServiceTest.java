@@ -62,6 +62,8 @@ class PaymentServiceTest {
     private StripeGateway stripeGateway;
     @Mock
     private OrderExpiryService orderExpiryService;
+    @Mock
+    private OrderNotifyService orderNotifyService;
     private PaymentProperties properties;
     private PaymentService paymentService;
 
@@ -71,7 +73,7 @@ class PaymentServiceTest {
         properties.setSecretKey("test-secret");
         properties.setPublishableKey("test-publishable");
         paymentService = new PaymentService(shopOrderMapper, productMapper, stripeGateway,
-                orderExpiryService, properties);
+                orderExpiryService, properties, orderNotifyService);
         // 断言中文商品名，需固定请求语言（与 OrderServiceTest 相同处理）
         LocaleContextHolder.setLocale(Locale.SIMPLIFIED_CHINESE);
     }
@@ -486,5 +488,34 @@ class PaymentServiceTest {
                 .isInstanceOf(BizException.class)
                 .extracting(e -> ((BizException) e).getBizCode())
                 .isEqualTo(BizCodeEnum.ORDER_NOT_CANCELLABLE);
+    }
+
+    @Test
+    @DisplayName("首次入账成功（UPDATE 影响 1 行）：触发飞书支付成功通知")
+    void settlePaidTriggersNotify() {
+        ShopOrder order = pendingOrder();
+        order.setPaymentProvider("stripe");
+        order.setPaymentTradeNo("pi_123");
+        when(shopOrderMapper.selectOne(any())).thenReturn(order);
+        when(shopOrderMapper.update(isNull(), any())).thenReturn(1);
+
+        paymentService.handleWebhook(succeededEvent(11800L));
+
+        verify(orderNotifyService).notifyOrderPaid("MP20260714120000123456");
+    }
+
+    @Test
+    @DisplayName("入账重放（UPDATE 影响 0 行）：不触发通知，每单只推一次")
+    void settleReplayDoesNotNotify() {
+        ShopOrder order = pendingOrder();
+        order.setStatus(OrderStatusEnum.PAID);
+        order.setPaymentProvider("stripe");
+        order.setPaymentTradeNo("pi_123");
+        when(shopOrderMapper.selectOne(any())).thenReturn(order);
+        when(shopOrderMapper.update(isNull(), any())).thenReturn(0);
+
+        paymentService.handleWebhook(succeededEvent(11800L));
+
+        verify(orderNotifyService, never()).notifyOrderPaid(anyString());
     }
 }
