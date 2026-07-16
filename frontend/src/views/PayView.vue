@@ -39,6 +39,10 @@ const selectedKey = ref('')
 const submitting = ref(false)
 const polling = ref(false)
 
+// 订单级支付时限（区别于二维码有效期）
+const orderSecondsLeft = ref(0)
+const orderExpired = ref(false)
+
 // 二维码状态
 const qrFor = ref<StripeSubMethod | null>(null)
 const qrCanvas = ref<HTMLCanvasElement | null>(null)
@@ -50,16 +54,21 @@ let stripe: Stripe | null = null
 let cardElements: StripeElements | null = null
 let pollTimer: ReturnType<typeof setInterval> | undefined
 let qrTimer: ReturnType<typeof setInterval> | undefined
+let orderTimer: ReturnType<typeof setInterval> | undefined
 
 const selectedOption = computed(
   () => payOptions.value.find((o) => o.key === selectedKey.value) ?? null,
 )
 const isCardSelected = computed(() => selectedOption.value?.subMethod === 'card')
-const qrCountdown = computed(() => {
-  const m = Math.floor(qrSecondsLeft.value / 60)
-  const s = qrSecondsLeft.value % 60
+
+function formatCountdown(totalSeconds: number) {
+  const m = Math.floor(totalSeconds / 60)
+  const s = totalSeconds % 60
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-})
+}
+
+const qrCountdown = computed(() => formatCountdown(qrSecondsLeft.value))
+const orderCountdown = computed(() => formatCountdown(orderSecondsLeft.value))
 
 onMounted(async () => {
   try {
@@ -75,6 +84,8 @@ onMounted(async () => {
     }
     if (!stripe || payOptions.value.length === 0) {
       loadError.value = t('payment.notPayable')
+    } else {
+      startOrderCountdown(intent.expireRemainingSeconds)
     }
   } catch (e) {
     if (e instanceof UnauthorizedError) {
@@ -90,7 +101,51 @@ onMounted(async () => {
 onUnmounted(() => {
   clearInterval(pollTimer)
   clearInterval(qrTimer)
+  clearInterval(orderTimer)
 })
+
+/** 订单级支付时限倒计时：到点主动触发后端过期，而不是被动等下一个入口 */
+function startOrderCountdown(seconds: number) {
+  orderSecondsLeft.value = Math.max(0, Math.floor(seconds))
+  if (orderSecondsLeft.value === 0) {
+    void onOrderDeadline()
+    return
+  }
+  orderTimer = setInterval(() => {
+    orderSecondsLeft.value -= 1
+    if (orderSecondsLeft.value <= 0) {
+      clearInterval(orderTimer)
+      void onOrderDeadline()
+    }
+  }, 1000)
+}
+
+/**
+ * 倒计时归零：调 verify 主动触发后端懒惰过期（置 EXPIRED 并撤 Stripe 侧凭据）。
+ * 竞态兜底——若这一问发现其实已支付成功，直接去结果页而不是判过期。
+ */
+async function onOrderDeadline() {
+  try {
+    const result = await verifyOrder(orderNo)
+    if (isPaidStatus(result.status)) {
+      goResult()
+      return
+    }
+  } catch {
+    // 触发失败不影响前端切过期态：后端任一入口读到该单时仍会过期它
+  }
+  showExpiredState()
+}
+
+/** 切到订单过期态：停掉所有计时器与轮询，收起二维码 */
+function showExpiredState() {
+  clearInterval(orderTimer)
+  clearInterval(qrTimer)
+  clearInterval(pollTimer)
+  polling.value = false
+  qrFor.value = null
+  orderExpired.value = true
+}
 
 /** 选卡即重置确认区：切换方式时收起二维码；选中银行卡时挂 Payment Element */
 watch(selectedKey, async () => {
@@ -132,6 +187,25 @@ async function confirm() {
   }
   submitting.value = true
   try {
+    // 支付前先核实订单状态：页面可能已挂很久，client_secret 虽在手，超时/已取消单不放行
+    try {
+      const check = await verifyOrder(orderNo)
+      if (isPaidStatus(check.status)) {
+        goResult()
+        return
+      }
+      if (check.status === 'EXPIRED') {
+        showExpiredState()
+        return
+      }
+      if (check.status === 'CANCELLED') {
+        showToast('error', t('payment.notPayable'))
+        router.push('/orders')
+        return
+      }
+    } catch {
+      // 核实失败（网络抖动）不阻断支付：后端与 Stripe 侧仍有各自的拦截
+    }
     const clientSecret = intentInfo.value.clientSecret
     if (option.subMethod === 'wxpay') {
       const qr = await startWechatPay(stripe, clientSecret)
@@ -182,7 +256,7 @@ async function showQr(kind: StripeSubMethod, content: string) {
   }
 }
 
-/** 每 2s 核实一次，命中成功口径即停并跳结果页 */
+/** 每 2s 核实一次：成功跳结果页；过期/取消也是终态，停止轮询 */
 function startPolling() {
   if (polling.value) {
     return
@@ -195,6 +269,13 @@ function startPolling() {
         clearInterval(pollTimer)
         polling.value = false
         goResult()
+      } else if (result.status === 'EXPIRED') {
+        showExpiredState()
+      } else if (result.status === 'CANCELLED') {
+        clearInterval(pollTimer)
+        polling.value = false
+        showToast('error', t('payment.notPayable'))
+        router.push('/orders')
       }
     } catch {
       // 轮询失败不打断（网络抖动下一轮再试）
@@ -242,10 +323,19 @@ async function onCancel() {
           <span class="order-no">{{ $t('orders.orderNo', { orderNo: intentInfo.orderNo }) }}</span>
           <span class="amount">{{ formatPrice(intentInfo.amountCents) }}</span>
         </div>
+        <p v-if="!orderExpired && orderSecondsLeft > 0" class="pay-deadline">
+          {{ $t('payment.payDeadline', { time: orderCountdown }) }}
+        </p>
       </section>
 
+      <!-- 订单已过期：替换支付面板，引导重新下单 -->
+      <div v-if="orderExpired" class="hint error">
+        {{ $t('payment.orderExpired') }}
+        <RouterLink to="/orders" class="link">{{ $t('payment.viewOrders') }}</RouterLink>
+      </div>
+
       <!-- 支付方式（拍平三卡，INVARIANT） -->
-      <section class="pay-panel">
+      <section v-else class="pay-panel">
         <div class="panel-head">
           <h3 class="section-label">{{ $t('payment.paymentMethod') }}</h3>
           <i18n-t keypath="payment.poweredBy" tag="span" class="powered-by">
@@ -413,6 +503,12 @@ async function onCancel() {
   font-size: 20px;
   font-weight: 600;
   color: var(--color-brand-deep);
+}
+
+/* 订单级支付时限提示（区别于二维码有效期） */
+.pay-deadline {
+  font-size: 13px;
+  color: #b45309;
 }
 
 .pay-panel {

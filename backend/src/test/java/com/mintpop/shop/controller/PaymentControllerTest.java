@@ -70,7 +70,7 @@ class PaymentControllerTest {
     void createIntent() throws Exception {
         when(paymentService.getOrCreateIntent(42L, "MP1"))
                 .thenReturn(new PaymentIntentResponse("MP1", "pi_secret", 11800L, "USD",
-                        "薄荷精灵盲盒", 2));
+                        "薄荷精灵盲盒", 2, 1800L));
 
         mockMvc.perform(post("/api/payment/orders/MP1/intent"))
                 .andExpect(status().isOk())

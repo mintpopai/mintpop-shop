@@ -10,6 +10,7 @@ import com.mintpop.shop.mapper.ShopOrderMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -68,6 +69,16 @@ public class OrderExpiryService {
         if (order.getPaymentTradeNo() != null) {
             stripeGateway.cancelPaymentIntent(order.getPaymentTradeNo());
         }
+    }
+
+    /** 剩余支付秒数（前端订单级倒计时用）：已超时为 0 不出负数；createdAt 为空按整个时限算（与不误杀口径一致） */
+    public long remainingSeconds(ShopOrder order) {
+        long limitSeconds = orderProperties.getExpireMinutes() * 60;
+        if (order.getCreatedAt() == null) {
+            return limitSeconds;
+        }
+        long elapsed = Duration.between(order.getCreatedAt(), LocalDateTime.now()).getSeconds();
+        return Math.max(0, limitSeconds - elapsed);
     }
 
     /** 过期分界线：创建时间早于此刻的可过期订单视为超时 */

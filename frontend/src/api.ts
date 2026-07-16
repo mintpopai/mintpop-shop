@@ -66,6 +66,8 @@ export interface PaymentIntentInfo {
   currency: string
   productName: string
   quantity: number
+  /** 剩余支付秒数（服务端按下单时间与支付时限计算，前端据此倒计时） */
+  expireRemainingSeconds: number
 }
 
 /** 订单支付核实结果（镜像后端 VerifyOrderResponse） */

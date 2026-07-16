@@ -240,6 +240,20 @@ class PaymentServiceTest {
     }
 
     @Test
+    @DisplayName("支付意图响应带剩余支付秒数（前端订单级倒计时用）")
+    void intentResponseCarriesRemainingSeconds() {
+        when(shopOrderMapper.selectOne(any())).thenReturn(pendingOrder());
+        when(productMapper.selectById(1L)).thenReturn(product());
+        when(stripeGateway.createPaymentIntent(anyString(), anyLong(), anyString(), anyList()))
+                .thenReturn(intent("pi_123", "requires_payment_method", "pi_123_secret"));
+        when(orderExpiryService.remainingSeconds(any())).thenReturn(900L);
+
+        PaymentIntentResponse resp = paymentService.getOrCreateIntent(42L, "MP20260714120000123456");
+
+        assertThat(resp.getExpireRemainingSeconds()).isEqualTo(900L);
+    }
+
+    @Test
     @DisplayName("超时未支付订单发起支付：懒惰过期并拒绝（410002），不打网关")
     void timedOutOrderExpiredAndNotPayable() {
         ShopOrder order = pendingOrder();

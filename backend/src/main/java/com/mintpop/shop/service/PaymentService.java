@@ -99,7 +99,7 @@ public class PaymentService {
         }
         return new PaymentIntentResponse(order.getOrderNo(), intent.getClientSecret(),
                 order.getAmountCents(), paymentProperties.getCurrency(), subject,
-                order.getQuantity());
+                order.getQuantity(), orderExpiryService.remainingSeconds(order));
     }
 
     /** 配置的子方式经映射表转 Stripe 类型；为空一律回退 card（品牌硬约定） */

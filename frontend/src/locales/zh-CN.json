@@ -55,6 +55,8 @@
     "processing": "正在确认支付",
     "scanWithWechat": "请用微信扫码支付",
     "scanWithAlipay": "请用支付宝扫码支付",
+    "payDeadline": "支付剩余时间：{time}，超时订单将自动关闭",
+    "orderExpired": "订单已超时关闭，请重新下单。",
     "qrExpiry": "二维码有效期：{time}",
     "qrExpired": "二维码已过期",
     "regenerateQr": "重新获取二维码",

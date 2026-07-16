@@ -55,6 +55,8 @@
     "processing": "Confirming payment",
     "scanWithWechat": "Scan with WeChat to pay",
     "scanWithAlipay": "Scan with Alipay to pay",
+    "payDeadline": "Time left to pay: {time}. The order closes when it runs out.",
+    "orderExpired": "This order has expired. Please place a new one.",
     "qrExpiry": "QR code expires in: {time}",
     "qrExpired": "QR code expired",
     "regenerateQr": "Get a new QR code",

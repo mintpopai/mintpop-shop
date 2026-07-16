@@ -118,6 +118,33 @@ class OrderExpiryServiceTest {
     }
 
     @Test
+    @DisplayName("剩余支付秒数：新单约等于时限减已过时间（前端倒计时用）")
+    void remainingSecondsForFreshOrder() {
+        ShopOrder fresh = order(OrderStatusEnum.PENDING, LocalDateTime.now().minusMinutes(10));
+
+        long remaining = orderExpiryService.remainingSeconds(fresh);
+
+        // 默认时限 30 分钟，已过 10 分钟 → 剩约 20 分钟（容忍执行耗时的秒级误差）
+        assertThat(remaining).isBetween(19 * 60L, 20 * 60L);
+    }
+
+    @Test
+    @DisplayName("剩余支付秒数：已超时订单为 0，不出负数")
+    void remainingSecondsZeroWhenTimedOut() {
+        ShopOrder timedOut = order(OrderStatusEnum.PENDING, LocalDateTime.now().minusHours(2));
+
+        assertThat(orderExpiryService.remainingSeconds(timedOut)).isZero();
+    }
+
+    @Test
+    @DisplayName("剩余支付秒数：createdAt 为空按整个时限算（与不误杀口径一致）")
+    void remainingSecondsFullWhenNoCreatedAt() {
+        ShopOrder noCreatedAt = order(OrderStatusEnum.PENDING, null);
+
+        assertThat(orderExpiryService.remainingSeconds(noCreatedAt)).isEqualTo(30 * 60L);
+    }
+
+    @Test
     @DisplayName("批量：先查出该用户的超时单，条件置 EXPIRED，再逐笔取消已发起支付的 intent")
     void batchExpiresByUser() {
         ShopOrder withIntent = order(OrderStatusEnum.PENDING, LocalDateTime.now().minusHours(2));

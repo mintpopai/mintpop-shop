@@ -22,4 +22,6 @@ public class PaymentIntentResponse {
     private String productName;
     /** 购买数量 */
     private Integer quantity;
+    /** 剩余支付秒数（服务端按下单时间与支付时限计算，前端据此倒计时；已超时为 0） */
+    private Long expireRemainingSeconds;
 }
