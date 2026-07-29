@@ -4,7 +4,9 @@
 spring:
   datasource:
     # createDatabaseIfNotExist：账号有建库权限时自动创建目标库
-    url: jdbc:mysql://127.0.0.1:3306/mintpop_shop?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    # connectionTimeZone=UTC + forceConnectionTimeZoneToSession=true：把本连接的 MySQL 会话时区强制为 UTC，
+    # 使 NOW()/DEFAULT CURRENT_TIMESTAMP 产出 UTC 值，与 JVM（启动类已钉 UTC）同源，不依赖 MySQL 服务器自身时区配置
+    url: jdbc:mysql://127.0.0.1:3306/mintpop_shop?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=utf8&connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true
     username: 填用户名
     password: 填密码
 
