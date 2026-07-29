@@ -20,7 +20,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 import static org.mockito.Mockito.eq;
@@ -115,12 +115,14 @@ class OrderControllerTest {
     void listMyOrdersReturnsOwnOrders() throws Exception {
         when(orderService.listMyOrders(42L)).thenReturn(List.of(new OrderItemResponse(
                 "MP20260713120000123456", "薄荷精灵盲盒", 2, 11800L,
-                "PENDING", "待支付", LocalDateTime.of(2026, 7, 13, 12, 0))));
+                "PENDING", "待支付", Instant.parse("2026-07-13T12:00:00Z"))));
 
         mockMvc.perform(get("/api/orders"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data[0].productName").value("薄荷精灵盲盒"))
-                .andExpect(jsonPath("$.data[0].statusLabel").value("待支付"));
+                .andExpect(jsonPath("$.data[0].statusLabel").value("待支付"))
+                // 传输契约：时间一律 ISO-8601 UTC 带 Z 后缀，本地化渲染是前端的事
+                .andExpect(jsonPath("$.data[0].createdAt").value("2026-07-13T12:00:00Z"));
     }
 }

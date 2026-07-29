@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { cancelOrder, fetchMyOrders, formatPrice, UnauthorizedError, type OrderItem } from '../api'
 import { gotoLogin } from '../auth'
-import { t } from '../i18n'
+import { locale, t } from '../i18n'
 import { showToast } from '../toast'
 
 const orders = ref<OrderItem[]>([])
@@ -41,9 +41,18 @@ async function onCancel(order: OrderItem) {
   }
 }
 
-/** 后端 ISO 时间（如 2026-07-13T12:00:00）转「2026-07-13 12:00」 */
+/** 后端 UTC 时刻（ISO-8601 带 Z）按浏览器时区、当前语言渲染到分钟 */
+const timeFormatter = new Intl.DateTimeFormat(locale, {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+})
+
 function formatTime(iso: string): string {
-  return iso.replace('T', ' ').slice(0, 16)
+  return timeFormatter.format(new Date(iso))
 }
 </script>
 

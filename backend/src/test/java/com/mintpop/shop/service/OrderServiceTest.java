@@ -27,6 +27,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.i18n.LocaleContextHolder;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
@@ -154,6 +155,8 @@ class OrderServiceTest {
         assertThat(result.get(0).getProductName()).isEqualTo("薄荷精灵盲盒");
         assertThat(result.get(0).getStatus()).isEqualTo("PENDING");
         assertThat(result.get(0).getStatusLabel()).isEqualTo("待支付");
+        // 库里的挂钟时间按 UTC 语义换算成绝对时刻（全链路 UTC），不受运行机时区影响
+        assertThat(result.get(0).getCreatedAt()).isEqualTo(Instant.parse("2026-07-13T12:00:00Z"));
         assertThat(result.get(1).getProductName()).isEqualTo("（商品已删除）");
     }
 

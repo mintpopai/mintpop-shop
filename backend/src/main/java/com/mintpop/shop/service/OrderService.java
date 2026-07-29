@@ -18,6 +18,7 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
@@ -89,7 +90,8 @@ public class OrderService {
                         o.getAmountCents(),
                         o.getStatus().name(),
                         messageSource.getMessage(o.getStatus().getLabelKey(), null, locale),
-                        o.getCreatedAt()))
+                        // 库里挂钟时间即 UTC（全链路 UTC），显式按 UTC 升格为绝对时刻，不依赖 JVM 默认时区
+                        o.getCreatedAt().toInstant(ZoneOffset.UTC)))
                 .toList();
     }
 

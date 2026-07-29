@@ -3,7 +3,7 @@ package com.mintpop.shop.response;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 /**
  * 我的订单列表项。
@@ -24,6 +24,6 @@ public class OrderItemResponse {
     private String status;
     /** 订单状态展示文案（按请求语言） */
     private String statusLabel;
-    /** 下单时间 */
-    private LocalDateTime createdAt;
+    /** 下单时间（绝对时刻，JSON 序列化为 ISO-8601 UTC 带 Z，展示时区由前端定） */
+    private Instant createdAt;
 }

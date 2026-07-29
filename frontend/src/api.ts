@@ -49,6 +49,7 @@ export interface OrderItem {
   amountCents: number
   status: string
   statusLabel: string
+  /** 下单时间，ISO-8601 UTC（带 Z），展示时按浏览器时区渲染 */
   createdAt: string
 }
 
