@@ -84,6 +84,10 @@ run = "docker build -f backend/Dockerfile -t mintpop-shop-backend:local ."
 description = "构建 前端镜像（frontend/Dockerfile，mise 多阶段，context=仓库根）"
 run = "docker build -f frontend/Dockerfile -t mintpop-shop-frontend:local ."
 
+[tasks.image-admin]
+description = "构建 管理端镜像（admin/Dockerfile，mise 多阶段，context=仓库根）"
+run = "docker build -f admin/Dockerfile -t mintpop-shop-admin:local ."
+
 # —— 质量 ——
 [tasks.test-backend]
 description = "运行 后端单元测试"

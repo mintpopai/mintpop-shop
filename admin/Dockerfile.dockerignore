@@ -1,0 +1,7 @@
+# 白名单式：pattern 相对仓库根（context 根），与本文件所在目录无关
+*
+!mise.toml
+!admin
+admin/node_modules
+admin/dist
+**/.git
