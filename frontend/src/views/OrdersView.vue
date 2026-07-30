@@ -2,7 +2,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { cancelOrder, fetchMyOrders, formatPrice, UnauthorizedError, type OrderItem } from '../api'
 import { gotoLogin } from '../auth'
-import { locale, t } from '../i18n'
+import { formatDateTime } from '../datetime'
+import { t } from '../i18n'
 import { showToast } from '../toast'
 
 const orders = ref<OrderItem[]>([])
@@ -75,19 +76,6 @@ async function onCancel(order: OrderItem) {
   }
 }
 
-/** 后端 UTC 时刻（ISO-8601 带 Z）按浏览器时区、当前语言渲染到分钟 */
-const timeFormatter = new Intl.DateTimeFormat(locale, {
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  hour12: false,
-})
-
-function formatTime(iso: string): string {
-  return timeFormatter.format(new Date(iso))
-}
 </script>
 
 <template>
@@ -136,7 +124,7 @@ function formatTime(iso: string): string {
           <div class="order-side">
             <span class="amount">{{ formatPrice(order.amountCents) }}</span>
             <span class="meta">
-              {{ $t('orders.quantity', { n: order.quantity }) }} · {{ formatTime(order.createdAt) }}
+              {{ $t('orders.quantity', { n: order.quantity }) }} · {{ formatDateTime(order.createdAt) }}
             </span>
             <div v-if="isPayable(order)" class="order-actions">
               <RouterLink :to="`/pay/${order.orderNo}`" class="pay-link">
@@ -255,36 +243,7 @@ function formatTime(iso: string): string {
   color: var(--color-ink);
 }
 
-/* 状态 tag：未知状态用灰色兜底，已知状态按语义配色覆盖 */
-.status-tag {
-  flex-shrink: 0;
-  padding: 2px 10px;
-  border-radius: var(--radius-pill);
-  font-size: 12px;
-  font-weight: 500;
-  background: #f3f4f6;
-  color: #6b7280;
-}
-
-.status-tag--PENDING {
-  background: #fef3c7;
-  color: #b45309;
-}
-
-.status-tag--PAID {
-  background: #e0f2fe;
-  color: #0369a1;
-}
-
-.status-tag--COMPLETED {
-  background: #d1fae5;
-  color: #047857;
-}
-
-.status-tag--FAILED {
-  background: #fee2e2;
-  color: #b91c1c;
-}
+/* 状态 tag 样式在 base.css（与管理端共用） */
 
 .order-no {
   font-size: 13px;

@@ -31,3 +31,34 @@ body {
 .wordmark {
   font-family: "Fredoka", "Inter", sans-serif;
 }
+
+/* 订单状态 tag（商城订单页与管理端共用）：未知状态灰色兜底，已知状态按语义配色覆盖 */
+.status-tag {
+  flex-shrink: 0;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 500;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.status-tag--PENDING {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.status-tag--PAID {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.status-tag--COMPLETED {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.status-tag--FAILED {
+  background: #fee2e2;
+  color: #b91c1c;
+}
