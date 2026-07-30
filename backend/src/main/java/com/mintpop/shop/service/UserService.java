@@ -8,6 +8,7 @@ import com.mintpop.shop.exception.BizException;
 import com.mintpop.shop.mapper.ShopUserMapper;
 import com.mintpop.shop.mapper.UserIdentityMapper;
 import com.mintpop.shop.response.MeResponse;
+import com.mintpop.shop.security.AdminChecker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,7 @@ public class UserService {
 
     private final ShopUserMapper shopUserMapper;
     private final UserIdentityMapper userIdentityMapper;
+    private final AdminChecker adminChecker;
 
     /**
      * 登录同步：sub 命中映射则复用用户并刷新 email 副本；未命中视为首次登录（注册），
@@ -62,6 +64,7 @@ public class UserService {
         if (user == null) {
             throw new BizException(BizCodeEnum.USER_NOT_FOUND);
         }
-        return new MeResponse(user.getId(), user.getEmail(), user.getNickname(), user.getAvatarUrl());
+        return new MeResponse(user.getId(), user.getEmail(), user.getNickname(), user.getAvatarUrl(),
+                adminChecker.isAdmin(user.getEmail()));
     }
 }

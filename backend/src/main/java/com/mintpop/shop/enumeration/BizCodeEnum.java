@@ -13,8 +13,12 @@ public enum BizCodeEnum {
 
     SYSTEM_ERROR(110001, "biz.system-error"),
     PARAM_INVALID(110002, "biz.param-invalid"),
+    PERMISSION_DENIED(110003, "biz.permission-denied"),
 
     PRODUCT_NOT_ON_SALE(210001, "biz.product-not-on-sale"),
+    PRODUCT_NOT_FOUND(210002, "biz.product-not-found"),
+    GROUP_NOT_FOUND(210003, "biz.group-not-found"),
+    GROUP_NOT_EMPTY(210004, "biz.group-not-empty"),
 
     USER_NOT_FOUND(310001, "biz.user-not-found"),
 

@@ -49,7 +49,7 @@ class MeControllerTest {
     @DisplayName("返回当前登录用户档案")
     void returnsCurrentUser() throws Exception {
         when(userService.getMe(42L)).thenReturn(
-                new MeResponse(42L, "a@b.com", "小明", "https://img/x.png"));
+                new MeResponse(42L, "a@b.com", "小明", "https://img/x.png", false));
 
         mockMvc.perform(get("/api/me"))
                 .andExpect(status().isOk())

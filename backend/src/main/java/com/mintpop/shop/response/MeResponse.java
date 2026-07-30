@@ -18,4 +18,6 @@ public class MeResponse {
     private String nickname;
     /** 头像URL */
     private String avatarUrl;
+    /** 是否管理员（前端据此显示管理入口；安全边界在后端拦截器） */
+    private boolean admin;
 }

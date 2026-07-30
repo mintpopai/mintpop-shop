@@ -7,6 +7,7 @@ import com.mintpop.shop.exception.BizException;
 import com.mintpop.shop.mapper.ShopUserMapper;
 import com.mintpop.shop.mapper.UserIdentityMapper;
 import com.mintpop.shop.response.MeResponse;
+import com.mintpop.shop.security.AdminChecker;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +30,8 @@ class UserServiceTest {
     private ShopUserMapper shopUserMapper;
     @Mock
     private UserIdentityMapper userIdentityMapper;
+    @Mock
+    private AdminChecker adminChecker;
     @InjectMocks
     private UserService userService;
 
@@ -98,14 +101,16 @@ class UserServiceTest {
     }
 
     @Test
-    @DisplayName("getMe：返回用户档案")
+    @DisplayName("getMe：返回用户档案，管理员标志由 AdminChecker 裁决")
     void getMeReturnsProfile() {
         when(shopUserMapper.selectById(7L)).thenReturn(user(7L, "a@b.com"));
+        when(adminChecker.isAdmin("a@b.com")).thenReturn(true);
 
         MeResponse me = userService.getMe(7L);
 
         assertThat(me.getId()).isEqualTo(7L);
         assertThat(me.getEmail()).isEqualTo("a@b.com");
+        assertThat(me.isAdmin()).isTrue();
     }
 
     @Test

@@ -30,6 +30,9 @@ app:
   auth:
     # HS256 会话签名密钥，至少 32 字节：openssl rand -base64 48
     session-secret: 填会话签名密钥
+    # 管理员邮箱白名单（忽略大小写）：命中的账号可访问 /admin 管理端；不配则无人是管理员
+    admin-emails:
+      - 填管理员邮箱
     # 以下为可选项及默认值，不改可不写：
     # session-ttl: 7d            # 会话有效期
     # frontend-base-url: /       # 登录/登出完成后回跳的前端地址（同源部署用默认值即可）
