@@ -31,7 +31,9 @@
     "orderNo": "Order No. {orderNo}",
     "quantity": "Qty {n}",
     "goPay": "Pay now",
-    "cancel": "Cancel order"
+    "cancel": "Cancel order",
+    "filterLabel": "Filter by order status",
+    "filterAll": "All"
   },
   "product": {
     "buy": "Buy",

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { cancelOrder, fetchMyOrders, formatPrice, UnauthorizedError, type OrderItem } from '../api'
 import { gotoLogin } from '../auth'
 import { locale, t } from '../i18n'
@@ -8,6 +8,39 @@ import { showToast } from '../toast'
 const orders = ref<OrderItem[]>([])
 const loading = ref(true)
 const loadError = ref('')
+
+/** 筛选条的状态展示顺序（与后端 OrderStatusEnum 对齐，未知状态追加在尾部） */
+const STATUS_ORDER = ['PENDING', 'PAID', 'COMPLETED', 'FAILED', 'CANCELLED', 'EXPIRED']
+
+/** 当前筛选状态，'ALL' 表示不过滤 */
+const activeStatus = ref('ALL')
+
+/** 列表里实际出现的状态及数量，标签复用后端本地化的 statusLabel */
+const availableStatuses = computed(() => {
+  const counts = new Map<string, { label: string; count: number }>()
+  for (const order of orders.value) {
+    const entry = counts.get(order.status)
+    if (entry) {
+      entry.count += 1
+    } else {
+      counts.set(order.status, { label: order.statusLabel, count: 1 })
+    }
+  }
+  const known = STATUS_ORDER.filter((s) => counts.has(s))
+  const extras = [...counts.keys()].filter((s) => !STATUS_ORDER.includes(s))
+  return [...known, ...extras].map((s) => ({ status: s, ...counts.get(s)! }))
+})
+
+const filteredOrders = computed(() =>
+  activeStatus.value === 'ALL' ? orders.value : orders.value.filter((o) => o.status === activeStatus.value),
+)
+
+/** 重新拉取后，若当前筛选的状态已不存在（如取消了唯一的待支付单），退回「全部」 */
+function resetFilterIfStale() {
+  if (activeStatus.value !== 'ALL' && !orders.value.some((o) => o.status === activeStatus.value)) {
+    activeStatus.value = 'ALL'
+  }
+}
 
 onMounted(async () => {
   try {
@@ -36,6 +69,7 @@ async function onCancel(order: OrderItem) {
     await cancelOrder(order.orderNo)
     showToast('success', t('payment.cancelled'))
     orders.value = await fetchMyOrders()
+    resetFilterIfStale()
   } catch (e) {
     showToast('error', e instanceof Error ? e.message : t('api.requestFailed'))
   }
@@ -66,28 +100,56 @@ function formatTime(iso: string): string {
       {{ $t('orders.empty') }}<RouterLink to="/" class="link">{{ $t('orders.goShopping') }}</RouterLink>
     </p>
 
-    <ul v-else class="order-list">
-      <li v-for="order in orders" :key="order.orderNo" class="order-card">
-        <div class="order-main">
-          <span class="product-name">{{ order.productName }}</span>
-          <span class="order-no">{{ $t('orders.orderNo', { orderNo: order.orderNo }) }}</span>
-        </div>
-        <div class="order-side">
-          <span class="amount">{{ formatPrice(order.amountCents) }}</span>
-          <span class="meta">
-            {{ $t('orders.quantity', { n: order.quantity }) }} · {{ order.statusLabel }} · {{ formatTime(order.createdAt) }}
-          </span>
-          <div v-if="isPayable(order)" class="order-actions">
-            <RouterLink :to="`/pay/${order.orderNo}`" class="pay-link">
-              {{ $t('orders.goPay') }}
-            </RouterLink>
-            <button type="button" class="cancel-link" @click="onCancel(order)">
-              {{ $t('orders.cancel') }}
-            </button>
+    <template v-else>
+      <div class="filter-bar" role="group" :aria-label="$t('orders.filterLabel')">
+        <button
+          type="button"
+          class="filter-chip"
+          :class="{ active: activeStatus === 'ALL' }"
+          @click="activeStatus = 'ALL'"
+        >
+          {{ $t('orders.filterAll') }}
+          <span class="chip-count">{{ orders.length }}</span>
+        </button>
+        <button
+          v-for="s in availableStatuses"
+          :key="s.status"
+          type="button"
+          class="filter-chip"
+          :class="{ active: activeStatus === s.status }"
+          @click="activeStatus = s.status"
+        >
+          {{ s.label }}
+          <span class="chip-count">{{ s.count }}</span>
+        </button>
+      </div>
+
+      <ul class="order-list">
+        <li v-for="order in filteredOrders" :key="order.orderNo" class="order-card">
+          <div class="order-main">
+            <div class="name-row">
+              <span class="product-name">{{ order.productName }}</span>
+              <span class="status-tag" :class="`status-tag--${order.status}`">{{ order.statusLabel }}</span>
+            </div>
+            <span class="order-no">{{ $t('orders.orderNo', { orderNo: order.orderNo }) }}</span>
           </div>
-        </div>
-      </li>
-    </ul>
+          <div class="order-side">
+            <span class="amount">{{ formatPrice(order.amountCents) }}</span>
+            <span class="meta">
+              {{ $t('orders.quantity', { n: order.quantity }) }} · {{ formatTime(order.createdAt) }}
+            </span>
+            <div v-if="isPayable(order)" class="order-actions">
+              <RouterLink :to="`/pay/${order.orderNo}`" class="pay-link">
+                {{ $t('orders.goPay') }}
+              </RouterLink>
+              <button type="button" class="cancel-link" @click="onCancel(order)">
+                {{ $t('orders.cancel') }}
+              </button>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </template>
   </main>
 </template>
 
@@ -117,6 +179,43 @@ function formatTime(iso: string): string {
   color: var(--color-brand-deep);
 }
 
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-bg);
+  color: var(--color-ink-secondary);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.filter-chip:hover {
+  border-color: var(--color-brand);
+  color: var(--color-brand-deep);
+}
+
+.filter-chip.active {
+  border-color: var(--color-brand);
+  background: var(--color-brand);
+  color: #ffffff;
+}
+
+.chip-count {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
 .order-list {
   list-style: none;
   padding: 0;
@@ -144,9 +243,47 @@ function formatTime(iso: string): string {
   min-width: 0;
 }
 
+.name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .product-name {
   font-weight: 500;
   color: var(--color-ink);
+}
+
+/* 状态 tag：未知状态用灰色兜底，已知状态按语义配色覆盖 */
+.status-tag {
+  flex-shrink: 0;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 500;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.status-tag--PENDING {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.status-tag--PAID {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.status-tag--COMPLETED {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.status-tag--FAILED {
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
 .order-no {
