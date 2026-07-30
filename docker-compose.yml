@@ -2,6 +2,8 @@
 # 前置：部署机 docker login ghcr.io；本目录放好 application.yml（后端外置配置，含外部 MySQL
 #       连接与 OIDC 参数，参照 backend/config/application.example.yml 填写）与 gateway.nginx.conf
 # MySQL 用外部实例，不进 compose；gateway 是唯一入口，其余服务不映射宿主端口
+# 依赖 Compose ≥ 2.17（depends_on 的 restart 字段）：升级某服务时其被依赖方自动重启以重新解析
+# nginx 上游 IP（proxy_pass 用主机名且未配 resolver，会在配置加载时永久缓存旧 IP，否则升级后 502）
 services:
   gateway:
     image: nginx:1.29-alpine
@@ -14,8 +16,12 @@ services:
     depends_on:
       frontend:
         condition: service_healthy
+        restart: true
       admin:
-        condition: service_healthy
+        # 用 service_started 而非 service_healthy：管理端起不来（拉镜像失败/ADMIN_TAG 打错等）
+        # 不应连累网关不启动、商城一起打不开
+        condition: service_started
+        restart: true
     healthcheck:
       # 探自身 80：会经 default_server 落到商城，通即代表网关与上游都活着
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || exit 1"]
@@ -31,6 +37,7 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+        restart: true
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || exit 1"]
       interval: 30s
@@ -45,6 +52,7 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+        restart: true
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || exit 1"]
       interval: 30s

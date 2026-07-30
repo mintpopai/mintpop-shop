@@ -35,7 +35,10 @@ app:
       - 填管理员邮箱
     # 以下为可选项及默认值，不改可不写：
     # session-ttl: 7d            # 会话有效期
-    # frontend-base-url: /       # 登录/登出完成后回跳的前端地址（同源部署用默认值即可）
+    # frontend-base-url: /       # 登录/登出完成后回跳的前端地址
+    #   ⚠️ 多域部署（商城 mintpop.ai + 管理端 admin.mintpop.ai 各一个子域）下必须保持相对路径 /，
+    #   靠 sendRedirect("/") 回跳「当前请求所在的 host」；改成绝对 URL（如 https://mintpop.ai）
+    #   会导致管理端登录/登出后被强制弹回商城域，无法完成登录闭环。不改则默认值天然正确，不要手改。
   # order 整段为可选项及默认值，不改可不写：
   # order:
   #   expire-minutes: 30         # 待支付订单的支付时限（分钟），超时懒惰过期为「已过期」

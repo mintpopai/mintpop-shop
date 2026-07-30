@@ -11,7 +11,7 @@ MintPop 品牌商店：前端分组展示商品，点击购买创建待支付订
 
 ## 快速开始
 
-1. 复制 `backend/config/application.example.yml` 为同目录 `application.yml`，填入你的 MySQL 连接信息（该文件已被 gitignore 且在 jar 之外，凭据不入库；账号有建库权限时会自动创建 `mintpop_shop` 库）；同时按模板填入统一账号中心（Logto）的 OIDC 参数与会话密钥（向账号中心管理员申请；本地回调地址登记为 `http://localhost:5173/auth/callback`）。
+1. 复制 `backend/config/application.example.yml` 为同目录 `application.yml`，填入你的 MySQL 连接信息（该文件已被 gitignore 且在 jar 之外，凭据不入库；账号有建库权限时会自动创建 `mintpop_shop` 库）；同时按模板填入统一账号中心（Logto）的 OIDC 参数与会话密钥（向账号中心管理员申请；本地回调地址登记为 `http://localhost:5173/auth/callback` 与 `http://localhost:5174/auth/callback` 两条，后者供管理端本地开发用，见「管理端」章节）。
 2. 依次执行：
 
 ```bash
@@ -19,9 +19,10 @@ mise install          # 安装工具链（java/maven/node/pnpm）
 mise run install      # 安装项目依赖
 mise run run-backend      # 终端 1：启动后端（8080，Flyway 自动建表并写入种子数据）
 mise run run-frontend      # 终端 2：启动前端（5173，/api 代理到 8080）
+mise run run-admin        # 终端 3：启动管理端（5174，/api 代理到 8080，见「管理端」章节）
 ```
 
-打开 http://localhost:5173 即可看到商店页面。
+打开 http://localhost:5173 即可看到商店页面，http://localhost:5174 是管理后台。
 
 ## 支付（Stripe）
 
@@ -109,4 +110,10 @@ DNS 需把 `mintpop.ai` 与 `admin.mintpop.ai` 都指向这台源站并开启 Cl
 
 **gateway 是唯一入口**：按 Host 分流——`admin.*` 走管理端站点，其余（含未知 Host）走商城站点；frontend、admin、backend 三个容器都不映射宿主端口。两个前端站点各自反代 `/api`、`/auth`、`/oauth2` 到 backend，因此各子域上的 API 调用都是同源的。
 
-部署注意：后端 8080 端口须仅经反向代理可达、不可直接暴露公网（已启用 `forward-headers-strategy: framework`，直连时 `X-Forwarded-*` 可被伪造）；gateway 与两个站点的 nginx 都必须透传原始 `Host` 头——后端靠它展开 OIDC 的 `redirect_uri`，被改写会导致登录失败。另外自签会话为无状态 JWT，登出仅清浏览器 Cookie、无服务端吊销，被窃 token 在有效期（默认 7 天）内仍有效，全员强制下线的手段是更换 `session-secret`。
+部署注意：后端 8080 端口须仅经反向代理可达、不可直接暴露公网（已启用 `forward-headers-strategy: framework`，直连时 `X-Forwarded-*` 可被伪造）；gateway 与两个站点的 nginx 都必须透传原始 `Host` 头——后端靠它展开 OIDC 的 `redirect_uri`，被改写会导致登录失败。`app.auth.frontend-base-url` 必须保持相对路径 `/`（默认值，见 `application.example.yml` 该项注释）——多域部署下若改成绝对 URL，管理端登录/登出后会被弹回商城域，这两条是同一个「按 Host 就地回跳」假设的两半，需同时成立。另外自签会话为无状态 JWT，登出仅清浏览器 Cookie、无服务端吊销，被窃 token 在有效期（默认 7 天）内仍有效，全员强制下线的手段是更换 `session-secret`。
+
+**上线核验（分流是否正确）**：部署完成后分别用 `curl -H "Host: mintpop.ai" http://<源站IP>/` 与 `curl -H "Host: admin.mintpop.ai" http://<源站IP>/`，核对返回页面的 `<title>` 分别是商城页与「MintPop Shop 管理后台」。必须人工核验的原因：gateway 的 healthcheck 只探 `default_server`（商城）路径，`admin.*` 的 `server_name` 正则若写成语义错误的形式（如误匹配到商城的 server block），healthcheck 依旧通过、不会报警。
+
+**源站防火墙**：源站 80 端口应限制到 Cloudflare IP 段。理由：`curl -H "Host: admin.mintpop.ai" http://<源站IP>/` 可绕过 Cloudflare Access 直达管理端 SPA 与 `/api/admin/**`；第二道防线（后端邮箱白名单 + OIDC）仍然成立，所以不构成可利用漏洞，但纵深防御的第一道会失效。
+
+**Access 会话过期的表现**：Cloudflare Access 整域拦截下，会话过期后 `/api/*` 的 fetch 会收到跨源 302（跳 Access 登录页）而失败，页面提示是通用的「网络异常，请稍后重试」，与「Access 会话过期」这个真实原因对不上——刷新页面即可重新过 Access 认证。
