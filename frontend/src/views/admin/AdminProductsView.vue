@@ -11,7 +11,6 @@ import {
   type AdminGroup,
   type AdminProduct,
 } from '../../api-admin'
-import { locale, t } from '../../i18n'
 import { showToast } from '../../toast'
 
 /** accent 枚举与商品卡的预览色（点缀色一致，仅作后台辨识） */
@@ -37,13 +36,9 @@ const filteredProducts = computed(() =>
     : products.value.filter((p) => p.groupId === groupFilter.value),
 )
 
-/** 分组名按当前语言展示（英文缺失回退中文，与后端口径一致） */
+/** 管理端固定中文：分组显示中文名 */
 function groupName(groupId: number): string {
-  const group = groups.value.find((g) => g.id === groupId)
-  if (!group) {
-    return String(groupId)
-  }
-  return locale === 'en-US' && group.nameEn ? group.nameEn : group.nameZh
+  return groups.value.find((g) => g.id === groupId)?.nameZh ?? String(groupId)
 }
 
 /** 弹窗状态：editingId 为空表示新增；价格以美元字符串编辑、提交时转美分 */
@@ -69,7 +64,7 @@ async function reload() {
     ;[groups.value, products.value] = await Promise.all([fetchAdminGroups(), fetchAdminProducts()])
     loadError.value = ''
   } catch (e) {
-    loadError.value = e instanceof Error ? e.message : t('common.loadFailed')
+    loadError.value = e instanceof Error ? e.message : '加载失败，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -116,7 +111,7 @@ function openEdit(product: AdminProduct) {
 async function onSave() {
   const priceCents = Math.round(Number(form.value.priceUsd) * 100)
   if (!form.value.nameZh.trim() || !form.value.groupId || !Number.isFinite(priceCents) || priceCents < 1) {
-    showToast('error', t('admin.form.invalid'))
+    showToast('error', '请完整填写必填项')
     return
   }
   saving.value = true
@@ -139,11 +134,11 @@ async function onSave() {
     } else {
       await updateAdminProduct(editingId.value, body)
     }
-    showToast('success', t('admin.products.saved'))
+    showToast('success', '已保存')
     modalOpen.value = false
     await reload()
   } catch (e) {
-    showToast('error', e instanceof Error ? e.message : t('api.requestFailed'))
+    showToast('error', e instanceof Error ? e.message : '请求失败，请稍后重试')
   } finally {
     saving.value = false
   }
@@ -153,43 +148,41 @@ async function onToggleSale(product: AdminProduct) {
   try {
     const updated = await setAdminProductOnSale(product.id, !product.onSale)
     products.value = products.value.map((p) => (p.id === updated.id ? updated : p))
-    showToast('success', t('admin.products.statusUpdated'))
+    showToast('success', '已更新上架状态')
   } catch (e) {
-    showToast('error', e instanceof Error ? e.message : t('api.requestFailed'))
+    showToast('error', e instanceof Error ? e.message : '请求失败，请稍后重试')
   }
 }
 </script>
 
 <template>
-  <h2 class="admin-title">{{ $t('admin.products.title') }}</h2>
+  <h2 class="admin-title">商品管理</h2>
 
   <div class="admin-toolbar">
-    <select v-model.number="groupFilter" class="admin-select" :aria-label="$t('admin.products.group')">
-      <option :value="0">{{ $t('admin.products.allGroups') }}</option>
-      <option v-for="group in groups" :key="group.id" :value="group.id">
-        {{ groupName(group.id) }}
-      </option>
+    <select v-model.number="groupFilter" class="admin-select" aria-label="按分组筛选">
+      <option :value="0">全部分组</option>
+      <option v-for="group in groups" :key="group.id" :value="group.id">{{ group.nameZh }}</option>
     </select>
     <span class="spacer"></span>
-    <button type="button" class="admin-btn" @click="openCreate">{{ $t('admin.products.add') }}</button>
+    <button type="button" class="admin-btn" @click="openCreate">新增商品</button>
   </div>
 
-  <p v-if="loading" class="admin-hint">{{ $t('common.loading') }}</p>
+  <p v-if="loading" class="admin-hint">加载中……</p>
   <p v-else-if="loadError" class="admin-hint error">{{ loadError }}</p>
 
   <div v-else class="admin-card">
-    <p v-if="filteredProducts.length === 0" class="admin-hint">{{ $t('admin.table.empty') }}</p>
+    <p v-if="filteredProducts.length === 0" class="admin-hint">暂无数据</p>
     <table v-else class="admin-table">
       <thead>
         <tr>
-          <th>{{ $t('admin.table.id') }}</th>
-          <th>{{ $t('admin.products.name') }}</th>
-          <th>{{ $t('admin.products.group') }}</th>
-          <th>{{ $t('admin.products.price') }}</th>
-          <th>{{ $t('admin.products.badge') }}</th>
-          <th>{{ $t('admin.products.accent') }}</th>
-          <th>{{ $t('admin.products.status') }}</th>
-          <th>{{ $t('admin.table.actions') }}</th>
+          <th>ID</th>
+          <th>名称</th>
+          <th>分组</th>
+          <th>价格</th>
+          <th>角标</th>
+          <th>主题色</th>
+          <th>状态</th>
+          <th>操作</th>
         </tr>
       </thead>
       <tbody>
@@ -210,15 +203,13 @@ async function onToggleSale(product: AdminProduct) {
           </td>
           <td>
             <span class="sale-tag" :class="{ off: !product.onSale }">
-              {{ product.onSale ? $t('admin.products.onSale') : $t('admin.products.offSale') }}
+              {{ product.onSale ? '上架中' : '已下架' }}
             </span>
           </td>
           <td class="actions">
-            <button type="button" class="admin-link" @click="openEdit(product)">
-              {{ $t('admin.products.editAction') }}
-            </button>
+            <button type="button" class="admin-link" @click="openEdit(product)">编辑</button>
             <button type="button" class="admin-link" :class="{ danger: product.onSale }" @click="onToggleSale(product)">
-              {{ product.onSale ? $t('admin.products.putOffSale') : $t('admin.products.putOnSale') }}
+              {{ product.onSale ? '下架' : '上架' }}
             </button>
           </td>
         </tr>
@@ -226,53 +217,47 @@ async function onToggleSale(product: AdminProduct) {
     </table>
   </div>
 
-  <AdminModal
-    v-if="modalOpen"
-    :title="editingId === null ? $t('admin.products.add') : $t('admin.products.edit')"
-    @close="modalOpen = false"
-  >
+  <AdminModal v-if="modalOpen" :title="editingId === null ? '新增商品' : '编辑商品'" @close="modalOpen = false">
     <form class="admin-form" @submit.prevent="onSave">
       <div class="admin-form-row">
         <div class="admin-field">
-          <label for="p-name-zh">{{ $t('admin.products.nameZh') }}</label>
+          <label for="p-name-zh">名称（中文）</label>
           <input id="p-name-zh" v-model="form.nameZh" class="admin-input" required />
         </div>
         <div class="admin-field">
-          <label for="p-name-en">{{ $t('admin.products.nameEn') }}</label>
+          <label for="p-name-en">名称（英文）</label>
           <input id="p-name-en" v-model="form.nameEn" class="admin-input" />
         </div>
       </div>
       <div class="admin-form-row">
         <div class="admin-field">
-          <label for="p-desc-zh">{{ $t('admin.products.descZh') }}</label>
+          <label for="p-desc-zh">描述（中文）</label>
           <textarea id="p-desc-zh" v-model="form.descriptionZh" class="admin-textarea"></textarea>
         </div>
         <div class="admin-field">
-          <label for="p-desc-en">{{ $t('admin.products.descEn') }}</label>
+          <label for="p-desc-en">描述（英文）</label>
           <textarea id="p-desc-en" v-model="form.descriptionEn" class="admin-textarea"></textarea>
         </div>
       </div>
       <div class="admin-form-row">
         <div class="admin-field">
-          <label for="p-badge-zh">{{ $t('admin.products.badgeZh') }}</label>
+          <label for="p-badge-zh">角标（中文，留空不显示）</label>
           <input id="p-badge-zh" v-model="form.badgeZh" class="admin-input" />
         </div>
         <div class="admin-field">
-          <label for="p-badge-en">{{ $t('admin.products.badgeEn') }}</label>
+          <label for="p-badge-en">角标（英文）</label>
           <input id="p-badge-en" v-model="form.badgeEn" class="admin-input" />
         </div>
       </div>
       <div class="admin-form-row">
         <div class="admin-field">
-          <label for="p-group">{{ $t('admin.products.group') }}</label>
+          <label for="p-group">分组</label>
           <select id="p-group" v-model.number="form.groupId" class="admin-select" required>
-            <option v-for="group in groups" :key="group.id" :value="group.id">
-              {{ groupName(group.id) }}
-            </option>
+            <option v-for="group in groups" :key="group.id" :value="group.id">{{ group.nameZh }}</option>
           </select>
         </div>
         <div class="admin-field">
-          <label for="p-accent">{{ $t('admin.products.accent') }}</label>
+          <label for="p-accent">主题色</label>
           <select id="p-accent" v-model="form.accent" class="admin-select">
             <option v-for="(color, name) in ACCENTS" :key="name" :value="name">{{ name }}</option>
           </select>
@@ -280,7 +265,7 @@ async function onToggleSale(product: AdminProduct) {
       </div>
       <div class="admin-form-row">
         <div class="admin-field">
-          <label for="p-price">{{ $t('admin.products.priceUsd') }}</label>
+          <label for="p-price">价格（美元）</label>
           <input
             id="p-price"
             v-model="form.priceUsd"
@@ -292,24 +277,22 @@ async function onToggleSale(product: AdminProduct) {
           />
         </div>
         <div class="admin-field">
-          <label for="p-on-sale">{{ $t('admin.products.onSaleField') }}</label>
+          <label for="p-on-sale">是否上架</label>
           <select id="p-on-sale" v-model="form.onSale" class="admin-select">
-            <option :value="true">{{ $t('admin.products.onSale') }}</option>
-            <option :value="false">{{ $t('admin.products.offSale') }}</option>
+            <option :value="true">上架</option>
+            <option :value="false">下架</option>
           </select>
         </div>
       </div>
       <div class="admin-field">
-        <label for="p-image">{{ $t('admin.products.imageUrl') }}</label>
+        <label for="p-image">商品图 URL（可空）</label>
         <input id="p-image" v-model="form.imageUrl" class="admin-input" type="url" />
       </div>
     </form>
     <template #footer>
-      <button type="button" class="admin-btn-ghost" @click="modalOpen = false">
-        {{ $t('admin.form.cancel') }}
-      </button>
+      <button type="button" class="admin-btn-ghost" @click="modalOpen = false">取消</button>
       <button type="button" class="admin-btn" :disabled="saving" @click="onSave">
-        {{ saving ? $t('admin.form.saving') : $t('admin.form.save') }}
+        {{ saving ? '保存中…' : '保存' }}
       </button>
     </template>
   </AdminModal>

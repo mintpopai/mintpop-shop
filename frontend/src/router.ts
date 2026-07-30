@@ -4,7 +4,6 @@ import OrdersView from './views/OrdersView.vue'
 import PayView from './views/PayView.vue'
 import PaymentResultView from './views/PaymentResultView.vue'
 import { currentUser, gotoLogin } from './auth'
-import { t } from './i18n'
 import { showToast } from './toast'
 
 export const router = createRouter({
@@ -40,7 +39,8 @@ router.beforeEach((to) => {
     return false
   }
   if (!currentUser.value.admin) {
-    showToast('error', t('admin.forbidden'))
+    // 管理端固定中文，此提示不做双语
+    showToast('error', '无权限访问管理后台')
     return '/'
   }
   return true

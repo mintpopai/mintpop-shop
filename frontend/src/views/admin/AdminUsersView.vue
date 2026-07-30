@@ -2,7 +2,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { fetchAdminUsers, type AdminUser } from '../../api-admin'
 import { formatDateTime } from '../../datetime'
-import { t } from '../../i18n'
 
 const PAGE_SIZE = 20
 
@@ -22,7 +21,7 @@ async function reload() {
     total.value = result.total
     loadError.value = ''
   } catch (e) {
-    loadError.value = e instanceof Error ? e.message : t('common.loadFailed')
+    loadError.value = e instanceof Error ? e.message : '加载失败，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -40,22 +39,22 @@ function gotoPage(next: number) {
 </script>
 
 <template>
-  <h2 class="admin-title">{{ $t('admin.users.title') }}</h2>
+  <h2 class="admin-title">用户管理</h2>
 
-  <p v-if="loading" class="admin-hint">{{ $t('common.loading') }}</p>
+  <p v-if="loading" class="admin-hint">加载中……</p>
   <p v-else-if="loadError" class="admin-hint error">{{ loadError }}</p>
 
   <template v-else>
     <div class="admin-card">
-      <p v-if="records.length === 0" class="admin-hint">{{ $t('admin.table.empty') }}</p>
+      <p v-if="records.length === 0" class="admin-hint">暂无数据</p>
       <table v-else class="admin-table">
         <thead>
           <tr>
-            <th>{{ $t('admin.table.id') }}</th>
-            <th>{{ $t('admin.users.user') }}</th>
-            <th>{{ $t('admin.users.email') }}</th>
-            <th>{{ $t('admin.users.orderCount') }}</th>
-            <th>{{ $t('admin.users.createdAt') }}</th>
+            <th>ID</th>
+            <th>用户</th>
+            <th>邮箱</th>
+            <th>订单数</th>
+            <th>注册时间</th>
           </tr>
         </thead>
         <tbody>
@@ -80,16 +79,16 @@ function gotoPage(next: number) {
 
     <div class="admin-pager">
       <button type="button" class="admin-btn-ghost" :disabled="page <= 1" @click="gotoPage(page - 1)">
-        {{ $t('admin.table.prev') }}
+        上一页
       </button>
-      <span class="info">{{ $t('admin.table.pageInfo', { page, total }) }}</span>
+      <span class="info">第 {{ page }} 页 · 共 {{ total }} 条</span>
       <button
         type="button"
         class="admin-btn-ghost"
         :disabled="page >= totalPages"
         @click="gotoPage(page + 1)"
       >
-        {{ $t('admin.table.next') }}
+        下一页
       </button>
     </div>
   </template>

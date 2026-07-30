@@ -3,10 +3,16 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { formatPrice } from '../../api'
 import { fetchAdminOrders, type AdminOrderItem } from '../../api-admin'
 import { formatDateTime } from '../../datetime'
-import { t } from '../../i18n'
 
-/** 筛选条状态顺序（与后端 OrderStatusEnum 对齐） */
-const STATUS_ORDER = ['PENDING', 'PAID', 'COMPLETED', 'FAILED', 'CANCELLED', 'EXPIRED']
+/** 筛选条状态与中文标签（顺序与后端 OrderStatusEnum 对齐） */
+const STATUS_FILTERS: Array<{ status: string; label: string }> = [
+  { status: 'PENDING', label: '待支付' },
+  { status: 'PAID', label: '已支付' },
+  { status: 'COMPLETED', label: '已完成' },
+  { status: 'FAILED', label: '支付失败' },
+  { status: 'CANCELLED', label: '已取消' },
+  { status: 'EXPIRED', label: '已过期' },
+]
 
 const PAGE_SIZE = 20
 
@@ -37,7 +43,7 @@ async function reload() {
     total.value = result.total
     loadError.value = ''
   } catch (e) {
-    loadError.value = e instanceof Error ? e.message : t('common.loadFailed')
+    loadError.value = e instanceof Error ? e.message : '加载失败，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -65,7 +71,7 @@ function gotoPage(next: number) {
 </script>
 
 <template>
-  <h2 class="admin-title">{{ $t('admin.orders.title') }}</h2>
+  <h2 class="admin-title">订单管理</h2>
 
   <div class="admin-toolbar">
     <button
@@ -74,54 +80,50 @@ function gotoPage(next: number) {
       :class="{ active: activeStatus === 'ALL' }"
       @click="activeStatus = 'ALL'"
     >
-      {{ $t('admin.orders.filterAll') }}
+      全部
     </button>
     <button
-      v-for="status in STATUS_ORDER"
-      :key="status"
+      v-for="item in STATUS_FILTERS"
+      :key="item.status"
       type="button"
       class="admin-chip"
-      :class="{ active: activeStatus === status }"
-      @click="activeStatus = status"
+      :class="{ active: activeStatus === item.status }"
+      @click="activeStatus = item.status"
     >
-      {{ $t(`admin.status.${status}`) }}
+      {{ item.label }}
     </button>
     <span class="spacer"></span>
     <form class="search" @submit.prevent="onSearch">
-      <input
-        v-model="keywordDraft"
-        class="admin-input"
-        :placeholder="$t('admin.orders.searchPlaceholder')"
-      />
-      <button type="submit" class="admin-btn-ghost">{{ $t('admin.orders.search') }}</button>
+      <input v-model="keywordDraft" class="admin-input" placeholder="按订单号搜索" />
+      <button type="submit" class="admin-btn-ghost">搜索</button>
     </form>
   </div>
 
-  <p v-if="loading" class="admin-hint">{{ $t('common.loading') }}</p>
+  <p v-if="loading" class="admin-hint">加载中……</p>
   <p v-else-if="loadError" class="admin-hint error">{{ loadError }}</p>
 
   <template v-else>
     <div class="admin-card">
-      <p v-if="records.length === 0" class="admin-hint">{{ $t('admin.table.empty') }}</p>
+      <p v-if="records.length === 0" class="admin-hint">暂无数据</p>
       <table v-else class="admin-table">
         <thead>
           <tr>
-            <th>{{ $t('admin.orders.orderNo') }}</th>
-            <th>{{ $t('admin.orders.product') }}</th>
-            <th>{{ $t('admin.orders.buyer') }}</th>
-            <th>{{ $t('admin.orders.quantity') }}</th>
-            <th>{{ $t('admin.orders.amount') }}</th>
-            <th>{{ $t('admin.orders.status') }}</th>
-            <th>{{ $t('admin.orders.provider') }}</th>
-            <th>{{ $t('admin.orders.createdAt') }}</th>
-            <th>{{ $t('admin.orders.paidAt') }}</th>
+            <th>订单号</th>
+            <th>商品</th>
+            <th>买家</th>
+            <th>数量</th>
+            <th>金额</th>
+            <th>状态</th>
+            <th>支付方式</th>
+            <th>下单时间</th>
+            <th>支付时间</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="order in records" :key="order.orderNo">
             <td class="mono">{{ order.orderNo }}</td>
             <td>{{ order.productName }}</td>
-            <td>{{ order.buyerEmail ?? $t('admin.orders.guest') }}</td>
+            <td>{{ order.buyerEmail ?? '游客' }}</td>
             <td>{{ order.quantity }}</td>
             <td class="amount">{{ formatPrice(order.amountCents) }}</td>
             <td>
@@ -137,16 +139,16 @@ function gotoPage(next: number) {
 
     <div class="admin-pager">
       <button type="button" class="admin-btn-ghost" :disabled="page <= 1" @click="gotoPage(page - 1)">
-        {{ $t('admin.table.prev') }}
+        上一页
       </button>
-      <span class="info">{{ $t('admin.table.pageInfo', { page, total }) }}</span>
+      <span class="info">第 {{ page }} 页 · 共 {{ total }} 条</span>
       <button
         type="button"
         class="admin-btn-ghost"
         :disabled="page >= totalPages"
         @click="gotoPage(page + 1)"
       >
-        {{ $t('admin.table.next') }}
+        下一页
       </button>
     </div>
   </template>

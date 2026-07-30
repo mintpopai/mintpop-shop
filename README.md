@@ -68,8 +68,20 @@ mise run run-frontend      # 终端 2：启动前端（5173，/api 代理到 808
 | `POST /api/payment/orders/verify` | 需登录 + 归属校验 | 主动核实并推进支付状态（轮询用） |
 | `POST /api/payment/orders/{orderNo}/cancel` | 需登录 + 归属校验 | 取消订单 |
 | `POST /api/v1/payment/webhook/stripe` | 验签，无登录态 | Stripe 事件回调 |
+| `/api/admin/**` | 需登录 + 管理员 | 管理端接口（概览/商品/分组/订单/用户），非管理员返回业务码 110003 |
 
 登录采用 MintPop 统一账号中心（Logto，OIDC 授权码 + PKCE）：后端为机密客户端（BFF），登录后自签会话 JWT（只含内部 userid）写 HttpOnly Cookie，账号中心 token 不进浏览器；用户主键为本地 `shop_user.id`，与账号中心 `sub` 通过 `user_identity` 映射表关联。
+
+## 管理端
+
+店主管理后台在 `/admin`（概览 / 商品 / 分组 / 订单 / 用户），界面固定中文、不做双语。权限是**两道防线**：
+
+1. **Cloudflare 前置拦截（第一道，生产必配）**：站点经 Cloudflare 代理，请在 Dashboard 把管理端路径挡在源站之前，仅放行管理员本人。二选一：
+   - 推荐 **Zero Trust Access**：Access → Applications → Self-hosted 建应用，路径配 `<域名>/admin*` 与 `<域名>/api/admin*`，Allow 策略限定管理员邮箱（邮箱 OTP 验证），适配 IP 不固定的场景。
+   - 或 **WAF 自定义规则**：表达式 `(http.request.uri.path wildcard "/admin*") or (http.request.uri.path wildcard "/api/admin*") and ip.src ne <你的固定IP>` → Block（有固定出口 IP 时最简单）。
+2. **后端管理员白名单（第二道）**：外置 `application.yml` 配 `app.auth.admin-emails` 邮箱白名单（忽略大小写，见 `application.example.yml`）。命中账号登录后可从头像菜单进入管理后台；`/api/admin/**` 由拦截器逐请求校验，非管理员返回业务码 110003。Cloudflare 被绕过（如源站直连）时该防线仍然成立。
+
+本地开发不经 Cloudflare，仅第二道防线生效——给自己的开发账号邮箱配进白名单即可。
 
 ## CI/CD 与发版
 

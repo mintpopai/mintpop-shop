@@ -9,7 +9,7 @@ const emit = defineEmits<{ close: [] }>()
       <div class="dialog" role="dialog" aria-modal="true" :aria-label="title">
         <header class="head">
           <h3 class="head-title">{{ title }}</h3>
-          <button type="button" class="close" :aria-label="$t('admin.form.cancel')" @click="emit('close')">
+          <button type="button" class="close" aria-label="关闭" @click="emit('close')">
             ×
           </button>
         </header>

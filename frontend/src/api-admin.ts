@@ -1,5 +1,16 @@
 import { request } from './api'
 
+/**
+ * 管理端请求封装：强制 Accept-Language 为中文——管理端不做双语，
+ * 后端产出的状态文案与错误信息一律中文，与页面写死的中文文案保持一致。
+ */
+function adminRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  return request<T>(path, {
+    ...init,
+    headers: { ...init?.headers, 'Accept-Language': 'zh-CN' },
+  })
+}
+
 /** 管理端商品（镜像后端 AdminProductResponse，双语原始字段供编辑） */
 export interface AdminProduct {
   id: number
@@ -93,28 +104,28 @@ export interface PageResult<T> {
 
 /** 概览统计 + 最近订单 */
 export function fetchAdminDashboard(): Promise<AdminDashboard> {
-  return request<AdminDashboard>('/api/admin/dashboard')
+  return adminRequest<AdminDashboard>('/api/admin/dashboard')
 }
 
 /** 全部商品（含下架），可按分组过滤 */
 export function fetchAdminProducts(groupId?: number): Promise<AdminProduct[]> {
   const query = groupId ? `?groupId=${groupId}` : ''
-  return request<AdminProduct[]>(`/api/admin/products${query}`)
+  return adminRequest<AdminProduct[]>(`/api/admin/products${query}`)
 }
 
 /** 新增商品 */
 export function createAdminProduct(body: AdminProductUpsert): Promise<AdminProduct> {
-  return request<AdminProduct>('/api/admin/products', { method: 'POST', body: JSON.stringify(body) })
+  return adminRequest<AdminProduct>('/api/admin/products', { method: 'POST', body: JSON.stringify(body) })
 }
 
 /** 编辑商品 */
 export function updateAdminProduct(id: number, body: AdminProductUpsert): Promise<AdminProduct> {
-  return request<AdminProduct>(`/api/admin/products/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+  return adminRequest<AdminProduct>(`/api/admin/products/${id}`, { method: 'PUT', body: JSON.stringify(body) })
 }
 
 /** 商品上/下架 */
 export function setAdminProductOnSale(id: number, onSale: boolean): Promise<AdminProduct> {
-  return request<AdminProduct>(`/api/admin/products/${id}/on-sale`, {
+  return adminRequest<AdminProduct>(`/api/admin/products/${id}/on-sale`, {
     method: 'PUT',
     body: JSON.stringify({ onSale }),
   })
@@ -122,22 +133,22 @@ export function setAdminProductOnSale(id: number, onSale: boolean): Promise<Admi
 
 /** 全部分组（含商品数） */
 export function fetchAdminGroups(): Promise<AdminGroup[]> {
-  return request<AdminGroup[]>('/api/admin/groups')
+  return adminRequest<AdminGroup[]>('/api/admin/groups')
 }
 
 /** 新增分组 */
 export function createAdminGroup(body: AdminGroupUpsert): Promise<AdminGroup> {
-  return request<AdminGroup>('/api/admin/groups', { method: 'POST', body: JSON.stringify(body) })
+  return adminRequest<AdminGroup>('/api/admin/groups', { method: 'POST', body: JSON.stringify(body) })
 }
 
 /** 编辑分组 */
 export function updateAdminGroup(id: number, body: AdminGroupUpsert): Promise<AdminGroup> {
-  return request<AdminGroup>(`/api/admin/groups/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+  return adminRequest<AdminGroup>(`/api/admin/groups/${id}`, { method: 'PUT', body: JSON.stringify(body) })
 }
 
 /** 删除分组（仅空组） */
 export function deleteAdminGroup(id: number): Promise<null> {
-  return request<null>(`/api/admin/groups/${id}`, { method: 'DELETE' })
+  return adminRequest<null>(`/api/admin/groups/${id}`, { method: 'DELETE' })
 }
 
 /** 订单分页：状态与订单号前缀可选 */
@@ -154,10 +165,10 @@ export function fetchAdminOrders(params: {
   if (params.keyword) {
     query.set('keyword', params.keyword)
   }
-  return request<PageResult<AdminOrderItem>>(`/api/admin/orders?${query}`)
+  return adminRequest<PageResult<AdminOrderItem>>(`/api/admin/orders?${query}`)
 }
 
 /** 用户分页 */
 export function fetchAdminUsers(page: number, size: number): Promise<PageResult<AdminUser>> {
-  return request<PageResult<AdminUser>>(`/api/admin/users?page=${page}&size=${size}`)
+  return adminRequest<PageResult<AdminUser>>(`/api/admin/users?page=${page}&size=${size}`)
 }

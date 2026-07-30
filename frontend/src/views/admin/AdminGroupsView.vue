@@ -8,14 +8,13 @@ import {
   updateAdminGroup,
   type AdminGroup,
 } from '../../api-admin'
-import { t } from '../../i18n'
 import { showToast } from '../../toast'
 
 const groups = ref<AdminGroup[]>([])
 const loading = ref(true)
 const loadError = ref('')
 
-/** 弹窗状态：null=关闭；editingId 为空表示新增 */
+/** 弹窗状态：editingId 为空表示新增 */
 const modalOpen = ref(false)
 const editingId = ref<number | null>(null)
 const form = ref({ nameZh: '', nameEn: '', sortOrder: 0 })
@@ -26,7 +25,7 @@ async function reload() {
     groups.value = await fetchAdminGroups()
     loadError.value = ''
   } catch (e) {
-    loadError.value = e instanceof Error ? e.message : t('common.loadFailed')
+    loadError.value = e instanceof Error ? e.message : '加载失败，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -50,7 +49,7 @@ function openEdit(group: AdminGroup) {
 
 async function onSave() {
   if (!form.value.nameZh.trim()) {
-    showToast('error', t('admin.form.invalid'))
+    showToast('error', '请完整填写必填项')
     return
   }
   saving.value = true
@@ -60,52 +59,52 @@ async function onSave() {
     } else {
       await updateAdminGroup(editingId.value, form.value)
     }
-    showToast('success', t('admin.groups.saved'))
+    showToast('success', '已保存')
     modalOpen.value = false
     await reload()
   } catch (e) {
-    showToast('error', e instanceof Error ? e.message : t('api.requestFailed'))
+    showToast('error', e instanceof Error ? e.message : '请求失败，请稍后重试')
   } finally {
     saving.value = false
   }
 }
 
 async function onDelete(group: AdminGroup) {
-  if (!window.confirm(t('admin.groups.deleteConfirm', { name: group.nameZh }))) {
+  if (!window.confirm(`确定删除分组「${group.nameZh}」吗？`)) {
     return
   }
   try {
     await deleteAdminGroup(group.id)
-    showToast('success', t('admin.groups.deleted'))
+    showToast('success', '已删除')
     await reload()
   } catch (e) {
-    showToast('error', e instanceof Error ? e.message : t('api.requestFailed'))
+    showToast('error', e instanceof Error ? e.message : '请求失败，请稍后重试')
   }
 }
 </script>
 
 <template>
-  <h2 class="admin-title">{{ $t('admin.groups.title') }}</h2>
+  <h2 class="admin-title">分组管理</h2>
 
   <div class="admin-toolbar">
     <span class="spacer"></span>
-    <button type="button" class="admin-btn" @click="openCreate">{{ $t('admin.groups.add') }}</button>
+    <button type="button" class="admin-btn" @click="openCreate">新增分组</button>
   </div>
 
-  <p v-if="loading" class="admin-hint">{{ $t('common.loading') }}</p>
+  <p v-if="loading" class="admin-hint">加载中……</p>
   <p v-else-if="loadError" class="admin-hint error">{{ loadError }}</p>
 
   <div v-else class="admin-card">
-    <p v-if="groups.length === 0" class="admin-hint">{{ $t('admin.table.empty') }}</p>
+    <p v-if="groups.length === 0" class="admin-hint">暂无数据</p>
     <table v-else class="admin-table">
       <thead>
         <tr>
-          <th>{{ $t('admin.table.id') }}</th>
-          <th>{{ $t('admin.groups.nameZh') }}</th>
-          <th>{{ $t('admin.groups.nameEn') }}</th>
-          <th>{{ $t('admin.groups.sortOrder') }}</th>
-          <th>{{ $t('admin.groups.productCount') }}</th>
-          <th>{{ $t('admin.table.actions') }}</th>
+          <th>ID</th>
+          <th>名称（中文）</th>
+          <th>名称（英文）</th>
+          <th>排序号</th>
+          <th>商品数</th>
+          <th>操作</th>
         </tr>
       </thead>
       <tbody>
@@ -116,17 +115,15 @@ async function onDelete(group: AdminGroup) {
           <td>{{ group.sortOrder }}</td>
           <td>{{ group.productCount }}</td>
           <td class="actions">
-            <button type="button" class="admin-link" @click="openEdit(group)">
-              {{ $t('admin.groups.editAction') }}
-            </button>
+            <button type="button" class="admin-link" @click="openEdit(group)">编辑</button>
             <button
               type="button"
               class="admin-link danger"
               :disabled="group.productCount > 0"
-              :title="group.productCount > 0 ? $t('admin.groups.notEmptyHint') : ''"
+              :title="group.productCount > 0 ? '组内有商品，不可删除' : ''"
               @click="onDelete(group)"
             >
-              {{ $t('admin.groups.delete') }}
+              删除
             </button>
           </td>
         </tr>
@@ -134,33 +131,27 @@ async function onDelete(group: AdminGroup) {
     </table>
   </div>
 
-  <AdminModal
-    v-if="modalOpen"
-    :title="editingId === null ? $t('admin.groups.add') : $t('admin.groups.edit')"
-    @close="modalOpen = false"
-  >
+  <AdminModal v-if="modalOpen" :title="editingId === null ? '新增分组' : '编辑分组'" @close="modalOpen = false">
     <form class="admin-form" @submit.prevent="onSave">
       <div class="admin-form-row">
         <div class="admin-field">
-          <label for="group-name-zh">{{ $t('admin.groups.nameZh') }}</label>
+          <label for="group-name-zh">名称（中文）</label>
           <input id="group-name-zh" v-model="form.nameZh" class="admin-input" required />
         </div>
         <div class="admin-field">
-          <label for="group-name-en">{{ $t('admin.groups.nameEn') }}</label>
+          <label for="group-name-en">名称（英文）</label>
           <input id="group-name-en" v-model="form.nameEn" class="admin-input" />
         </div>
       </div>
       <div class="admin-field">
-        <label for="group-sort">{{ $t('admin.groups.sortOrder') }}</label>
+        <label for="group-sort">排序号（小的在前）</label>
         <input id="group-sort" v-model.number="form.sortOrder" class="admin-input" type="number" required />
       </div>
     </form>
     <template #footer>
-      <button type="button" class="admin-btn-ghost" @click="modalOpen = false">
-        {{ $t('admin.form.cancel') }}
-      </button>
+      <button type="button" class="admin-btn-ghost" @click="modalOpen = false">取消</button>
       <button type="button" class="admin-btn" :disabled="saving" @click="onSave">
-        {{ saving ? $t('admin.form.saving') : $t('admin.form.save') }}
+        {{ saving ? '保存中…' : '保存' }}
       </button>
     </template>
   </AdminModal>
