@@ -5,7 +5,8 @@ MintPop 品牌商店：前端分组展示商品，点击购买创建待支付订
 ## 技术栈
 
 - **backend**：Spring Boot 4 单体（Java 21 / Maven）+ MyBatis-Plus + Spring Security（OIDC 登录）+ Flyway + MySQL
-- **frontend**：Vue 3 + Vite + TypeScript（字体 Fontsource 自托管）
+- **frontend**：商城前端，Vue 3 + Vite + TypeScript（字体 Fontsource 自托管）
+- **admin**：管理端前端（独立项目，同 frontend 技术栈），部署在独立子域 `admin.mintpop.ai`
 - 工具链与命令统一由根 `mise.toml` 管理
 
 ## 快速开始
@@ -44,11 +45,11 @@ mise run run-frontend      # 终端 2：启动前端（5173，/api 代理到 808
 
 | 命令 | 说明 |
 |---|---|
-| `mise run run-backend` / `run-frontend` | 启动后端 / 前端 |
+| `mise run run-backend` / `run-frontend` / `run-admin` | 启动后端 / 商城前端 / 管理端（管理端 5174，见「管理端」章节） |
 | `mise run test-backend` | 后端单元测试 |
-| `mise run build-backend` / `build-frontend` | 构建后端 jar / 前端产物 |
-| `mise run image-backend` / `image-frontend` | 本地构建后端 / 前端 Docker 镜像 |
-| `mise run release-backend` / `release-frontend` | 发版（校验→打 tag→推送，tag 触发发布 workflow） |
+| `mise run build-backend` / `build-frontend` / `build-admin` | 构建后端 jar / 商城前端 / 管理端产物 |
+| `mise run image-backend` / `image-frontend` / `image-admin` | 本地构建后端 / 商城前端 / 管理端 Docker 镜像 |
+| `mise run release-backend` / `release-frontend` / `release-admin` | 发版（校验→打 tag→推送，tag 触发发布 workflow） |
 | `mise run up` / `down` | 以 docker-compose 启停已发布镜像 |
 
 ## 接口
@@ -74,30 +75,38 @@ mise run run-frontend      # 终端 2：启动前端（5173，/api 代理到 808
 
 ## 管理端
 
-店主管理后台在 `/admin`（概览 / 商品 / 分组 / 订单 / 用户），界面固定中文、不做双语。权限是**两道防线**：
+店主管理后台是独立前端项目（`admin/`），部署在独立子域 `admin.mintpop.ai`（概览 / 商品 / 分组 / 订单 / 用户），界面固定中文、不做双语。权限是**两道防线**：
 
-1. **Cloudflare 前置拦截（第一道，生产必配）**：站点经 Cloudflare 代理，请在 Dashboard 把管理端路径挡在源站之前，仅放行管理员本人。二选一：
-   - 推荐 **Zero Trust Access**：Access → Applications → Self-hosted 建应用，路径配 `<域名>/admin*` 与 `<域名>/api/admin*`，Allow 策略限定管理员邮箱（邮箱 OTP 验证），适配 IP 不固定的场景。
-   - 或 **WAF 自定义规则**：表达式 `(http.request.uri.path wildcard "/admin*") or (http.request.uri.path wildcard "/api/admin*") and ip.src ne <你的固定IP>` → Block（有固定出口 IP 时最简单）。
-2. **后端管理员白名单（第二道）**：外置 `application.yml` 配 `app.auth.admin-emails` 邮箱白名单（忽略大小写，见 `application.example.yml`）。命中账号登录后可从头像菜单进入管理后台；`/api/admin/**` 由拦截器逐请求校验，非管理员返回业务码 110003。Cloudflare 被绕过（如源站直连）时该防线仍然成立。
+1. **Cloudflare Zero Trust Access（第一道，生产必配）**：Access → Applications → Self-hosted 建应用，Domain 填 `admin.mintpop.ai`（整域，**不填 path**），Allow 策略限定管理员邮箱（邮箱 OTP 验证）。整域拦截意味着 `/auth/callback`、`/oauth2/*` 也在防线内——`CF_Authorization` 是 hostname 级 Cookie，OIDC 回调是带该 Cookie 的顶级导航，能正常通过。
+2. **后端管理员白名单（第二道）**：外置 `application.yml` 配 `app.auth.admin-emails` 邮箱白名单（忽略大小写，见 `application.example.yml`）。`/api/admin/**` 由拦截器逐请求校验，非管理员返回业务码 110003。Cloudflare 被绕过（如源站直连）时该防线仍然成立。
+
+管理端会话与商城**互不共享**：admin 子域自带 nginx 反代 `/api`、`/auth`、`/oauth2` 到同一个 backend，`mp_session` 以 host-only 形式单独下发在 `admin.mintpop.ai` 上。项目对授权请求强制 `prompt=login`，因此在商城登录过之后进管理端仍会重新走一遍账号中心登录——对管理端而言这是优点。
+
+**账号中心（Logto）需登记的 redirect_uri**：
+- `https://admin.mintpop.ai/auth/callback`（生产）
+- `http://localhost:5174/auth/callback`（本地开发）
 
 本地开发不经 Cloudflare，仅第二道防线生效——给自己的开发账号邮箱配进白名单即可。
 
+> **本地开发注意**：本地商城（5173）与管理端（5174）都是 `localhost`，而 **Cookie 作用域不区分端口**，两者会共用同一份 `mp_session`。生产是不同 hostname，会话隔离才真正成立——不要拿本地行为推断生产行为。
+
 ## CI/CD 与发版
 
-- **CI**：push main / PR 触发 `CI Backend` / `CI Frontend`（按目录过滤），复用 `Quality *` 质量门禁（后端 `mvn test`，前端类型检查+构建）。
-- **发版**：`mise run release-backend [vX.Y.Z] ["更新说明"]`（frontend 同理）。脚本校验通过后同步版本号文件、打 `<组件>-vX.Y.Z` tag 并推送；tag 触发 `Release *` workflow：质量门禁 → 构建镜像推 `ghcr.io/mintpopai/mintpop-shop/<组件>` → 创建 GitHub Release（tag 注释置顶 + 按类型过滤的变更日志）。缺省版本号取最新稳定 tag 的 patch+1；带说明时打 annotated tag。
+- **CI**：push main / PR 触发 `CI Backend` / `CI Frontend` / `CI Admin`（按目录过滤），复用 `Quality *` 质量门禁（后端 `mvn test`，两个前端各自类型检查+构建）。
+- **发版**：`mise run release-backend [vX.Y.Z] ["更新说明"]`（frontend / admin 同理）。脚本校验通过后同步版本号文件、打 `<组件>-vX.Y.Z` tag 并推送；tag 触发 `Release *` workflow：质量门禁 → 构建镜像推 `ghcr.io/mintpopai/mintpop-shop/<组件>` → 创建 GitHub Release（tag 注释置顶 + 按类型过滤的变更日志）。缺省版本号取最新稳定 tag 的 patch+1；带说明时打 annotated tag。
 - **通知**：`Action Notify` 把各流水线结果推飞书私聊，需在仓库 Secrets 配 `FEISHU_APP_ID` / `FEISHU_APP_SECRET` / `FEISHU_RECEIVE_ID`。
 
 ## 部署
 
-部署机安装 Docker 后，取仓库根的 `docker-compose.yml` 与一份填好的 `application.yml`（参照 `backend/config/application.example.yml`，MySQL 用外部实例）放同一目录：
+部署机安装 Docker 后，取仓库根的 `docker-compose.yml`、`gateway.nginx.conf` 与一份填好的 `application.yml`（参照 `backend/config/application.example.yml`，MySQL 用外部实例）放同一目录：
 
 ```bash
 docker login ghcr.io          # 私有镜像时需要
-BACKEND_TAG=0.1.0 FRONTEND_TAG=0.1.0 docker compose up -d   # 缺省 latest；端口用 APP_PORT 覆盖（默认 80）
+BACKEND_TAG=0.1.0 FRONTEND_TAG=0.1.0 ADMIN_TAG=0.1.0 docker compose up -d   # 缺省 latest；端口用 APP_PORT 覆盖（默认 80）
 ```
 
-前端 nginx 是唯一入口：静态资源 + 反代 `/api`、`/auth` 到 backend（backend 不映射宿主端口，满足「8080 仅经反代可达」）；SPA 深链已 fallback 到 `index.html`。
+DNS 需把 `mintpop.ai` 与 `admin.mintpop.ai` 都指向这台源站并开启 Cloudflare 代理。
 
-部署注意：后端 8080 端口须仅经反向代理可达、不可直接暴露公网（已启用 `forward-headers-strategy: framework`，直连时 `X-Forwarded-*` 可被伪造）；生产反代需将前端深链（如 `/orders`）fallback 到 `index.html`。另外自签会话为无状态 JWT，登出仅清浏览器 Cookie、无服务端吊销，被窃 token 在有效期（默认 7 天）内仍有效，全员强制下线的手段是更换 `session-secret`。
+**gateway 是唯一入口**：按 Host 分流——`admin.*` 走管理端站点，其余（含未知 Host）走商城站点；frontend、admin、backend 三个容器都不映射宿主端口。两个前端站点各自反代 `/api`、`/auth`、`/oauth2` 到 backend，因此各子域上的 API 调用都是同源的。
+
+部署注意：后端 8080 端口须仅经反向代理可达、不可直接暴露公网（已启用 `forward-headers-strategy: framework`，直连时 `X-Forwarded-*` 可被伪造）；gateway 与两个站点的 nginx 都必须透传原始 `Host` 头——后端靠它展开 OIDC 的 `redirect_uri`，被改写会导致登录失败。另外自签会话为无状态 JWT，登出仅清浏览器 Cookie、无服务端吊销，被窃 token 在有效期（默认 7 天）内仍有效，全员强制下线的手段是更换 `session-secret`。
