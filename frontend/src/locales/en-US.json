@@ -5,8 +5,7 @@
     "myOrders": "My Orders",
     "logout": "Sign out",
     "loginFailed": "Sign-in was not completed, please try again",
-    "shop": "Shop",
-    "admin": "Admin"
+    "shop": "Shop"
   },
   "common": {
     "loading": "Loading…",

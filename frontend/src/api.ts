@@ -33,14 +33,12 @@ export interface CreateOrderResult {
   amountCents: number
 }
 
-/** 当前用户（镜像后端 MeResponse） */
+/** 当前用户（镜像后端 MeResponse 的商城侧子集；后端另有 admin 字段，仅管理端使用） */
 export interface Me {
   id: number
   email: string
   nickname: string | null
   avatarUrl: string | null
-  /** 是否管理员（仅控制入口显隐；安全边界在后端） */
-  admin: boolean
 }
 
 /** 我的订单列表项（镜像后端 OrderItemResponse） */
@@ -86,7 +84,7 @@ export class UnauthorizedError extends Error {
   }
 }
 
-/** 统一请求封装（api-admin.ts 复用同一份：401 转类型化错误、业务码判定、文案本地化） */
+/** 统一请求封装：401 转类型化错误、业务码判定、文案本地化 */
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response
   try {

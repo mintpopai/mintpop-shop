@@ -69,9 +69,6 @@ onMounted(() => {
           <span class="nickname">{{ currentUser.nickname ?? currentUser.email }}</span>
         </button>
         <div v-if="menuOpen" class="menu" @click="menuOpen = false">
-          <RouterLink v-if="currentUser.admin" to="/admin" class="menu-item">
-            {{ $t('app.admin') }}
-          </RouterLink>
           <button type="button" class="menu-item" @click="gotoLogout">{{ $t('app.logout') }}</button>
         </div>
       </div>

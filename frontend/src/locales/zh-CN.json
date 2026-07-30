@@ -5,8 +5,7 @@
     "myOrders": "我的订单",
     "logout": "退出登录",
     "loginFailed": "登录未完成，请重试",
-    "shop": "商店",
-    "admin": "管理后台"
+    "shop": "商店"
   },
   "common": {
     "loading": "加载中……",
