@@ -1,14 +1,47 @@
 # 部署：拉 GHCR 已发布镜像运行；本地构建镜像用 mise run image-*，不归 compose 管
 # 前置：部署机 docker login ghcr.io；本目录放好 application.yml（后端外置配置，含外部 MySQL
-#       连接与 OIDC 参数，参照 backend/config/application.example.yml 填写）
-# MySQL 用外部实例，不进 compose；后端不映射宿主端口，仅经前端 nginx 反代可达
+#       连接与 OIDC 参数，参照 backend/config/application.example.yml 填写）与 gateway.nginx.conf
+# MySQL 用外部实例，不进 compose；gateway 是唯一入口，其余服务不映射宿主端口
 services:
+  gateway:
+    image: nginx:1.29-alpine
+    container_name: mintpop-shop-gateway
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-80}:80"   # 宿主端口参数化（右侧容器端口固定）
+    volumes:
+      - ./gateway.nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      frontend:
+        condition: service_healthy
+      admin:
+        condition: service_healthy
+    healthcheck:
+      # 探自身 80：会经 default_server 落到商城，通即代表网关与上游都活着
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
   frontend:
     image: ghcr.io/mintpopai/mintpop-shop/frontend:${FRONTEND_TAG:-latest}   # 版本参数化
     container_name: mintpop-shop-frontend
     restart: unless-stopped
-    ports:
-      - "${APP_PORT:-80}:80"   # 宿主端口参数化（右侧容器端口固定）
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  admin:
+    image: ghcr.io/mintpopai/mintpop-shop/admin:${ADMIN_TAG:-latest}   # 版本参数化
+    container_name: mintpop-shop-admin
+    restart: unless-stopped
     depends_on:
       backend:
         condition: service_healthy
