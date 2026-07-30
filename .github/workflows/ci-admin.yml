@@ -1,0 +1,20 @@
+name: CI Admin
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "admin/**"
+      - "mise.toml"
+      - ".github/workflows/ci-admin.yml"
+      - ".github/workflows/quality-admin.yml"
+  pull_request:
+    paths:
+      - "admin/**"
+      - "mise.toml"
+      - ".github/workflows/ci-admin.yml"
+      - ".github/workflows/quality-admin.yml"
+
+jobs:
+  quality:
+    uses: ./.github/workflows/quality-admin.yml

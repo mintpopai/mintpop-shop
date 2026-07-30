@@ -6,8 +6,10 @@ on:
     workflows:
       - CI Backend
       - CI Frontend
+      - CI Admin
       - Release Backend
       - Release Frontend
+      - Release Admin
     types: [completed]
 
 permissions:

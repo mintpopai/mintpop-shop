@@ -101,7 +101,7 @@ run = "mvn test"
 hide = true
 description = "发版共用逻辑（内部）：校验→同步版本号文件→打 tag→先推 main 再推 tag"
 usage = '''
-arg "<component>" help="组件（backend / frontend）"
+arg "<component>" help="组件（backend / frontend / admin）"
 arg "[arg1]" help="版本号（vX.Y.Z）或更新说明，单参数按形状消歧；缺省取最新稳定 tag 的 patch+1"
 arg "[arg2]" help="更新说明（第一个参数为版本号时用）"
 '''
@@ -114,8 +114,8 @@ arg1="${usage_arg1:-}"
 arg2="${usage_arg2:-}"
 
 case "$component" in
-  backend|frontend) ;;
-  *) echo "未知组件：${component}（只支持 backend / frontend）" >&2; exit 1 ;;
+  backend|frontend|admin) ;;
+  *) echo "未知组件：${component}（只支持 backend / frontend / admin）" >&2; exit 1 ;;
 esac
 
 ver_re='^v?[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'
@@ -164,6 +164,9 @@ case "$component" in
   frontend)
     (cd frontend && pnpm version "$bare" --no-git-tag-version --allow-same-version)
     ;;
+  admin)
+    (cd admin && pnpm version "$bare" --no-git-tag-version --allow-same-version)
+    ;;
   backend)
     (cd backend && mvn -B -q versions:set -DnewVersion="$bare" -DgenerateBackupPoms=false)
     ;;
@@ -198,3 +201,11 @@ arg "[arg1]" help="版本号（vX.Y.Z）或更新说明，单参数按形状消�
 arg "[arg2]" help="更新说明（第一个参数为版本号时用）"
 '''
 run = 'mise run release frontend "${usage_arg1:-}" "${usage_arg2:-}"'
+
+[tasks.release-admin]
+description = "发版 管理端：校验→同步 package.json 版本→打 tag→推送（tag 触发 Release Admin）"
+usage = '''
+arg "[arg1]" help="版本号（vX.Y.Z）或更新说明，单参数按形状消歧；缺省取最新稳定 tag 的 patch+1"
+arg "[arg2]" help="更新说明（第一个参数为版本号时用）"
+'''
+run = 'mise run release admin "${usage_arg1:-}" "${usage_arg2:-}"'
