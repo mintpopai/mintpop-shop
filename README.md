@@ -106,13 +106,22 @@ docker login ghcr.io          # 私有镜像时需要
 BACKEND_TAG=0.1.0 FRONTEND_TAG=0.1.0 ADMIN_TAG=0.1.0 docker compose up -d   # 缺省 latest；端口用 APP_PORT 覆盖（默认 80）
 ```
 
+`gateway.nginx.conf` 与 `application.yml` 是以 bind mount 挂进容器的宿主机文件，`docker compose up -d` **感知不到挂载文件的内容变化**——改完之后容器不会自动重建，改动也就不生效。改了这两个文件后需显式重启对应容器：改 `gateway.nginx.conf` 执行 `docker compose restart gateway`，改 `application.yml` 执行 `docker compose restart backend`。
+
 DNS 需把 `mintpop.ai` 与 `admin.mintpop.ai` 都指向这台源站并开启 Cloudflare 代理。
 
 **gateway 是唯一入口**：按 Host 分流——`admin.*` 走管理端站点，其余（含未知 Host）走商城站点；frontend、admin、backend 三个容器都不映射宿主端口。两个前端站点各自反代 `/api`、`/auth`、`/oauth2` 到 backend，因此各子域上的 API 调用都是同源的。
 
 部署注意：后端 8080 端口须仅经反向代理可达、不可直接暴露公网（已启用 `forward-headers-strategy: framework`，直连时 `X-Forwarded-*` 可被伪造）；gateway 与两个站点的 nginx 都必须透传原始 `Host` 头——后端靠它展开 OIDC 的 `redirect_uri`，被改写会导致登录失败。`app.auth.frontend-base-url` 必须保持相对路径 `/`（默认值，见 `application.example.yml` 该项注释）——多域部署下若改成绝对 URL，管理端登录/登出后会被弹回商城域，这两条是同一个「按 Host 就地回跳」假设的两半，需同时成立。另外自签会话为无状态 JWT，登出仅清浏览器 Cookie、无服务端吊销，被窃 token 在有效期（默认 7 天）内仍有效，全员强制下线的手段是更换 `session-secret`。
 
-**上线核验（分流是否正确）**：部署完成后分别用 `curl -H "Host: mintpop.ai" http://<源站IP>/` 与 `curl -H "Host: admin.mintpop.ai" http://<源站IP>/`，核对返回页面的 `<title>` 分别是商城页与「MintPop Shop 管理后台」。必须人工核验的原因：gateway 的 healthcheck 只探 `default_server`（商城）路径，`admin.*` 的 `server_name` 正则若写成语义错误的形式（如误匹配到商城的 server block），healthcheck 依旧通过、不会报警。
+**上线核验（分流是否正确）**：部署完成后在**部署机本机**执行以下核验（而非从外部经源站 IP 访问）——本机请求走的是宿主机回环网卡，不受下方「源站防火墙」限制影响：
+
+```bash
+curl -sI -H "Host: mintpop.ai"       http://127.0.0.1/
+curl -s  -H "Host: admin.mintpop.ai" http://127.0.0.1/ | grep -o '<title>.*</title>'
+```
+
+核对两次请求返回页面的 `<title>` 分别是商城页与「MintPop Shop 管理后台」。必须人工核验的原因：gateway 的 healthcheck 只探 `default_server`（商城）路径，若 `admin.*` 的 `server_name` 正则写错、匹配不上 `admin.*`，该请求会直接落到 `default_server`（商城站点）而非报错——healthcheck 依旧通过、不会报警。
 
 **源站防火墙**：源站 80 端口应限制到 Cloudflare IP 段。理由：`curl -H "Host: admin.mintpop.ai" http://<源站IP>/` 可绕过 Cloudflare Access 直达管理端 SPA 与 `/api/admin/**`；第二道防线（后端邮箱白名单 + OIDC）仍然成立，所以不构成可利用漏洞，但纵深防御的第一道会失效。
 

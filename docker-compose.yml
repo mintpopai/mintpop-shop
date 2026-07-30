@@ -18,8 +18,12 @@ services:
         condition: service_healthy
         restart: true
       admin:
-        # 用 service_started 而非 service_healthy：管理端起不来（拉镜像失败/ADMIN_TAG 打错等）
-        # 不应连累网关不启动、商城一起打不开
+        # 需要这条依赖：gateway 的 nginx 在加载配置时要解析 proxy_pass http://admin:80 里的主机名，
+        # admin 容器不存在/未启动时该主机名不可解析，nginx 会直接拒绝启动。
+        # 用 service_started 而非 service_healthy：只要求 admin 进入 running（满足 nginx 启动期
+        # 的主机名解析这一最小条件），不等待健康检查通过——避免管理端健康检查慢或不健康时连累
+        # 网关不启动。注意它挡不住拉镜像失败/ADMIN_TAG 打错等情况：那种情况 admin 根本不会进入
+        # running，service_started 同样不满足，gateway 依旧会随之启动失败。
         condition: service_started
         restart: true
     healthcheck:
