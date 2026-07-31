@@ -2,6 +2,7 @@ package com.mintpop.shop.service;
 
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import com.mintpop.shop.config.AppMailProperties;
 import com.mintpop.shop.entity.OrderShipment;
 import com.mintpop.shop.entity.Product;
 import com.mintpop.shop.entity.ShopOrder;
@@ -16,7 +17,6 @@ import com.mintpop.shop.mapper.ShopOrderMapper;
 import com.mintpop.shop.mapper.ShopUserMapper;
 import com.mintpop.shop.response.AdminShipmentResponse;
 import com.mintpop.shop.support.TestMessages;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -26,7 +26,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -71,14 +70,10 @@ class AdminShipmentServiceTest {
 
     @BeforeEach
     void setUp() {
+        AppMailProperties mailProperties = new AppMailProperties();
+        mailProperties.setDefaultLocale("en-US");
         service = new AdminShipmentService(shopOrderMapper, orderShipmentMapper, productMapper,
-                shopUserMapper, shipmentMailSender, transactionTemplate, TestMessages.create());
-        LocaleContextHolder.setLocale(Locale.SIMPLIFIED_CHINESE);
-    }
-
-    @AfterEach
-    void resetLocale() {
-        LocaleContextHolder.resetLocaleContext();
+                shopUserMapper, shipmentMailSender, transactionTemplate, TestMessages.create(), mailProperties);
     }
 
     /** 事务模板直接执行回调，等价于「在事务里跑」 */
@@ -262,19 +257,21 @@ class AdminShipmentServiceTest {
     }
 
     @Test
-    @DisplayName("买家语言偏好为空时回退请求语言，商品名按该语言取")
-    void fallsBackToRequestLocale() {
+    @DisplayName("买家语言偏好为空时回退配置的默认语言，商品名按该语言取")
+    void fallsBackToConfiguredDefaultLocale() {
         runTransactionsInline();
-        LocaleContextHolder.setLocale(Locale.US);
         stubOrderAndBuyer(OrderStatusEnum.PAID, null);
         when(orderShipmentMapper.selectCount(any())).thenReturn(0L);
         when(productMapper.selectById(3L)).thenReturn(product());
-        when(shipmentMailSender.send(any(), eq("Membership"), any(), anyString(), eq(Locale.US)))
+        Locale configuredDefault = Locale.forLanguageTag("en-US");
+        when(shipmentMailSender.send(any(), eq("Membership"), any(), anyString(), eq(configuredDefault)))
                 .thenReturn(MailResult.ok());
 
         service.ship("mintpopshop_20260731120000123456", "Code: ABC", null, 99L);
 
-        verify(shipmentMailSender).send(any(), eq("Membership"), any(), eq("Code: ABC"), eq(Locale.US));
+        // setUp() 里 mailProperties.defaultLocale = en-US；买家 locale 为 null 时必须用它，
+        // 而不是当前请求（管理员发货请求）的语言——二者在生产中恒为 zh-CN，与买家无关
+        verify(shipmentMailSender).send(any(), eq("Membership"), any(), eq("Code: ABC"), eq(configuredDefault));
     }
 
     @Test

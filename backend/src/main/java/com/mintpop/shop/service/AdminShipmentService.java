@@ -1,6 +1,7 @@
 package com.mintpop.shop.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.mintpop.shop.config.AppMailProperties;
 import com.mintpop.shop.entity.OrderShipment;
 import com.mintpop.shop.entity.Product;
 import com.mintpop.shop.entity.ShopOrder;
@@ -19,7 +20,6 @@ import com.mintpop.shop.util.I18nUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSource;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -50,6 +50,7 @@ public class AdminShipmentService {
     private final ShipmentMailSender shipmentMailSender;
     private final TransactionTemplate transactionTemplate;
     private final MessageSource messageSource;
+    private final AppMailProperties mailProperties;
 
     /**
      * 发货：校验 → 事务内（订单置已完成 + 插记录，邮件状态先记 FAILED）→ 事务外发信 → 回写邮件状态。
@@ -170,11 +171,15 @@ public class AdminShipmentService {
         return error.length() <= MAX_EMAIL_ERROR_LENGTH ? error : error.substring(0, MAX_EMAIL_ERROR_LENGTH);
     }
 
-    /** 邮件语言：买家偏好优先，未设置回退当前请求语言 */
+    /**
+     * 邮件语言：买家偏好优先，未设置回退配置的默认语言（{@code app.mail.default-locale}）。
+     * 不能回退当前请求语言：这里的「当前请求」是管理员发起的发货请求，与买家语言无关
+     * （管理端固定用 zh-CN 调后端，回退会让英文买家在偏好补写前收到中文邮件）。
+     */
     private Locale resolveLocale(ShopUser buyer) {
         String preference = buyer.getLocale();
         return preference == null || preference.isBlank()
-                ? LocaleContextHolder.getLocale() : Locale.forLanguageTag(preference);
+                ? Locale.forLanguageTag(mailProperties.getDefaultLocale()) : Locale.forLanguageTag(preference);
     }
 
     /** 商品名按邮件语言取，商品已删除时给占位文案 */

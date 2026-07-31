@@ -60,6 +60,7 @@ app:
     # 以下为可选项及默认值，不改可不写：
     # from-name: MintPop Shop
     # site-base-url: https://mintpop.ai   # 邮件里「查看订单详情」链接的站点前缀
+    # default-locale: zh-CN               # 买家未设置语言偏好时的发信语言兜底（BCP47），不影响已设置偏好的买家
 
 # —— 支付（Stripe）——密钥只写进真实 config/application.yml，绝不进仓库 ——
 payment:
