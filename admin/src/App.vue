@@ -1,57 +1,75 @@
 <script setup lang="ts">
-// 管理端外壳：顶栏（品牌 + 当前用户）+ 左侧竖导航 + 内容区。
+// 管理端外壳：全高深色导航轨（品牌 + 页面 + 当前用户）+ 右侧工作区。
 // 管理端不做双语，文案一律写死中文。
 // 权限在此统一裁决：未登录引导登录、非管理员显示无权限页——但这只是 UX，
 // 真正的安全边界是后端 AdminInterceptor 对 /api/admin/** 的逐请求校验。
+import { computed } from 'vue'
 import { currentUser, gotoLogin, gotoLogout } from './auth'
 import { toast } from './toast'
 import './styles/layout.css'
+
+/** 头像兜底字母：优先昵称首字，其次邮箱首字 */
+const initial = computed(() => (currentUser.value?.nickname ?? currentUser.value?.email ?? '?').slice(0, 1))
 </script>
 
 <template>
-  <header class="admin-header">
-    <span class="wordmark">MintPop</span>
-    <span class="admin-badge">管理后台</span>
-    <div class="admin-header-right">
-      <template v-if="currentUser">
-        <span class="admin-user">{{ currentUser.nickname ?? currentUser.email }}</span>
-        <button type="button" class="admin-text-btn" @click="gotoLogout">登出</button>
-      </template>
+  <!-- 未登录 / 无权限：整屏深墨，与导航轨同材质 -->
+  <div v-if="!currentUser" class="gate">
+    <div class="gate-box">
+      <p class="gate-brand"><span class="wordmark">MintPop</span> 管理后台</p>
+      <h1 class="gate-title">用管理员账号登录</h1>
+      <p class="gate-text">登录后可以查看订单与营收、维护商品目录。</p>
+      <button type="button" class="gate-btn" @click="gotoLogin">登录</button>
     </div>
-  </header>
-
-  <!-- 未登录 -->
-  <div v-if="!currentUser" class="admin-gate">
-    <h1 class="admin-gate-title">MintPop Shop 管理后台</h1>
-    <p class="admin-gate-text">请使用管理员账号登录。</p>
-    <button type="button" class="admin-gate-btn" @click="gotoLogin">登录</button>
   </div>
 
-  <!-- 已登录但不是管理员 -->
-  <div v-else-if="!currentUser.admin" class="admin-gate">
-    <h1 class="admin-gate-title">无访问权限</h1>
-    <p class="admin-gate-text">
-      当前账号（{{ currentUser.email }}）不是管理员。如需访问请联系店主，或换个账号登录。
-    </p>
-    <div class="admin-gate-actions">
-      <button type="button" class="admin-gate-btn" @click="gotoLogout">退出登录</button>
-      <a class="admin-text-btn" href="https://mintpop.ai">返回商城</a>
+  <div v-else-if="!currentUser.admin" class="gate">
+    <div class="gate-box">
+      <p class="gate-brand"><span class="wordmark">MintPop</span> 管理后台</p>
+      <h1 class="gate-title">这个账号没有后台权限</h1>
+      <p class="gate-text">
+        当前登录的是 <span class="fact">{{ currentUser.email }}</span
+        >。找店主把它设为管理员，或换个账号登录。
+      </p>
+      <div class="gate-actions">
+        <button type="button" class="gate-btn" @click="gotoLogout">退出登录</button>
+        <a class="gate-link" href="https://mintpop.ai">返回商城</a>
+      </div>
     </div>
   </div>
 
   <!-- 管理员 -->
-  <div v-else class="admin-shell">
-    <nav class="admin-nav" aria-label="管理后台">
-      <RouterLink to="/" class="admin-nav-item">概览</RouterLink>
-      <RouterLink to="/products" class="admin-nav-item">商品</RouterLink>
-      <RouterLink to="/groups" class="admin-nav-item">分组</RouterLink>
-      <RouterLink to="/orders" class="admin-nav-item">订单</RouterLink>
-      <RouterLink to="/users" class="admin-nav-item">用户</RouterLink>
+  <template v-else>
+    <nav class="admin-rail" aria-label="管理后台">
+      <p class="rail-brand">
+        <span class="wordmark rail-wordmark">MintPop</span>
+        <span class="rail-kind">管理后台</span>
+      </p>
+
+      <div class="rail-nav">
+        <RouterLink to="/" class="rail-link">概览</RouterLink>
+        <RouterLink to="/products" class="rail-link">商品</RouterLink>
+        <RouterLink to="/groups" class="rail-link">分组</RouterLink>
+        <RouterLink to="/orders" class="rail-link">订单</RouterLink>
+        <RouterLink to="/users" class="rail-link">用户</RouterLink>
+      </div>
+
+      <div class="rail-foot">
+        <div class="rail-user">
+          <img v-if="currentUser.avatarUrl" class="rail-avatar" :src="currentUser.avatarUrl" alt="" />
+          <span v-else class="rail-avatar">{{ initial }}</span>
+          <span class="rail-user-name">{{ currentUser.nickname ?? currentUser.email }}</span>
+        </div>
+        <button type="button" class="rail-signout" @click="gotoLogout">退出登录</button>
+      </div>
     </nav>
-    <main class="admin-main">
-      <RouterView />
+
+    <main class="admin-desk">
+      <div class="admin-page">
+        <RouterView />
+      </div>
     </main>
-  </div>
+  </template>
 
   <Transition name="toast">
     <div v-if="toast" class="toast" :class="toast.type" role="status">
@@ -61,104 +79,91 @@ import './styles/layout.css'
 </template>
 
 <style scoped>
-.admin-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 32px;
-  background: var(--color-bg);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.wordmark {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--color-brand-deep);
-}
-
-.admin-badge {
-  padding: 2px 10px;
-  border-radius: var(--radius-pill);
-  background: var(--color-bg-cloud);
-  color: var(--color-ink-secondary);
-  font-size: 12px;
-}
-
-.admin-header-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-left: auto;
-}
-
-.admin-user {
-  font-size: 14px;
-  color: var(--color-ink-secondary);
-}
-
-.admin-text-btn {
-  border: none;
-  background: none;
-  padding: 0;
-  font-family: inherit;
-  font-size: 14px;
-  color: var(--color-ink-secondary);
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.admin-text-btn:hover {
-  color: var(--color-ink);
-}
-
-.admin-gate {
-  max-width: 520px;
-  margin: 96px auto;
-  padding: 32px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-card);
-  background: var(--color-bg);
-  text-align: center;
-}
-
-.admin-gate-title {
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.admin-gate-text {
-  margin-top: 12px;
-  color: var(--color-ink-secondary);
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.admin-gate-actions {
+.gate {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 20px;
-  margin-top: 24px;
+  min-height: 100vh;
+  padding: 24px;
+  background: var(--counter-rail);
 }
 
-.admin-gate-btn {
-  margin-top: 24px;
-  padding: 8px 24px;
-  border: none;
-  border-radius: var(--radius-pill);
-  background: var(--color-brand);
+.gate-box {
+  max-width: 460px;
+}
+
+.gate-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--counter-rail-text);
+}
+
+.gate-brand .wordmark {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-brand);
+}
+
+.gate-title {
+  margin-top: 22px;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: #ffffff;
-  font-family: inherit;
-  font-size: 14px;
-  cursor: pointer;
 }
 
-.admin-gate-actions .admin-gate-btn {
+.gate-text {
+  margin-top: 12px;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--counter-rail-text);
+}
+
+.gate-text .fact {
+  color: var(--counter-rail-text-strong);
+  font-size: 13px;
+}
+
+.gate-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-top: 28px;
+}
+
+.gate-actions .gate-btn,
+.gate-actions .gate-link {
   margin-top: 0;
 }
 
-.admin-gate-btn:hover {
-  background: var(--color-brand-deep);
+.gate-btn {
+  margin-top: 28px;
+  padding: 10px 26px;
+  border: none;
+  border-radius: var(--radius-button);
+  background: var(--color-brand);
+  color: var(--counter-rail);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.gate-btn:hover {
+  background: #2ce0b7;
+}
+
+.gate-link {
+  margin-top: 28px;
+  font-size: 14px;
+  color: var(--counter-rail-text);
+  text-decoration: none;
+}
+
+.gate-link:hover {
+  color: #ffffff;
 }
 
 .toast {
@@ -168,11 +173,11 @@ import './styles/layout.css'
   transform: translateX(-50%);
   padding: 12px 24px;
   border-radius: var(--radius-card);
-  background: var(--color-ink);
+  background: var(--counter-rail);
   color: #ffffff;
   font-size: 14px;
-  box-shadow: 0 8px 24px rgba(11, 11, 12, 0.16);
-  z-index: 10;
+  box-shadow: 0 10px 30px rgba(15, 26, 22, 0.28);
+  z-index: 40;
 }
 
 .toast.success {
@@ -180,7 +185,7 @@ import './styles/layout.css'
 }
 
 .toast.error {
-  background: #b91c1c;
+  background: var(--counter-danger);
 }
 
 .toast-enter-active,

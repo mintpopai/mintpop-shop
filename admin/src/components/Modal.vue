@@ -28,7 +28,7 @@ const emit = defineEmits<{ close: [] }>()
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(11, 11, 12, 0.4);
+  background: rgba(15, 26, 22, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -44,7 +44,7 @@ const emit = defineEmits<{ close: [] }>()
   flex-direction: column;
   background: var(--color-bg);
   border-radius: var(--radius-card);
-  box-shadow: 0 16px 48px rgba(11, 11, 12, 0.2);
+  box-shadow: 0 18px 56px rgba(15, 26, 22, 0.28);
 }
 
 .head {
@@ -52,11 +52,12 @@ const emit = defineEmits<{ close: [] }>()
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--counter-edge);
 }
 
 .head-title {
   font-size: 16px;
+  font-weight: 600;
   color: var(--color-ink);
 }
 
@@ -83,6 +84,6 @@ const emit = defineEmits<{ close: [] }>()
   justify-content: flex-end;
   gap: 10px;
   padding: 14px 20px;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--counter-edge);
 }
 </style>

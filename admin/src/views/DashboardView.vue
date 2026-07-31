@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { formatPrice } from '../api'
-import { fetchAdminDashboard, type AdminDashboard } from '../api-admin'
-import { formatDateTime } from '../datetime'
+import { fetchAdminDashboard, type AdminDashboard, type AdminOrderItem } from '../api-admin'
+import { formatUtcDateTime, formatUtcTime, utcDate, utcDayProgress } from '../datetime'
 
 const dashboard = ref<AdminDashboard | null>(null)
 const loading = ref(true)
 const loadError = ref('')
+/** 打开页面那一刻的 UTC 时间，用于纸带的「此刻」标线与今日判定 */
+const openedAt = ref(new Date())
 
 onMounted(async () => {
   try {
@@ -17,66 +19,148 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+const today = computed(() => utcDate(openedAt.value))
+
+/** 最近订单里属于今天（UTC）的部分，按时间正序——纸带只画得出手上有的这些 */
+const todayOrders = computed(() =>
+  (dashboard.value?.recentOrders ?? [])
+    .filter((o) => utcDate(o.createdAt) === today.value)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+)
+
+/** 一笔订单一根竖条：横轴是 UTC 一天的时刻，高度按金额相对当天最大额 */
+const bars = computed(() => {
+  const orders = todayOrders.value
+  const maxCents = orders.reduce((max, o) => Math.max(max, o.amountCents), 0) || 1
+  return orders.map((order: AdminOrderItem, index: number) => ({
+    order,
+    left: utcDayProgress(order.createdAt) * 100,
+    height: 20 + (order.amountCents / maxCents) * 80,
+    delay: index * 40,
+  }))
+})
+
+const nowLeft = computed(() => utcDayProgress(openedAt.value) * 100)
+
+/** 后端的今日笔数才是权威值；纸带只取自最近订单，条数对不上时要说明 */
+const hiddenCount = computed(() => Math.max(0, (dashboard.value?.todayOrderCount ?? 0) - bars.value.length))
+
+const tapeLabel = computed(() =>
+  dashboard.value
+    ? `今日（UTC）${dashboard.value.todayOrderCount} 笔订单，营收 ${formatPrice(dashboard.value.todayRevenueCents)}`
+    : '',
+)
 </script>
 
 <template>
-  <h2 class="admin-title">概览</h2>
+  <header class="page-head">
+    <h2 class="page-title">概览</h2>
+    <p class="page-facts">
+      今天是 <span class="fact">{{ today }}</span
+      >。这一页的时间全部按 UTC 显示，与后端结算「今日」的口径一致。
+    </p>
+  </header>
 
-  <p v-if="loading" class="admin-hint">加载中……</p>
+  <p v-if="loading" class="admin-hint loading">加载中……</p>
   <p v-else-if="loadError" class="admin-hint error">{{ loadError }}</p>
 
   <template v-else-if="dashboard">
-    <div class="stats">
-      <div class="stat-card">
-        <span class="stat-label">累计营收</span>
-        <span class="stat-value highlight">{{ formatPrice(dashboard.totalRevenueCents) }}</span>
+    <!-- 今日纸带：左边是今天收了多少，右边是这些钱在一天里什么时候进来的 -->
+    <section class="tape-card">
+      <div class="tape-lead">
+        <p class="tape-lead-label">今日营收</p>
+        <p class="tape-lead-value fact">{{ formatPrice(dashboard.todayRevenueCents) }}</p>
+        <p class="tape-lead-sub">
+          <span class="fact">{{ dashboard.todayOrderCount }}</span> 笔订单
+          <template v-if="hiddenCount > 0">
+            ·<br />纸带画出其中最近 <span class="fact">{{ bars.length }}</span> 笔
+          </template>
+        </p>
       </div>
-      <div class="stat-card">
-        <span class="stat-label">累计订单</span>
-        <span class="stat-value">{{ dashboard.totalOrderCount }}</span>
+
+      <div class="tape" role="img" :aria-label="tapeLabel">
+        <div class="tape-track">
+          <div
+            class="tape-now"
+            :class="{ flip: nowLeft > 82 }"
+            :style="{ left: `${nowLeft}%` }"
+            aria-hidden="true"
+          >
+            <span class="tape-now-label"
+              >此刻 <span class="fact">{{ formatUtcTime(openedAt.toISOString()) }}</span></span
+            >
+          </div>
+
+          <div
+            v-for="bar in bars"
+            :key="bar.order.orderNo"
+            class="tape-bar"
+            :data-state="bar.order.status"
+            :style="{ left: `${bar.left}%`, height: `${bar.height}%`, animationDelay: `${bar.delay}ms` }"
+          >
+            <span class="tape-tip">
+              <span class="fact">{{ formatUtcTime(bar.order.createdAt) }}</span>
+              <span class="fact tape-tip-amount">{{ formatPrice(bar.order.amountCents) }}</span>
+              <span class="tape-tip-name">{{ bar.order.productName }}</span>
+            </span>
+          </div>
+
+          <p v-if="bars.length === 0" class="tape-empty">今天还没有订单</p>
+        </div>
+
+        <div class="tape-axis fact" aria-hidden="true">
+          <span>00</span><span>06</span><span>12</span><span>18</span><span>24</span>
+        </div>
       </div>
-      <div class="stat-card">
-        <span class="stat-label">今日订单（UTC）</span>
-        <span class="stat-value">{{ dashboard.todayOrderCount }}</span>
+    </section>
+
+    <!-- 累计数据不抢戏：一行事实，看一眼就够 -->
+    <dl class="totals">
+      <div class="total">
+        <dt>累计营收</dt>
+        <dd class="fact">{{ formatPrice(dashboard.totalRevenueCents) }}</dd>
       </div>
-      <div class="stat-card">
-        <span class="stat-label">今日营收（UTC）</span>
-        <span class="stat-value highlight">{{ formatPrice(dashboard.todayRevenueCents) }}</span>
+      <div class="total">
+        <dt>累计订单</dt>
+        <dd class="fact">{{ dashboard.totalOrderCount }}</dd>
       </div>
-      <div class="stat-card">
-        <span class="stat-label">注册用户</span>
-        <span class="stat-value">{{ dashboard.userCount }}</span>
+      <div class="total">
+        <dt>注册用户</dt>
+        <dd class="fact">{{ dashboard.userCount }}</dd>
       </div>
-      <div class="stat-card">
-        <span class="stat-label">在售商品</span>
-        <span class="stat-value">{{ dashboard.onSaleProductCount }}</span>
+      <div class="total">
+        <dt>在售商品</dt>
+        <dd class="fact">{{ dashboard.onSaleProductCount }}</dd>
       </div>
-    </div>
+    </dl>
 
     <h3 class="section-title">最近订单</h3>
     <div class="admin-card">
-      <p v-if="dashboard.recentOrders.length === 0" class="admin-hint">暂无订单</p>
+      <p v-if="dashboard.recentOrders.length === 0" class="admin-hint">
+        还没有订单。商城下出第一单后，它会出现在这里。
+      </p>
       <table v-else class="admin-table">
         <thead>
           <tr>
             <th>订单号</th>
             <th>商品</th>
             <th>买家</th>
-            <th>金额</th>
+            <th class="col-amount">金额</th>
             <th>状态</th>
-            <th>下单时间</th>
+            <th>下单时间（UTC）</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="order in dashboard.recentOrders" :key="order.orderNo">
-            <td class="mono">{{ order.orderNo }}</td>
+            <td class="fact">{{ order.orderNo }}</td>
             <td>{{ order.productName }}</td>
             <td>{{ order.buyerEmail ?? '游客' }}</td>
-            <td class="amount">{{ formatPrice(order.amountCents) }}</td>
+            <td class="fact col-amount">{{ formatPrice(order.amountCents) }}</td>
             <td>
-              <span class="status-tag" :class="`status-tag--${order.status}`">{{ order.statusLabel }}</span>
+              <span class="state" :data-state="order.status">{{ order.statusLabel }}</span>
             </td>
-            <td class="secondary">{{ formatDateTime(order.createdAt) }}</td>
+            <td class="fact muted">{{ formatUtcDateTime(order.createdAt) }}</td>
           </tr>
         </tbody>
       </table>
@@ -85,56 +169,228 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 12px;
-  margin-bottom: 28px;
-}
-
-.stat-card {
+.tape-card {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px 20px;
+  gap: 36px;
+  padding: 26px 28px 22px;
   background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--counter-edge);
   border-radius: var(--radius-card);
 }
 
-.stat-label {
+/* 不写死宽度：营收位数变多时让左栏自己撑开、纸带相应变窄，而不是把数字压到纸带上 */
+.tape-lead {
+  flex-shrink: 0;
+  min-width: 190px;
+}
+
+.tape-lead-label {
   font-size: 13px;
   color: var(--color-ink-secondary);
 }
 
-.stat-value {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--color-ink);
+/* 全站唯一的大号品牌绿数字——今天做成了多少生意 */
+.tape-lead-value {
+  margin-top: 6px;
+  font-size: clamp(34px, 4vw, 46px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--color-brand-deep);
 }
 
-.stat-value.highlight {
-  color: var(--color-brand-deep);
+.tape-lead-sub {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-ink-secondary);
+}
+
+.tape {
+  flex: 1;
+  min-width: 0;
+}
+
+.tape-track {
+  position: relative;
+  height: 104px;
+  border-bottom: 1px solid var(--counter-edge);
+}
+
+/* 此刻：一天已经走到哪儿了 */
+.tape-now {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px dashed var(--counter-edge);
+}
+
+.tape-now-label {
+  position: absolute;
+  top: -2px;
+  left: 6px;
+  font-size: 11px;
+  color: var(--color-ink-secondary);
+  white-space: nowrap;
+}
+
+/* 临近一天末尾时把「此刻」标签翻到线的左侧，避免溢出 */
+.tape-now.flip .tape-now-label {
+  left: auto;
+  right: 6px;
+}
+
+.tape-bar {
+  position: absolute;
+  bottom: 0;
+  width: 6px;
+  margin-left: -3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--state-color, #7a857f);
+  animation: bar-rise 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+
+@keyframes bar-rise {
+  from {
+    height: 0;
+  }
+}
+
+/* 柱子只有 6px 宽，用透明区域把鼠标命中范围撑开 */
+.tape-bar::before {
+  content: '';
+  position: absolute;
+  inset: -6px -7px 0;
+}
+
+.tape-tip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 11px;
+  border-radius: var(--radius-button);
+  background: var(--counter-rail);
+  color: #ffffff;
+  font-size: 12px;
+  white-space: nowrap;
+  max-width: 260px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+
+.tape-bar:hover .tape-tip {
+  opacity: 1;
+}
+
+.tape-tip-amount {
+  color: var(--color-brand);
+}
+
+.tape-tip-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--counter-rail-text);
+}
+
+.tape-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--color-ink-secondary);
+}
+
+/* 刻度必须精确落在 0/25/50/75/100%——space-between 会把首末标签整体内缩半个字宽，
+   与柱子的百分比定位对不上，所以逐个绝对定位再居中 */
+.tape-axis {
+  position: relative;
+  height: 14px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--color-ink-secondary);
+}
+
+.tape-axis span {
+  position: absolute;
+  transform: translateX(-50%);
+}
+
+.tape-axis span:nth-child(1) {
+  left: 0;
+}
+
+.tape-axis span:nth-child(2) {
+  left: 25%;
+}
+
+.tape-axis span:nth-child(3) {
+  left: 50%;
+}
+
+.tape-axis span:nth-child(4) {
+  left: 75%;
+}
+
+.tape-axis span:nth-child(5) {
+  left: 100%;
+}
+
+/* —— 累计事实条 —— */
+.totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 0;
+  margin: 18px 2px 32px;
+}
+
+.total {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-right: 26px;
+}
+
+.total + .total {
+  padding-left: 26px;
+  border-left: 1px solid var(--counter-edge);
+}
+
+.total dt {
+  font-size: 12px;
+  color: var(--color-ink-secondary);
+}
+
+.total dd {
+  font-size: 15px;
+  color: var(--color-ink);
 }
 
 .section-title {
-  font-size: 16px;
-  color: var(--color-ink);
+  font-size: 15px;
+  font-weight: 600;
   margin-bottom: 12px;
 }
 
-.mono {
-  font-size: 13px;
-}
+@media (max-width: 860px) {
+  .tape-card {
+    flex-direction: column;
+    gap: 22px;
+  }
 
-.amount {
-  font-weight: 600;
-  color: var(--color-brand-deep);
-}
+  .tape-lead {
+    min-width: 0;
+  }
 
-.secondary {
-  color: var(--color-ink-secondary);
-  font-size: 13px;
-  white-space: nowrap;
+  .total + .total {
+    padding-left: 0;
+    border-left: none;
+  }
 }
 </style>

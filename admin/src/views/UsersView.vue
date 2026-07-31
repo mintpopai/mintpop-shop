@@ -39,14 +39,19 @@ function gotoPage(next: number) {
 </script>
 
 <template>
-  <h2 class="admin-title">用户管理</h2>
+  <header class="page-head">
+    <h2 class="page-title">用户</h2>
+    <p class="page-facts">
+      共 <span class="fact">{{ total }}</span> 人。角色只读，改管理员权限要直接改库。
+    </p>
+  </header>
 
-  <p v-if="loading" class="admin-hint">加载中……</p>
+  <p v-if="loading" class="admin-hint loading">加载中……</p>
   <p v-else-if="loadError" class="admin-hint error">{{ loadError }}</p>
 
   <template v-else>
     <div class="admin-card">
-      <p v-if="records.length === 0" class="admin-hint">暂无数据</p>
+      <p v-if="records.length === 0" class="admin-hint">还没有用户。有人在商城登录后会出现在这里。</p>
       <table v-else class="admin-table">
         <thead>
           <tr>
@@ -54,13 +59,13 @@ function gotoPage(next: number) {
             <th>用户</th>
             <th>邮箱</th>
             <th>角色</th>
-            <th>订单数</th>
+            <th class="col-amount">订单数</th>
             <th>注册时间</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="user in records" :key="user.id">
-            <td>{{ user.id }}</td>
+            <td class="fact muted">{{ user.id }}</td>
             <td>
               <div class="user-cell">
                 <img v-if="user.avatarUrl" class="avatar" :src="user.avatarUrl" alt="" />
@@ -70,13 +75,13 @@ function gotoPage(next: number) {
                 <span>{{ user.nickname ?? '—' }}</span>
               </div>
             </td>
-            <td>{{ user.email }}</td>
+            <td class="fact">{{ user.email }}</td>
             <td>
               <span v-if="user.role === 'ADMIN'" class="role-badge">管理员</span>
-              <span v-else class="secondary">普通用户</span>
+              <span v-else class="muted">普通用户</span>
             </td>
-            <td>{{ user.orderCount }}</td>
-            <td class="secondary">{{ formatDateTime(user.createdAt) }}</td>
+            <td class="fact col-amount">{{ user.orderCount }}</td>
+            <td class="fact muted">{{ formatDateTime(user.createdAt) }}</td>
           </tr>
         </tbody>
       </table>
@@ -86,7 +91,10 @@ function gotoPage(next: number) {
       <button type="button" class="admin-btn-ghost" :disabled="page <= 1" @click="gotoPage(page - 1)">
         上一页
       </button>
-      <span class="info">第 {{ page }} 页 · 共 {{ total }} 条</span>
+      <span class="info">
+        第 <span class="fact">{{ page }}</span> / <span class="fact">{{ totalPages }}</span> 页 · 共
+        <span class="fact">{{ total }}</span> 人
+      </span>
       <button
         type="button"
         class="admin-btn-ghost"
@@ -117,16 +125,11 @@ function gotoPage(next: number) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-brand);
-  color: #ffffff;
+  background: var(--color-bg-cloud);
+  color: var(--color-ink-secondary);
   font-weight: 600;
   font-size: 13px;
-}
-
-.secondary {
-  color: var(--color-ink-secondary);
-  font-size: 13px;
-  white-space: nowrap;
+  text-transform: uppercase;
 }
 
 /* 管理员标记：只读展示，角色由管理员直接改库维护 */
@@ -134,7 +137,7 @@ function gotoPage(next: number) {
   display: inline-block;
   padding: 2px 10px;
   border-radius: var(--radius-pill);
-  background: var(--color-brand);
+  background: var(--counter-rail);
   color: #ffffff;
   font-size: 12px;
   white-space: nowrap;

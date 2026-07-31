@@ -30,6 +30,11 @@ const keyword = ref('')
 
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / PAGE_SIZE)))
 
+/** 页头那行事实：当前筛选下有多少笔 */
+const scopeLabel = computed(
+  () => STATUS_FILTERS.find((item) => item.status === activeStatus.value)?.label ?? '全部',
+)
+
 async function reload() {
   loading.value = true
   try {
@@ -71,7 +76,15 @@ function gotoPage(next: number) {
 </script>
 
 <template>
-  <h2 class="admin-title">订单管理</h2>
+  <header class="page-head">
+    <h2 class="page-title">订单</h2>
+    <p class="page-facts">
+      {{ activeStatus === 'ALL' ? '全部' : scopeLabel }}共 <span class="fact">{{ total }}</span> 笔<template
+        v-if="keyword"
+        >，订单号含「{{ keyword }}」</template
+      >
+    </p>
+  </header>
 
   <div class="admin-toolbar">
     <button
@@ -88,6 +101,7 @@ function gotoPage(next: number) {
       type="button"
       class="admin-chip"
       :class="{ active: activeStatus === item.status }"
+      :data-state="item.status"
       @click="activeStatus = item.status"
     >
       {{ item.label }}
@@ -99,20 +113,22 @@ function gotoPage(next: number) {
     </form>
   </div>
 
-  <p v-if="loading" class="admin-hint">加载中……</p>
+  <p v-if="loading" class="admin-hint loading">加载中……</p>
   <p v-else-if="loadError" class="admin-hint error">{{ loadError }}</p>
 
   <template v-else>
     <div class="admin-card">
-      <p v-if="records.length === 0" class="admin-hint">暂无数据</p>
+      <p v-if="records.length === 0" class="admin-hint">
+        {{ keyword || activeStatus !== 'ALL' ? '没有符合条件的订单，换个状态或搜索词试试。' : '还没有订单。' }}
+      </p>
       <table v-else class="admin-table">
         <thead>
           <tr>
             <th>订单号</th>
             <th>商品</th>
             <th>买家</th>
-            <th>数量</th>
-            <th>金额</th>
+            <th class="col-amount">数量</th>
+            <th class="col-amount">金额</th>
             <th>状态</th>
             <th>支付方式</th>
             <th>下单时间</th>
@@ -121,17 +137,17 @@ function gotoPage(next: number) {
         </thead>
         <tbody>
           <tr v-for="order in records" :key="order.orderNo">
-            <td class="mono">{{ order.orderNo }}</td>
+            <td class="fact">{{ order.orderNo }}</td>
             <td>{{ order.productName }}</td>
             <td>{{ order.buyerEmail ?? '游客' }}</td>
-            <td>{{ order.quantity }}</td>
-            <td class="amount">{{ formatPrice(order.amountCents) }}</td>
+            <td class="fact col-amount">{{ order.quantity }}</td>
+            <td class="fact col-amount">{{ formatPrice(order.amountCents) }}</td>
             <td>
-              <span class="status-tag" :class="`status-tag--${order.status}`">{{ order.statusLabel }}</span>
+              <span class="state" :data-state="order.status">{{ order.statusLabel }}</span>
             </td>
-            <td>{{ order.paymentProvider ?? '—' }}</td>
-            <td class="secondary">{{ formatDateTime(order.createdAt) }}</td>
-            <td class="secondary">{{ order.paidAt ? formatDateTime(order.paidAt) : '—' }}</td>
+            <td class="fact muted">{{ order.paymentProvider ?? '—' }}</td>
+            <td class="fact muted">{{ formatDateTime(order.createdAt) }}</td>
+            <td class="fact muted">{{ order.paidAt ? formatDateTime(order.paidAt) : '—' }}</td>
           </tr>
         </tbody>
       </table>
@@ -141,7 +157,10 @@ function gotoPage(next: number) {
       <button type="button" class="admin-btn-ghost" :disabled="page <= 1" @click="gotoPage(page - 1)">
         上一页
       </button>
-      <span class="info">第 {{ page }} 页 · 共 {{ total }} 条</span>
+      <span class="info">
+        第 <span class="fact">{{ page }}</span> / <span class="fact">{{ totalPages }}</span> 页 · 共
+        <span class="fact">{{ total }}</span> 条
+      </span>
       <button
         type="button"
         class="admin-btn-ghost"
@@ -158,22 +177,5 @@ function gotoPage(next: number) {
 .search {
   display: flex;
   gap: 8px;
-}
-
-.mono {
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-.amount {
-  font-weight: 600;
-  color: var(--color-brand-deep);
-  white-space: nowrap;
-}
-
-.secondary {
-  color: var(--color-ink-secondary);
-  font-size: 13px;
-  white-space: nowrap;
 }
 </style>

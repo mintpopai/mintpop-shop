@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import Modal from '../components/Modal.vue'
 import {
   createAdminGroup,
@@ -13,6 +13,9 @@ import { showToast } from '../toast'
 const groups = ref<AdminGroup[]>([])
 const loading = ref(true)
 const loadError = ref('')
+
+/** 页头那行事实：分组一共装了多少件商品 */
+const coveredProducts = computed(() => groups.value.reduce((sum, g) => sum + g.productCount, 0))
 
 /** 弹窗状态：editingId 为空表示新增 */
 const modalOpen = ref(false)
@@ -84,36 +87,42 @@ async function onDelete(group: AdminGroup) {
 </script>
 
 <template>
-  <h2 class="admin-title">分组管理</h2>
+  <header class="page-head">
+    <h2 class="page-title">分组</h2>
+    <p class="page-facts">
+      共 <span class="fact">{{ groups.length }}</span> 组，装着
+      <span class="fact">{{ coveredProducts }}</span> 件商品。排序号小的排在商城前面。
+    </p>
+  </header>
 
   <div class="admin-toolbar">
     <span class="spacer"></span>
     <button type="button" class="admin-btn" @click="openCreate">新增分组</button>
   </div>
 
-  <p v-if="loading" class="admin-hint">加载中……</p>
+  <p v-if="loading" class="admin-hint loading">加载中……</p>
   <p v-else-if="loadError" class="admin-hint error">{{ loadError }}</p>
 
   <div v-else class="admin-card">
-    <p v-if="groups.length === 0" class="admin-hint">暂无数据</p>
+    <p v-if="groups.length === 0" class="admin-hint">还没有分组。商品必须归到某个分组下，先建一个。</p>
     <table v-else class="admin-table">
       <thead>
         <tr>
           <th>ID</th>
           <th>名称（中文）</th>
           <th>名称（英文）</th>
-          <th>排序号</th>
-          <th>商品数</th>
+          <th class="col-amount">排序号</th>
+          <th class="col-amount">商品数</th>
           <th>操作</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="group in groups" :key="group.id">
-          <td>{{ group.id }}</td>
+          <td class="fact muted">{{ group.id }}</td>
           <td>{{ group.nameZh }}</td>
           <td>{{ group.nameEn ?? '—' }}</td>
-          <td>{{ group.sortOrder }}</td>
-          <td>{{ group.productCount }}</td>
+          <td class="fact col-amount">{{ group.sortOrder }}</td>
+          <td class="fact col-amount">{{ group.productCount }}</td>
           <td class="actions">
             <button type="button" class="admin-link" @click="openEdit(group)">编辑</button>
             <button
@@ -156,11 +165,3 @@ async function onDelete(group: AdminGroup) {
     </template>
   </Modal>
 </template>
-
-<style scoped>
-.actions {
-  display: flex;
-  gap: 12px;
-  white-space: nowrap;
-}
-</style>

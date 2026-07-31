@@ -1,53 +1,225 @@
-/* 管理端共用样式：由 App.vue 引入，覆盖导航、卡片、表格、表单、分页等管理端通用控件。
-   全部基于 base.css 的设计 token，与商城侧同一材质语言（白卡、细边框、胶囊按钮）。 */
+/* 管理端设计层「柜台」——按「一人小店的收银台后侧」来设计，而不是企业 BI 后台。
+   建在 base.css 的品牌 token 之上，只增不改：base.css 与 frontend/src/styles/base.css
+   逐字同源、改动需两边同步，故管理端专属变量一律以 --counter-* 前缀写在本文件里。
 
-.admin-shell {
-  display: flex;
-  align-items: flex-start;
-  gap: 24px;
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 24px 32px 48px;
+   两条贯穿全站的规则：
+   1. 排版即信息——等宽（IBM Plex Mono）只给「系统生成的事实」：订单号、金额、时间戳、
+      ID、枚举值、计数；Inter 只给「人写的内容」：商品名、描述、昵称、界面文案。
+      金额列因此天然对齐可比，不需要额外装饰。
+   2. 品牌绿只花在两处——导航的当前位置、概览的今日营收。其余状态一律交给状态点的
+      语义色，表格保持安静、可长时间扫读。 */
+
+:root {
+  /* 导航轨：带绿的深墨，与商城的薄荷同族，不是中性黑 */
+  --counter-rail: #0f1a16;
+  --counter-rail-soft: #1c2b25;
+  --counter-rail-line: rgba(255, 255, 255, 0.09);
+  --counter-rail-text: #9db2aa;
+  --counter-rail-text-strong: #f1f6f3;
+  /* 工作区：偏薄荷的冷灰，与纯白卡面拉开层次 */
+  --counter-desk: #edf1ee;
+  --counter-edge: #dce4df;
+  --counter-edge-strong: #c2cec8;
+  --counter-rule: #eef2f0;
+  --counter-head: #fafcfb;
+  --counter-danger: #b3341f;
+
+  --font-fact: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --rail-width: 208px;
 }
 
-.admin-nav {
-  position: sticky;
-  top: 24px;
-  width: 168px;
-  flex-shrink: 0;
+body {
+  background: var(--counter-desk);
+}
+
+/* —— 状态语义色：任何元素带 data-state 都能取到，供状态点与筛选 chip 共用 —— */
+[data-state='PENDING'] {
+  --state-color: #b4720b;
+}
+
+[data-state='PAID'] {
+  --state-color: #1f5fa8;
+}
+
+[data-state='COMPLETED'] {
+  --state-color: #0a8a6a;
+}
+
+[data-state='FAILED'] {
+  --state-color: #b3341f;
+}
+
+[data-state='CANCELLED'],
+[data-state='EXPIRED'] {
+  --state-color: #7a857f;
+}
+
+[data-state='ON_SALE'] {
+  --state-color: #0a8a6a;
+}
+
+[data-state='OFF_SALE'] {
+  --state-color: #9aa5a0;
+}
+
+/* —— 外壳：全高导航轨常驻左侧，长表格滚动时导航不跟着走 —— */
+.admin-rail {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--rail-width);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  padding: 26px 16px 20px;
+  background: var(--counter-rail);
+  z-index: 20;
 }
 
-.admin-nav-item {
-  padding: 10px 16px;
-  border-radius: var(--radius-card);
-  font-size: 14px;
-  color: var(--color-ink);
-  text-decoration: none;
-  transition: background 0.15s ease;
+.rail-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 0 12px 26px;
 }
 
-.admin-nav-item:hover {
-  background: var(--color-bg);
-}
-
-.admin-nav-item.router-link-exact-active {
-  background: var(--color-bg);
-  color: var(--color-brand-deep);
+.rail-wordmark {
+  font-size: 21px;
   font-weight: 600;
+  color: var(--color-brand);
 }
 
-.admin-main {
-  flex: 1;
+.rail-kind {
+  font-size: 12px;
+  color: var(--counter-rail-text);
+}
+
+.rail-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rail-link {
+  position: relative;
+  padding: 9px 12px;
+  border-radius: var(--radius-button);
+  font-size: 14px;
+  color: var(--counter-rail-text);
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.rail-link:hover {
+  background: var(--counter-rail-soft);
+  color: var(--counter-rail-text-strong);
+}
+
+.rail-link.router-link-exact-active {
+  background: var(--counter-rail-soft);
+  color: #ffffff;
+  font-weight: 500;
+}
+
+/* 当前位置的指示条贴在轨道左沿——品牌绿在全站只出现在这里和今日营收 */
+.rail-link.router-link-exact-active::before {
+  content: '';
+  position: absolute;
+  top: 9px;
+  bottom: 9px;
+  left: -16px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--color-brand);
+}
+
+.rail-foot {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--counter-rail-line);
+}
+
+.rail-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px;
   min-width: 0;
 }
 
-.admin-title {
-  font-size: 20px;
+.rail-avatar {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-brand);
+  color: var(--counter-rail);
+  font-size: 13px;
+  font-weight: 600;
+  object-fit: cover;
+}
+
+.rail-user-name {
+  font-size: 13px;
+  color: var(--counter-rail-text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rail-signout {
+  margin-top: 10px;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--counter-rail-text);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.rail-signout:hover {
+  color: var(--counter-rail-text-strong);
+}
+
+.admin-desk {
+  margin-left: var(--rail-width);
+  min-height: 100vh;
+}
+
+.admin-page {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 36px 40px 72px;
+}
+
+/* —— 页头：标题下面挂的是这一页的真实规模，不是口号 —— */
+.page-head {
+  margin-bottom: 22px;
+}
+
+.page-title {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--color-ink);
-  margin-bottom: 16px;
+}
+
+.page-facts {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--color-ink-secondary);
+}
+
+/* 系统生成的事实：等宽 + 表格数字 */
+.fact {
+  font-family: var(--font-fact);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
 }
 
 .admin-toolbar {
@@ -62,10 +234,10 @@
   flex: 1;
 }
 
-/* 白卡容器：表格统一放在卡内，宽表格自身横向滚动 */
+/* —— 卡片与表格 —— */
 .admin-card {
   background: var(--color-bg);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--counter-edge);
   border-radius: var(--radius-card);
   overflow-x: auto;
 }
@@ -77,19 +249,24 @@
 }
 
 .admin-table th {
-  padding: 10px 16px;
+  padding: 11px 18px;
   text-align: left;
-  font-size: 13px;
+  background: var(--counter-head);
+  font-size: 12px;
   font-weight: 500;
+  letter-spacing: 0.02em;
   color: var(--color-ink-secondary);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--counter-edge);
   white-space: nowrap;
 }
 
+/* 单元格一律不换行：订单号这类长 ASCII 串没有断点，auto 布局会把它撑成最宽列，
+   再把能断行的中文列压到一字宽竖排。宽表格改由卡片自身横向滚动兜底 */
 .admin-table td {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border);
+  padding: 13px 18px;
+  border-bottom: 1px solid var(--counter-rule);
   vertical-align: middle;
+  white-space: nowrap;
 }
 
 .admin-table tbody tr:last-child td {
@@ -100,69 +277,120 @@
   background: var(--color-bg-cloud);
 }
 
-/* 主按钮：与商城「购买/登录」同款品牌绿 */
+/* 表格没占满卡片时，把富余宽度全给最后一列，其余列贴着内容——
+   否则空隙会被平摊到每列之间，同一行的数据被拉散、不好横向扫读 */
+.admin-table tr > *:last-child {
+  width: 100%;
+}
+
+/* 金额列右对齐，靠等宽数字自然成列。
+   选择器要盖过 .admin-table th 的 text-align: left，故不能只写 .col-amount */
+.admin-table .col-amount {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.admin-table .muted {
+  color: var(--color-ink-secondary);
+}
+
+.admin-table .actions > * + * {
+  margin-left: 14px;
+}
+
+/* —— 状态：色点带语义，文字保持墨色；只有失败才连文字一起染 —— */
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.state::before {
+  content: '';
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--state-color, #7a857f);
+}
+
+.state[data-state='FAILED'] {
+  color: var(--counter-danger);
+}
+
+.state[data-state='OFF_SALE'],
+.state[data-state='CANCELLED'],
+.state[data-state='EXPIRED'] {
+  color: var(--color-ink-secondary);
+}
+
+/* —— 控件 —— */
 .admin-btn {
   padding: 8px 18px;
   border: none;
   border-radius: var(--radius-button);
-  background: var(--color-brand);
+  background: var(--counter-rail);
   color: #ffffff;
   font-size: 13px;
   font-family: inherit;
   font-weight: 500;
   cursor: pointer;
+  transition: background 0.15s ease;
 }
 
 .admin-btn:hover {
-  background: var(--color-brand-deep);
+  background: var(--counter-rail-soft);
 }
 
 .admin-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
-/* 次按钮：描边款 */
 .admin-btn-ghost {
   padding: 7px 16px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--counter-edge);
   border-radius: var(--radius-button);
   background: var(--color-bg);
   color: var(--color-ink);
   font-size: 13px;
   font-family: inherit;
   cursor: pointer;
+  transition: border-color 0.15s ease;
 }
 
 .admin-btn-ghost:hover {
-  border-color: var(--color-brand);
-  color: var(--color-brand-deep);
+  border-color: var(--color-ink-secondary);
 }
 
 .admin-btn-ghost:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  border-color: var(--color-border);
+  border-color: var(--counter-edge);
   color: var(--color-ink-secondary);
 }
 
-/* 行内文字操作 */
 .admin-link {
   border: none;
   background: none;
   padding: 0;
-  color: var(--color-brand-deep);
+  color: var(--color-ink);
   font-size: 13px;
   font-family: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--counter-edge-strong);
+  text-underline-offset: 3px;
   cursor: pointer;
 }
 
 .admin-link:hover {
-  text-decoration: underline;
+  text-decoration-color: currentColor;
 }
 
 .admin-link.danger {
-  color: #b91c1c;
+  color: var(--counter-danger);
 }
 
 .admin-link:disabled {
@@ -175,7 +403,7 @@
 .admin-select,
 .admin-textarea {
   padding: 8px 12px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--counter-edge);
   border-radius: var(--radius-button);
   background: var(--color-bg);
   color: var(--color-ink);
@@ -183,11 +411,22 @@
   font-family: inherit;
 }
 
-.admin-input:focus,
-.admin-select:focus,
-.admin-textarea:focus {
-  outline: none;
-  border-color: var(--color-brand);
+.admin-input:hover,
+.admin-select:hover,
+.admin-textarea:hover {
+  border-color: var(--color-ink-secondary);
+}
+
+/* 原生下拉的系统外观（圆角、渐变、内嵌箭头按钮）与这套扁平材质冲突，
+   自己画一个 chevron；SVG 内联成 data URI，不外链 */
+.admin-select {
+  appearance: none;
+  padding-right: 30px;
+  background-color: var(--color-bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236b7280' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+  background-size: 10px 6px;
 }
 
 .admin-textarea {
@@ -195,17 +434,16 @@
   min-height: 64px;
 }
 
-/* 表单：弹窗内纵向排布，双语字段两列 */
 .admin-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .admin-form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 14px;
 }
 
 .admin-field {
@@ -220,33 +458,41 @@
   color: var(--color-ink-secondary);
 }
 
-/* 状态筛选 chips：与商城订单页同款 */
+/* 筛选 chip：带状态点，与表格里的同一套语义色 */
 .admin-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   padding: 6px 14px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--counter-edge);
   border-radius: var(--radius-pill);
   background: var(--color-bg);
   color: var(--color-ink-secondary);
   font-family: inherit;
   font-size: 13px;
   cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.admin-chip[data-state]::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--state-color);
 }
 
 .admin-chip:hover {
-  border-color: var(--color-brand);
-  color: var(--color-brand-deep);
+  border-color: var(--color-ink-secondary);
+  color: var(--color-ink);
 }
 
 .admin-chip.active {
-  border-color: var(--color-brand);
-  background: var(--color-brand);
+  border-color: var(--counter-rail);
+  background: var(--counter-rail);
   color: #ffffff;
 }
 
-/* 分页条 */
 .admin-pager {
   display: flex;
   align-items: center;
@@ -259,37 +505,123 @@
   color: var(--color-ink-secondary);
 }
 
+/* —— 加载 / 空 / 错误 —— */
 .admin-hint {
+  padding: 32px 20px;
   color: var(--color-ink-secondary);
-  padding: 24px 16px;
+  font-size: 14px;
+  line-height: 1.7;
 }
 
 .admin-hint.error {
-  color: #b91c1c;
+  color: var(--counter-danger);
 }
 
-/* 上/下架状态 tag：沿用 status-tag 的形态 */
-.sale-tag {
-  display: inline-block;
-  padding: 2px 10px;
-  border-radius: var(--radius-pill);
-  font-size: 12px;
-  font-weight: 500;
-  background: #d1fae5;
-  color: #047857;
+.admin-hint.loading {
+  color: var(--counter-edge-strong);
 }
 
-.sale-tag.off {
-  background: #f3f4f6;
-  color: #6b7280;
-}
-
-/* accent 色点（商品表格里预览主题色） */
+/* 商品表格里的主题色预览 */
 .accent-dot {
   display: inline-block;
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  margin-right: 6px;
+  margin-right: 8px;
   vertical-align: -1px;
+}
+
+/* —— 质量地板：键盘焦点在深浅两种底上都看得见 —— */
+:focus-visible {
+  outline: 2px solid var(--color-brand-deep);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.admin-rail :focus-visible {
+  outline-color: var(--color-brand);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* —— 响应式：窄屏把导航轨放平成顶部横条 —— */
+@media (max-width: 960px) {
+  .admin-rail {
+    position: static;
+    width: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 20px;
+    padding: 12px 20px;
+    overflow-x: auto;
+  }
+
+  .rail-brand {
+    padding: 0;
+    flex-shrink: 0;
+  }
+
+  .rail-nav {
+    flex-direction: row;
+    gap: 4px;
+  }
+
+  .rail-link.router-link-exact-active::before {
+    top: auto;
+    bottom: -12px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    height: 2px;
+    border-radius: 2px 2px 0 0;
+  }
+
+  .rail-foot {
+    margin-top: 0;
+    margin-left: auto;
+    padding-top: 0;
+    border-top: none;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .rail-signout {
+    margin-top: 0;
+  }
+
+  .admin-desk {
+    margin-left: 0;
+    min-height: 0;
+  }
+
+  .admin-page {
+    padding: 28px 24px 56px;
+  }
+}
+
+@media (max-width: 640px) {
+  .rail-user-name {
+    display: none;
+  }
+
+  .admin-page {
+    padding: 22px 16px 48px;
+  }
+
+  .page-title {
+    font-size: 22px;
+  }
+
+  .admin-form-row {
+    grid-template-columns: 1fr;
+  }
 }

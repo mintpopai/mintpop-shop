@@ -36,6 +36,9 @@ const filteredProducts = computed(() =>
     : products.value.filter((p) => p.groupId === groupFilter.value),
 )
 
+/** 页头那行事实：当前筛选下的上下架构成 */
+const onSaleCount = computed(() => filteredProducts.value.filter((p) => p.onSale).length)
+
 /** 管理端固定中文：分组显示中文名 */
 function groupName(groupId: number): string {
   return groups.value.find((g) => g.id === groupId)?.nameZh ?? String(groupId)
@@ -156,7 +159,14 @@ async function onToggleSale(product: AdminProduct) {
 </script>
 
 <template>
-  <h2 class="admin-title">商品管理</h2>
+  <header class="page-head">
+    <h2 class="page-title">商品</h2>
+    <p class="page-facts">
+      共 <span class="fact">{{ filteredProducts.length }}</span> 件 · 在售
+      <span class="fact">{{ onSaleCount }}</span> · 已下架
+      <span class="fact">{{ filteredProducts.length - onSaleCount }}</span>
+    </p>
+  </header>
 
   <div class="admin-toolbar">
     <select v-model.number="groupFilter" class="admin-select" aria-label="按分组筛选">
@@ -167,18 +177,20 @@ async function onToggleSale(product: AdminProduct) {
     <button type="button" class="admin-btn" @click="openCreate">新增商品</button>
   </div>
 
-  <p v-if="loading" class="admin-hint">加载中……</p>
+  <p v-if="loading" class="admin-hint loading">加载中……</p>
   <p v-else-if="loadError" class="admin-hint error">{{ loadError }}</p>
 
   <div v-else class="admin-card">
-    <p v-if="filteredProducts.length === 0" class="admin-hint">暂无数据</p>
+    <p v-if="filteredProducts.length === 0" class="admin-hint">
+      {{ groupFilter === 0 ? '还没有商品。新增的商品会出现在商城首页。' : '这个分组下还没有商品。' }}
+    </p>
     <table v-else class="admin-table">
       <thead>
         <tr>
           <th>ID</th>
           <th>名称</th>
           <th>分组</th>
-          <th>价格</th>
+          <th class="col-amount">价格</th>
           <th>角标</th>
           <th>主题色</th>
           <th>状态</th>
@@ -187,7 +199,7 @@ async function onToggleSale(product: AdminProduct) {
       </thead>
       <tbody>
         <tr v-for="product in filteredProducts" :key="product.id">
-          <td>{{ product.id }}</td>
+          <td class="fact muted">{{ product.id }}</td>
           <td>
             <div class="name-cell">
               <span>{{ product.nameZh }}</span>
@@ -195,14 +207,14 @@ async function onToggleSale(product: AdminProduct) {
             </div>
           </td>
           <td>{{ groupName(product.groupId) }}</td>
-          <td class="price">{{ formatPrice(product.priceCents) }}</td>
+          <td class="fact col-amount">{{ formatPrice(product.priceCents) }}</td>
           <td>{{ product.badgeZh ?? '—' }}</td>
-          <td>
+          <td class="fact">
             <span class="accent-dot" :style="{ background: ACCENTS[product.accent] ?? ACCENTS.MINT }"></span
             >{{ product.accent }}
           </td>
           <td>
-            <span class="sale-tag" :class="{ off: !product.onSale }">
+            <span class="state" :data-state="product.onSale ? 'ON_SALE' : 'OFF_SALE'">
               {{ product.onSale ? '上架中' : '已下架' }}
             </span>
           </td>
@@ -308,17 +320,5 @@ async function onToggleSale(product: AdminProduct) {
 .name-en {
   font-size: 12px;
   color: var(--color-ink-secondary);
-}
-
-.price {
-  font-weight: 600;
-  color: var(--color-brand-deep);
-  white-space: nowrap;
-}
-
-.actions {
-  display: flex;
-  gap: 12px;
-  white-space: nowrap;
 }
 </style>
