@@ -107,7 +107,7 @@ const initial = computed(() => (currentUser.value?.nickname ?? currentUser.value
 }
 
 .gate-title {
-  margin-top: 22px;
+  margin-top: 24px;
   font-size: 28px;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -140,7 +140,7 @@ const initial = computed(() => (currentUser.value?.nickname ?? currentUser.value
 
 .gate-btn {
   margin-top: 28px;
-  padding: 10px 26px;
+  padding: 12px 24px;
   border: none;
   border-radius: var(--radius-button);
   background: var(--color-brand);

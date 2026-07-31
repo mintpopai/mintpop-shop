@@ -314,7 +314,7 @@ async function onToggleSale(product: AdminProduct) {
 .name-cell {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .name-en {

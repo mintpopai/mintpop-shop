@@ -135,7 +135,7 @@ function gotoPage(next: number) {
 /* 管理员标记：只读展示，角色由管理员直接改库维护 */
 .role-badge {
   display: inline-block;
-  padding: 2px 10px;
+  padding: 4px 12px;
   border-radius: var(--radius-pill);
   background: var(--counter-rail);
   color: #ffffff;

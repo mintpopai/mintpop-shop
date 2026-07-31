@@ -102,6 +102,8 @@ const tapeLabel = computed(() =>
             <span class="tape-tip">
               <span class="fact">{{ formatUtcTime(bar.order.createdAt) }}</span>
               <span class="fact tape-tip-amount">{{ formatPrice(bar.order.amountCents) }}</span>
+              <!-- 柱子的颜色只是辅助，状态在这里始终有文字 -->
+              <span class="tape-tip-state">{{ bar.order.statusLabel }}</span>
               <span class="tape-tip-name">{{ bar.order.productName }}</span>
             </span>
           </div>
@@ -171,17 +173,17 @@ const tapeLabel = computed(() =>
 <style scoped>
 .tape-card {
   display: flex;
-  gap: 36px;
-  padding: 26px 28px 22px;
+  gap: 32px;
+  padding: 24px;
   background: var(--color-bg);
-  border: 1px solid var(--counter-edge);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
 }
 
 /* 不写死宽度：营收位数变多时让左栏自己撑开、纸带相应变窄，而不是把数字压到纸带上 */
 .tape-lead {
   flex-shrink: 0;
-  min-width: 190px;
+  min-width: 192px;
 }
 
 .tape-lead-label {
@@ -189,17 +191,18 @@ const tapeLabel = computed(() =>
   color: var(--color-ink-secondary);
 }
 
-/* 全站唯一的大号品牌绿数字——今天做成了多少生意 */
+/* 页面的焦点数字。不染品牌绿：#0FB389 对白底只有 2.7:1，达不到大字要求的 3:1；
+   46px 的墨色本身就够重，染成浅绿反而更轻 */
 .tape-lead-value {
-  margin-top: 6px;
+  margin-top: 8px;
   font-size: clamp(34px, 4vw, 46px);
   line-height: 1.05;
   letter-spacing: -0.02em;
-  color: var(--color-brand-deep);
+  color: var(--color-ink);
 }
 
 .tape-lead-sub {
-  margin-top: 10px;
+  margin-top: 12px;
   font-size: 13px;
   line-height: 1.6;
   color: var(--color-ink-secondary);
@@ -213,7 +216,7 @@ const tapeLabel = computed(() =>
 .tape-track {
   position: relative;
   height: 104px;
-  border-bottom: 1px solid var(--counter-edge);
+  border-bottom: 1px solid var(--color-border);
 }
 
 /* 此刻：一天已经走到哪儿了 */
@@ -221,7 +224,7 @@ const tapeLabel = computed(() =>
   position: absolute;
   top: 0;
   bottom: 0;
-  border-left: 1px dashed var(--counter-edge);
+  border-left: 1px dashed var(--color-border);
 }
 
 .tape-now-label {
@@ -269,14 +272,14 @@ const tapeLabel = computed(() =>
   transform: translateX(-50%);
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  padding: 7px 11px;
+  gap: 12px;
+  padding: 8px 12px;
   border-radius: var(--radius-button);
   background: var(--counter-rail);
   color: #ffffff;
   font-size: 12px;
   white-space: nowrap;
-  max-width: 260px;
+  max-width: 320px;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.12s ease;
@@ -290,6 +293,7 @@ const tapeLabel = computed(() =>
   color: var(--color-brand);
 }
 
+.tape-tip-state,
 .tape-tip-name {
   min-width: 0;
   overflow: hidden;
@@ -311,8 +315,8 @@ const tapeLabel = computed(() =>
    与柱子的百分比定位对不上，所以逐个绝对定位再居中 */
 .tape-axis {
   position: relative;
-  height: 14px;
-  margin-top: 6px;
+  height: 16px;
+  margin-top: 8px;
   font-size: 11px;
   color: var(--color-ink-secondary);
 }
@@ -346,20 +350,20 @@ const tapeLabel = computed(() =>
 .totals {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 0;
-  margin: 18px 2px 32px;
+  gap: 12px 0;
+  margin: 16px 0 32px;
 }
 
 .total {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  padding-right: 26px;
+  padding-right: 24px;
 }
 
 .total + .total {
-  padding-left: 26px;
-  border-left: 1px solid var(--counter-edge);
+  padding-left: 24px;
+  border-left: 1px solid var(--color-border);
 }
 
 .total dt {
@@ -378,10 +382,10 @@ const tapeLabel = computed(() =>
   margin-bottom: 12px;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 640px) {
   .tape-card {
     flex-direction: column;
-    gap: 22px;
+    gap: 24px;
   }
 
   .tape-lead {

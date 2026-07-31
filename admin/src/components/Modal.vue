@@ -52,7 +52,7 @@ const emit = defineEmits<{ close: [] }>()
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid var(--counter-edge);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .head-title {
@@ -82,8 +82,8 @@ const emit = defineEmits<{ close: [] }>()
 .foot {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  padding: 14px 20px;
-  border-top: 1px solid var(--counter-edge);
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--color-border);
 }
 </style>
