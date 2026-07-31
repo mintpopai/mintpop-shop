@@ -3,15 +3,18 @@ package com.mintpop.shop.service;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import com.mintpop.shop.entity.OrderShipment;
 import com.mintpop.shop.entity.Product;
 import com.mintpop.shop.entity.ShopOrder;
 import com.mintpop.shop.enumeration.BizCodeEnum;
 import com.mintpop.shop.enumeration.OrderStatusEnum;
 import com.mintpop.shop.exception.BizException;
+import com.mintpop.shop.mapper.OrderShipmentMapper;
 import com.mintpop.shop.mapper.ProductMapper;
 import com.mintpop.shop.mapper.ShopOrderMapper;
 import com.mintpop.shop.request.CreateOrderRequest;
 import com.mintpop.shop.response.CreateOrderResponse;
+import com.mintpop.shop.response.OrderDetailResponse;
 import com.mintpop.shop.response.OrderItemResponse;
 import com.mintpop.shop.support.TestMessages;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
@@ -29,6 +32,7 @@ import org.springframework.context.i18n.LocaleContextHolder;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Locale;
 
@@ -57,12 +61,14 @@ class OrderServiceTest {
     private ShopOrderMapper shopOrderMapper;
     @Mock
     private OrderExpiryService orderExpiryService;
+    @Mock
+    private OrderShipmentMapper orderShipmentMapper;
     private OrderService orderService;
 
     @BeforeEach
     void setUp() {
         orderService = new OrderService(productMapper, shopOrderMapper, orderExpiryService,
-                TestMessages.create());
+                TestMessages.create(), orderShipmentMapper);
         LocaleContextHolder.setLocale(Locale.SIMPLIFIED_CHINESE);
     }
 
@@ -91,6 +97,29 @@ class OrderServiceTest {
         o.setUserId(42L);
         o.setCreatedAt(LocalDateTime.of(2026, 7, 13, 12, 0));
         return o;
+    }
+
+    /** 订单详情用例的辅助构造：需要指定 id（用于关联发货记录）、下单用户与状态 */
+    private ShopOrder order(long id, long productId, long userId, OrderStatusEnum status) {
+        ShopOrder o = new ShopOrder();
+        o.setId(id);
+        o.setOrderNo("order-1");
+        o.setProductId(productId);
+        o.setQuantity(2);
+        o.setAmountCents(11800L);
+        o.setStatus(status);
+        o.setUserId(userId);
+        o.setCreatedAt(LocalDateTime.of(2026, 7, 13, 12, 0));
+        return o;
+    }
+
+    private OrderShipment shipment(long id, String content, LocalDateTime createdAt) {
+        OrderShipment s = new OrderShipment();
+        s.setId(id);
+        s.setOrderId(7L);
+        s.setContent(content);
+        s.setCreatedAt(createdAt);
+        return s;
     }
 
     @Test
@@ -194,5 +223,44 @@ class OrderServiceTest {
         assertThat(result.get(0).getProductName()).isEqualTo("Mint Sprite Blind Box");
         assertThat(result.get(0).getStatusLabel()).isEqualTo("Awaiting payment");
         assertThat(result.get(1).getProductName()).isEqualTo("(Product removed)");
+    }
+
+    @Test
+    @DisplayName("订单详情：已发货订单带出最新一条发货内容")
+    void detailReturnsLatestShipment() {
+        ShopOrder order = order(7L, 3L, 11L, OrderStatusEnum.COMPLETED);
+        when(shopOrderMapper.selectOne(any())).thenReturn(order);
+        when(productMapper.selectById(3L)).thenReturn(onSaleProduct());
+        OrderShipment older = shipment(1L, "第一次", LocalDateTime.of(2026, 7, 31, 12, 0));
+        OrderShipment newer = shipment(2L, "第二次", LocalDateTime.of(2026, 7, 31, 13, 0));
+        when(orderShipmentMapper.selectList(any())).thenReturn(List.of(newer, older));
+
+        OrderDetailResponse detail = orderService.getMyOrderDetail(11L, "order-1");
+
+        assertThat(detail.getOrderNo()).isEqualTo(order.getOrderNo());
+        assertThat(detail.getLatestShipment().getContent()).isEqualTo("第二次");
+        assertThat(detail.getLatestShipment().getShippedAt())
+                .isEqualTo(LocalDateTime.of(2026, 7, 31, 13, 0).toInstant(ZoneOffset.UTC));
+    }
+
+    @Test
+    @DisplayName("订单详情：未发货时 latestShipment 为空")
+    void detailWithoutShipment() {
+        when(shopOrderMapper.selectOne(any())).thenReturn(order(7L, 3L, 11L, OrderStatusEnum.PAID));
+        when(productMapper.selectById(3L)).thenReturn(onSaleProduct());
+        when(orderShipmentMapper.selectList(any())).thenReturn(List.of());
+
+        assertThat(orderService.getMyOrderDetail(11L, "order-1").getLatestShipment()).isNull();
+    }
+
+    @Test
+    @DisplayName("订单详情：别人的订单一律报订单不存在，不泄露存在性")
+    void detailRejectsOtherUsersOrder() {
+        when(shopOrderMapper.selectOne(any())).thenReturn(order(7L, 3L, 11L, OrderStatusEnum.PAID));
+
+        assertThatThrownBy(() -> orderService.getMyOrderDetail(999L, "order-1"))
+                .isInstanceOf(BizException.class)
+                .extracting(e -> ((BizException) e).getBizCode())
+                .isEqualTo(BizCodeEnum.ORDER_NOT_FOUND);
     }
 }

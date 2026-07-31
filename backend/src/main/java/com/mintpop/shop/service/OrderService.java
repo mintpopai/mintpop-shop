@@ -1,16 +1,20 @@
 package com.mintpop.shop.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.mintpop.shop.entity.OrderShipment;
 import com.mintpop.shop.entity.Product;
 import com.mintpop.shop.entity.ShopOrder;
 import com.mintpop.shop.enumeration.BizCodeEnum;
 import com.mintpop.shop.enumeration.OrderStatusEnum;
 import com.mintpop.shop.exception.BizException;
+import com.mintpop.shop.mapper.OrderShipmentMapper;
 import com.mintpop.shop.mapper.ProductMapper;
 import com.mintpop.shop.mapper.ShopOrderMapper;
 import com.mintpop.shop.request.CreateOrderRequest;
 import com.mintpop.shop.response.CreateOrderResponse;
+import com.mintpop.shop.response.OrderDetailResponse;
 import com.mintpop.shop.response.OrderItemResponse;
+import com.mintpop.shop.response.ShipmentInfoResponse;
 import com.mintpop.shop.util.I18nUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;
@@ -23,6 +27,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
@@ -40,6 +45,7 @@ public class OrderService {
     private final ShopOrderMapper shopOrderMapper;
     private final OrderExpiryService orderExpiryService;
     private final MessageSource messageSource;
+    private final OrderShipmentMapper orderShipmentMapper;
 
     /**
      * 创建待支付订单：校验商品存在且上架，金额=单价×数量，绑定当前登录用户。
@@ -93,6 +99,43 @@ public class OrderService {
                         // 库里挂钟时间即 UTC（全链路 UTC），显式按 UTC 升格为绝对时刻，不依赖 JVM 默认时区
                         o.getCreatedAt().toInstant(ZoneOffset.UTC)))
                 .toList();
+    }
+
+    /**
+     * 我的订单详情：只允许本人查看；别人的订单一律按「订单不存在」处理，不泄露存在性。
+     */
+    public OrderDetailResponse getMyOrderDetail(Long userId, String orderNo) {
+        // 懒惰过期：详情页读到的状态与列表口径一致
+        orderExpiryService.expireTimedOut(userId);
+        ShopOrder order = shopOrderMapper.selectOne(new LambdaQueryWrapper<ShopOrder>()
+                .eq(ShopOrder::getOrderNo, orderNo));
+        if (order == null || !Objects.equals(order.getUserId(), userId)) {
+            throw new BizException(BizCodeEnum.ORDER_NOT_FOUND);
+        }
+        Locale locale = LocaleContextHolder.getLocale();
+        Product product = productMapper.selectById(order.getProductId());
+        String productName = product == null
+                ? messageSource.getMessage("order.product-deleted", null, locale)
+                : I18nUtil.pick(I18nUtil.isEnglish(), product.getNameEn(), product.getNameZh());
+
+        List<OrderShipment> shipments = orderShipmentMapper.selectList(
+                new LambdaQueryWrapper<OrderShipment>()
+                        .eq(OrderShipment::getOrderId, order.getId())
+                        .orderByDesc(OrderShipment::getId));
+        ShipmentInfoResponse latest = shipments.isEmpty() ? null
+                : new ShipmentInfoResponse(shipments.get(0).getContent(),
+                        shipments.get(0).getCreatedAt().toInstant(ZoneOffset.UTC));
+
+        return new OrderDetailResponse(
+                order.getOrderNo(),
+                productName,
+                order.getQuantity(),
+                order.getAmountCents(),
+                order.getStatus().name(),
+                messageSource.getMessage(order.getStatus().getLabelKey(), null, locale),
+                order.getCreatedAt().toInstant(ZoneOffset.UTC),
+                order.getPaidAt() == null ? null : order.getPaidAt().toInstant(ZoneOffset.UTC),
+                latest);
     }
 
     /** 订单号：mintpopshop_ + 时间戳 + 6 位随机数（骨架阶段单机够用）；
