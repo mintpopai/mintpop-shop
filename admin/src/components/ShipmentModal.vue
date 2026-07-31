@@ -166,6 +166,11 @@ async function onSubmit() {
   gap: 8px;
 }
 
+/* 弹窗经 Teleport 渲染到 body，不在 .admin-table 下，layout.css 里限定祖先的 .muted 命中不到，这里补一份局部定义 */
+.muted {
+  color: var(--color-ink-secondary);
+}
+
 .mail-state {
   font-size: 12px;
   color: #b45309;

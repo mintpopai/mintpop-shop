@@ -183,6 +183,28 @@ class AdminShipmentServiceTest {
     }
 
     @Test
+    @DisplayName("邮件状态回写失败：不外抛异常，仍按本次邮件结果返回")
+    void markMailResultFailureDoesNotPropagate() {
+        runTransactionsInline();
+        stubOrderAndBuyer(OrderStatusEnum.PAID, "zh-CN");
+        when(orderShipmentMapper.selectCount(any())).thenReturn(0L);
+        when(productMapper.selectById(3L)).thenReturn(product());
+        when(shipmentMailSender.send(any(), eq("会员账号"), any(), eq("兑换码：ABC"), eq(Locale.forLanguageTag("zh-CN"))))
+                .thenReturn(MailResult.ok());
+        // 邮件已发出、发货也已落库之后，回写邮件状态这一步 DB 抖动抛异常
+        when(orderShipmentMapper.updateById(any(OrderShipment.class)))
+                .thenThrow(new RuntimeException("db connection reset"));
+
+        AdminShipmentResponse response = service.ship(
+                "mintpopshop_20260731120000123456", "兑换码：ABC", null, 99L);
+
+        // 回写失败不能让「已经成功发货」这次操作对外报成失败，否则管理员会重发导致买家收到两封邮件
+        assertThat(response.getEmailStatus()).isEqualTo("SENT");
+        assertThat(response.getEmailError()).isNull();
+        assertThat(response.getShippedAt()).isNotNull();
+    }
+
+    @Test
     @DisplayName("已发过货再发：缺原因直接报错，不写库不发信")
     void reshipRequiresReason() {
         stubOrderAndBuyer(OrderStatusEnum.COMPLETED, "zh-CN");

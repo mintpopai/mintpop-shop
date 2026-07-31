@@ -169,7 +169,7 @@ onMounted(async () => {
   line-height: 1.6;
   margin: 0;
   padding: 14px;
-  background: var(--color-bg-soft, #f5f7f6);
+  background: var(--color-bg-cloud);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
   color: var(--color-ink);

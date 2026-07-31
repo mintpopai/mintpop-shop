@@ -81,10 +81,10 @@ mise run run-admin        # 终端 3：启动管理端（5174，/api 代理到 8
 | `POST /api/payment/orders/{orderNo}/cancel` | 需登录 + 归属校验 | 取消订单 |
 | `POST /api/v1/payment/webhook/stripe` | 验签，无登录态 | Stripe 事件回调 |
 | `/api/admin/**` | 需登录 + 管理员 | 管理端接口（概览/商品/分组/订单/用户），非管理员返回业务码 110003 |
-| `GET /api/orders/{orderNo}` | 登录 | 我的订单详情，含最新发货信息 |
-| `PUT /api/me/locale` | 登录 | 保存语言偏好（zh-CN/en-US） |
-| `POST /api/admin/orders/{orderNo}/shipments` | 管理员 | 发货/重新发货，返回邮件发送结果 |
-| `GET /api/admin/orders/{orderNo}/shipments` | 管理员 | 发货历史（时间倒序） |
+| `GET /api/orders/{orderNo}` | 需登录 | 我的订单详情，含最新发货信息 |
+| `PUT /api/me/locale` | 需登录 | 保存语言偏好（zh-CN/en-US） |
+| `POST /api/admin/orders/{orderNo}/shipments` | 需登录 + 管理员 | 发货/重新发货，返回邮件发送结果 |
+| `GET /api/admin/orders/{orderNo}/shipments` | 需登录 + 管理员 | 发货历史（时间倒序） |
 
 登录采用 MintPop 统一账号中心（Logto，OIDC 授权码 + PKCE）：后端为机密客户端（BFF），登录后自签会话 JWT（只含内部 userid）写 HttpOnly Cookie，账号中心 token 不进浏览器；用户主键为本地 `shop_user.id`，与账号中心 `sub` 通过 `user_identity` 映射表关联。
 

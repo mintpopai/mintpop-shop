@@ -17,6 +17,7 @@ import com.mintpop.shop.response.AdminShipmentItemResponse;
 import com.mintpop.shop.response.AdminShipmentResponse;
 import com.mintpop.shop.util.I18nUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
@@ -36,6 +37,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AdminShipmentService {
 
     /** email_error 列宽 512，入库前截断 */
@@ -133,7 +135,14 @@ public class AdminShipmentService {
         });
     }
 
-    /** 按发信结果回写记录：成功改 SENT，失败补失败原因；返回截断后的失败原因（成功为空） */
+    /**
+     * 按发信结果回写记录：成功改 SENT，失败补失败原因；返回截断后的失败原因（成功为空）。
+     * 此时发货已经落库、邮件也已经发出（或已经失败），这条更新只是「记账」性质的收尾动作。
+     * 若这里的 updateById 本身再抛异常（如 DB 抖动），绝不能让它冒泡到 ship()：一旦外抛，
+     * 控制器会把「已经成功发货」的这次操作显示成「发货失败」，管理员大概率会再点一次发货，
+     * 导致买家收到两封含兑换码/账号密码的邮件——这比「邮件状态没回写成功」严重得多。
+     * 所以这里只记 warn 留痕供人工对账，吞掉异常，让 ship() 照常按本次 mailResult 返回。
+     */
     private String markMailResult(Long shipmentId, MailResult mailResult) {
         OrderShipment update = new OrderShipment();
         update.setId(shipmentId);
@@ -145,7 +154,12 @@ public class AdminShipmentService {
             update.setEmailStatus(ShipmentEmailStatusEnum.FAILED);
             update.setEmailError(error);
         }
-        orderShipmentMapper.updateById(update);
+        try {
+            orderShipmentMapper.updateById(update);
+        } catch (RuntimeException e) {
+            log.warn("发货记录 id={} 的邮件状态回写失败，本次邮件结果 sent={} error={}，需人工核对该记录的 email_status 是否与实际相符",
+                    shipmentId, mailResult.sent(), error, e);
+        }
         return error;
     }
 
