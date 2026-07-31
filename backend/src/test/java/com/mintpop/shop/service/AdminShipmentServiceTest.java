@@ -83,6 +83,18 @@ class AdminShipmentServiceTest {
                 inv -> ((TransactionCallback<Object>) inv.getArgument(0)).doInTransaction(null));
     }
 
+    /**
+     * 与 {@link #runTransactionsInline()} 行为相同，但用 lenient 放宽严格 stub 校验：
+     * 仅供「写库前置校验应使 persist() 根本不被调用」这类测试使用——正确实现下该 stub
+     * 永远不会被触发，若用严格 when() 会被 Mockito 判为 UnnecessaryStubbingException；
+     * 一旦实现退化成先写库再查询，这个 stub 就会被真正调用，从而暴露出插入动作。
+     */
+    @SuppressWarnings("unchecked")
+    private void runTransactionsInlineLeniently() {
+        org.mockito.Mockito.lenient().when(transactionTemplate.execute(any())).thenAnswer(
+                inv -> ((TransactionCallback<Object>) inv.getArgument(0)).doInTransaction(null));
+    }
+
     private ShopOrder order(OrderStatusEnum status) {
         ShopOrder o = new ShopOrder();
         o.setId(7L);
@@ -197,6 +209,29 @@ class AdminShipmentServiceTest {
         assertThat(response.getEmailStatus()).isEqualTo("SENT");
         assertThat(response.getEmailError()).isNull();
         assertThat(response.getShippedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("商品名查询异常：不能已经写库——锁住「查询必须在写库之前」的顺序")
+    void productNameLookupFailureLeavesNoWrite() {
+        // 必须真正让事务回调执行（而非让 transactionTemplate.execute 停在未 stub 的默认 null），
+        // 否则不论查询顺序对错，persist() 都不会真的调用 insert/updateById，测试会失去鉴别力；
+        // 用 lenient 版本是因为正确实现下这个 stub 根本不会被触发（查询在写库前就已抛出）
+        runTransactionsInlineLeniently();
+        stubOrderAndBuyer(OrderStatusEnum.PAID, "zh-CN");
+        when(orderShipmentMapper.selectCount(any())).thenReturn(0L);
+        // 模拟事务提交后仍可能触发的那次 DB 读抖动：若查询被错误地挪回写库之后，
+        // 这次异常会在发货记录已经插入之后才抛出，留下一条「幽灵记录」
+        when(productMapper.selectById(3L)).thenThrow(new RuntimeException("db connection reset"));
+
+        assertThatThrownBy(() -> service.ship(
+                "mintpopshop_20260731120000123456", "兑换码：ABC", null, 99L))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("db connection reset");
+
+        // 商品名查询必须在写库之前完成：查询一炸，两处写库都不能发生，不留幽灵记录
+        verify(orderShipmentMapper, never()).insert(any(OrderShipment.class));
+        verify(shopOrderMapper, never()).updateById(any(ShopOrder.class));
     }
 
     @Test

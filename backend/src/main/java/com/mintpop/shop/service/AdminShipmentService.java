@@ -34,6 +34,8 @@ import java.util.stream.Collectors;
 /**
  * 管理端发货服务：一单可多次发货，全部留痕；重新发货必须填原因。
  * 邮件是 IO，放在事务外同步发送——发货已经落库，邮件失败只记录状态，绝不回滚。
+ * 事务提交之后只做「发信 + 记账」两件事，不再有任何一次 DB 读/写会抛出后仍
+ * 让「发货已落库」这一事实无法被感知（写库前需要的只读查询一律提前到事务之前）。
  */
 @Service
 @RequiredArgsConstructor
@@ -53,7 +55,8 @@ public class AdminShipmentService {
     private final AppMailProperties mailProperties;
 
     /**
-     * 发货：校验 → 事务内（订单置已完成 + 插记录，邮件状态先记 FAILED）→ 事务外发信 → 回写邮件状态。
+     * 发货：校验 → 查商品名（只读，须在写库前完成）→ 事务内（订单置已完成 + 插记录，
+     * 邮件状态先记 FAILED）→ 事务提交后同步发信 → 回写邮件状态。
      */
     public AdminShipmentResponse ship(String orderNo, String content, String reason, Long operatorUserId) {
         ShopOrder order = requireOrder(orderNo);
@@ -72,11 +75,15 @@ public class AdminShipmentService {
         }
 
         String trimmedContent = content.trim();
+        // 商品名查询必须放在写库之前：它本身是一次 DB 读，若挪到事务提交之后再查，
+        // 一旦此刻 DB 抖动抛异常就会直穿到控制器——但发货记录其实已经落库，
+        // 变成一条 email_status=FAILED、从未真正发信的「幽灵记录」。挪到这里之后，
+        // 事务提交后就只剩「发信 + 记账」两件事，不再有任何抛出点。
+        Locale locale = resolveLocale(buyer);
+        String productName = productName(order, locale);
         OrderShipment shipment = persist(order, buyer, trimmedContent, reason, operatorUserId);
 
-        Locale locale = resolveLocale(buyer);
-        MailResult mailResult = shipmentMailSender.send(
-                order, productName(order, locale), buyer, trimmedContent, locale);
+        MailResult mailResult = shipmentMailSender.send(order, productName, buyer, trimmedContent, locale);
         // 不复用/回改已插入的 shipment 实体：insert() 已把该引用交给 mapper，
         // 事后再改它的字段会连带影响调用方对「插入时状态」的观察，这里只按 id 回写一条独立的更新记录
         String emailError = markMailResult(shipment.getId(), mailResult);
