@@ -137,7 +137,7 @@ function gotoPage(next: number) {
   display: inline-block;
   padding: 4px 12px;
   border-radius: var(--radius-pill);
-  background: var(--counter-rail);
+  background: var(--counter-deep);
   color: #ffffff;
   font-size: 12px;
   white-space: nowrap;

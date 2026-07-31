@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// 管理端外壳：全高深色导航轨（品牌 + 页面 + 当前用户）+ 右侧工作区。
+// 管理端外壳：全高导航轨（品牌 + 页面 + 当前用户）+ 右侧工作区。
 // 管理端不做双语，文案一律写死中文。
 // 权限在此统一裁决：未登录引导登录、非管理员显示无权限页——但这只是 UX，
 // 真正的安全边界是后端 AdminInterceptor 对 /api/admin/** 的逐请求校验。
@@ -13,7 +13,7 @@ const initial = computed(() => (currentUser.value?.nickname ?? currentUser.value
 </script>
 
 <template>
-  <!-- 未登录 / 无权限：整屏深墨，与导航轨同材质 -->
+  <!-- 未登录 / 无权限：与后台同一套浅色材质 -->
   <div v-if="!currentUser" class="gate">
     <div class="gate-box">
       <p class="gate-brand"><span class="wordmark">MintPop</span> 管理后台</p>
@@ -79,17 +79,22 @@ const initial = computed(() => (currentUser.value?.nickname ?? currentUser.value
 </template>
 
 <style scoped>
+/* 入口页与后台同一套浅色材质：Cloud 底 + 一张白卡，不另起一个深色世界 */
 .gate {
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
   padding: 24px;
-  background: var(--counter-rail);
+  background: var(--color-bg-cloud);
 }
 
 .gate-box {
   max-width: 460px;
+  padding: 40px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
 }
 
 .gate-brand {
@@ -97,13 +102,13 @@ const initial = computed(() => (currentUser.value?.nickname ?? currentUser.value
   align-items: baseline;
   gap: 8px;
   font-size: 13px;
-  color: var(--counter-rail-text);
+  color: var(--color-ink-secondary);
 }
 
 .gate-brand .wordmark {
   font-size: 20px;
   font-weight: 600;
-  color: var(--color-brand);
+  color: var(--color-brand-deep);
 }
 
 .gate-title {
@@ -111,18 +116,18 @@ const initial = computed(() => (currentUser.value?.nickname ?? currentUser.value
   font-size: 28px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: #ffffff;
+  color: var(--color-ink);
 }
 
 .gate-text {
   margin-top: 12px;
   font-size: 14px;
   line-height: 1.75;
-  color: var(--counter-rail-text);
+  color: var(--color-ink-secondary);
 }
 
 .gate-text .fact {
-  color: var(--counter-rail-text-strong);
+  color: var(--color-ink);
   font-size: 13px;
 }
 
@@ -138,13 +143,14 @@ const initial = computed(() => (currentUser.value?.nickname ?? currentUser.value
   margin-top: 0;
 }
 
+/* 与后台主按钮同一个语言，只是尺寸放大一档 */
 .gate-btn {
   margin-top: 28px;
   padding: 12px 24px;
   border: none;
   border-radius: var(--radius-button);
   background: var(--color-brand);
-  color: var(--counter-rail);
+  color: var(--counter-deep);
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
@@ -152,18 +158,18 @@ const initial = computed(() => (currentUser.value?.nickname ?? currentUser.value
 }
 
 .gate-btn:hover {
-  background: #2ce0b7;
+  background: var(--color-brand-deep);
 }
 
 .gate-link {
   margin-top: 28px;
   font-size: 14px;
-  color: var(--counter-rail-text);
+  color: var(--color-ink-secondary);
   text-decoration: none;
 }
 
 .gate-link:hover {
-  color: #ffffff;
+  color: var(--color-ink);
 }
 
 .toast {
@@ -173,7 +179,7 @@ const initial = computed(() => (currentUser.value?.nickname ?? currentUser.value
   transform: translateX(-50%);
   padding: 12px 24px;
   border-radius: var(--radius-card);
-  background: var(--counter-rail);
+  background: var(--counter-deep);
   color: #ffffff;
   font-size: 14px;
   box-shadow: 0 10px 30px rgba(15, 26, 22, 0.28);

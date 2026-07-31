@@ -275,7 +275,7 @@ const tapeLabel = computed(() =>
   gap: 12px;
   padding: 8px 12px;
   border-radius: var(--radius-button);
-  background: var(--counter-rail);
+  background: var(--counter-deep);
   color: #ffffff;
   font-size: 12px;
   white-space: nowrap;
@@ -298,7 +298,7 @@ const tapeLabel = computed(() =>
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--counter-rail-text);
+  color: var(--counter-deep-text);
 }
 
 .tape-empty {

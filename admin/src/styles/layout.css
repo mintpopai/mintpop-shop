@@ -6,27 +6,24 @@
    1. 排版即信息——等宽（IBM Plex Mono）只给「系统生成的事实」：订单号、金额、时间戳、
       ID、枚举值、计数；Inter 只给「人写的内容」：商品名、描述、昵称、界面文案。
       金额列因此天然对齐可比，不需要额外装饰。
-   2. 品牌绿只出现在深色面上——导航的当前位置、登录按钮、纸带浮层里的金额。白底上
-      一律不用品牌绿写字：#17D1A7 / #0FB389 对白底只有 2.7:1，达不到 WCAG AA，
-      主色本就该是点缀而不是大面积文字。白底上的状态一律交给状态点的语义色。
+   2. 品牌绿的位置由对比度决定——#17D1A7 / #0FB389 对白底只有 2.7:1，达不到 AA，
+      所以白底上它只做「底色」不做「文字」：主按钮是绿底深墨字（9.1:1）、当前导航项
+      是淡薄荷底。深色浮层上它才用来写字（纸带浮层里的金额）。词标属 logotype，
+      沿用商城的 --color-brand-deep，不受对比度约束。
 
    —— 相对品牌设计基线的覆盖项（基线为 REFERENCE，偏离需写明）——
-   · 深色导航轨（--counter-rail 系）：基线只定义了浅色面。管理端是长时间停留的工作
-     台，深色轨道把「导航」与「数据」分成两个面，长表格横向滚动时导航仍常驻可辨；
-     色相取带绿的深墨而非中性黑，与 Mint 同族。
    · 新增等宽字体 IBM Plex Mono：基线允许换字体，前提是自托管、全球可达——经
      Fontsource 打包进产物，未外链。用途见上面第 1 条。
    · 新增状态语义色板：基线未定义状态色。取值均在白底达 AA，且一律「色点 + 文字」
      并行，不靠颜色单独传达状态。
+   · 深墨 --counter-deep 只用于浮层类元素（纸带浮层、toast、选中的筛选 chip、
+     管理员徽章）——这些是盖在页面之上的小面积对象，不构成一个深色面。
    其余（主色、文本色、背景 Cloud、分隔线、圆角、4 的倍数间距刻度）全部沿用基线。 */
 
 :root {
-  /* 导航轨：带绿的深墨，与商城的薄荷同族，不是中性黑 */
-  --counter-rail: #0f1a16;
-  --counter-rail-soft: #1c2b25;
-  --counter-rail-line: rgba(255, 255, 255, 0.09);
-  --counter-rail-text: #9db2aa;
-  --counter-rail-text-strong: #f1f6f3;
+  /* 深墨：只给浮层类小面积对象，不铺成面 */
+  --counter-deep: #0f1a16;
+  --counter-deep-text: #9db2aa;
   --counter-danger: #b3341f;
 
   --font-fact: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -68,7 +65,8 @@ body {
   --state-color: #8a938e;
 }
 
-/* —— 外壳：全高导航轨常驻左侧，长表格滚动时导航不跟着走 —— */
+/* —— 外壳：全高导航轨常驻左侧，长表格滚动时导航不跟着走。
+   轨道用白面、工作区用 Cloud，靠这层明暗差和一条右边框区分，不靠深色块压 —— */
 .admin-rail {
   position: fixed;
   top: 0;
@@ -78,7 +76,8 @@ body {
   display: flex;
   flex-direction: column;
   padding: 24px 16px 20px;
-  background: var(--counter-rail);
+  background: var(--color-bg);
+  border-right: 1px solid var(--color-border);
   z-index: 20;
 }
 
@@ -89,15 +88,16 @@ body {
   padding: 0 12px 24px;
 }
 
+/* 词标是 logotype，对比度豁免；取值与商城 header 一致 */
 .rail-wordmark {
   font-size: 21px;
   font-weight: 600;
-  color: var(--color-brand);
+  color: var(--color-brand-deep);
 }
 
 .rail-kind {
   font-size: 12px;
-  color: var(--counter-rail-text);
+  color: var(--color-ink-secondary);
 }
 
 .rail-nav {
@@ -111,23 +111,24 @@ body {
   padding: 8px 12px;
   border-radius: var(--radius-button);
   font-size: 14px;
-  color: var(--counter-rail-text);
+  color: var(--color-ink-secondary);
   text-decoration: none;
   transition: background 0.15s ease, color 0.15s ease;
 }
 
 .rail-link:hover {
-  background: var(--counter-rail-soft);
-  color: var(--counter-rail-text-strong);
+  background: var(--color-bg-cloud);
+  color: var(--color-ink);
 }
 
+/* 当前位置三重表达：淡薄荷底、墨色、加粗——不靠颜色单独传达 */
 .rail-link.router-link-exact-active {
-  background: var(--counter-rail-soft);
-  color: #ffffff;
-  font-weight: 500;
+  background: color-mix(in srgb, var(--color-brand) 14%, #ffffff);
+  color: var(--color-ink);
+  font-weight: 600;
 }
 
-/* 当前位置的指示条贴在轨道左沿——品牌绿在白底上不够对比度，这里是深底，正好留给它 */
+/* 贴在轨道左沿的指示条，是上面三重表达之外的冗余强化 */
 .rail-link.router-link-exact-active::before {
   content: '';
   position: absolute;
@@ -136,13 +137,13 @@ body {
   left: -16px;
   width: 3px;
   border-radius: 0 3px 3px 0;
-  background: var(--color-brand);
+  background: var(--color-brand-deep);
 }
 
 .rail-foot {
   margin-top: auto;
   padding-top: 16px;
-  border-top: 1px solid var(--counter-rail-line);
+  border-top: 1px solid var(--color-border);
 }
 
 .rail-user {
@@ -162,7 +163,7 @@ body {
   align-items: center;
   justify-content: center;
   background: var(--color-brand);
-  color: var(--counter-rail);
+  color: var(--counter-deep);
   font-size: 13px;
   font-weight: 600;
   object-fit: cover;
@@ -170,7 +171,7 @@ body {
 
 .rail-user-name {
   font-size: 13px;
-  color: var(--counter-rail-text-strong);
+  color: var(--color-ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -183,13 +184,13 @@ body {
   background: none;
   font-family: inherit;
   font-size: 12px;
-  color: var(--counter-rail-text);
+  color: var(--color-ink-secondary);
   text-decoration: none;
   cursor: pointer;
 }
 
 .rail-signout:hover {
-  color: var(--counter-rail-text-strong);
+  color: var(--color-ink);
 }
 
 .admin-desk {
@@ -345,18 +346,20 @@ body {
   cursor: pointer;
 }
 
+/* 主操作用品牌绿：白底上它做底色不做文字，配深墨字 9.1:1；
+   hover 走基线定义的主色（深），正是它的用途 */
 .admin-btn {
   padding: 8px 20px;
   /* 透明描边而非 none：与描边款共用同一个盒模型，并排时不差 1px */
   border: 1px solid transparent;
-  background: var(--counter-rail);
-  color: #ffffff;
-  font-weight: 500;
+  background: var(--color-brand);
+  color: var(--counter-deep);
+  font-weight: 600;
   transition: background 0.15s ease;
 }
 
 .admin-btn:hover {
-  background: var(--counter-rail-soft);
+  background: var(--color-brand-deep);
 }
 
 .admin-btn:disabled {
@@ -502,9 +505,10 @@ body {
   color: var(--color-ink);
 }
 
+/* 选中的筛选条件用深墨，与主操作的绿区分开：一个是「我要做什么」，一个是「我在看什么」 */
 .admin-chip.active {
-  border-color: var(--counter-rail);
-  background: var(--counter-rail);
+  border-color: var(--counter-deep);
+  background: var(--counter-deep);
   color: #ffffff;
 }
 
@@ -549,10 +553,6 @@ body {
   border-radius: 3px;
 }
 
-.admin-rail :focus-visible {
-  outline-color: var(--color-brand);
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -573,6 +573,8 @@ body {
     gap: 20px;
     padding: 12px 20px;
     overflow-x: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
   }
 
   .rail-brand {
