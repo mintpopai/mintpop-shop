@@ -26,6 +26,8 @@ public class ShopUser {
     private String avatarUrl;
     /** 角色（USER/ADMIN；由管理员直接改库维护，产品侧无写入口） */
     private UserRoleEnum role;
+    /** 语言偏好（BCP47：zh-CN/en-US）；空表示未设置，邮件按请求语言兜底 */
+    private String locale;
     /** 创建时间（数据库默认值维护） */
     private LocalDateTime createdAt;
     /** 更新时间（数据库默认值维护） */

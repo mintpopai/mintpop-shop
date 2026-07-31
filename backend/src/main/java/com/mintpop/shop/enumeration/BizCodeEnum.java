@@ -26,7 +26,10 @@ public enum BizCodeEnum {
     ORDER_NOT_PAYABLE(410002, "biz.order-not-payable"),
     PAYMENT_NOT_CONFIGURED(410003, "biz.payment-not-configured"),
     PAYMENT_GATEWAY_ERROR(410004, "biz.payment-gateway-error"),
-    ORDER_NOT_CANCELLABLE(410005, "biz.order-not-cancellable");
+    ORDER_NOT_CANCELLABLE(410005, "biz.order-not-cancellable"),
+    ORDER_NOT_SHIPPABLE(410006, "biz.order-not-shippable"),
+    SHIPMENT_REASON_REQUIRED(410007, "biz.shipment-reason-required"),
+    MAIL_NOT_CONFIGURED(410008, "biz.mail-not-configured");
 
     private final int code;
     private final String messageKey;
