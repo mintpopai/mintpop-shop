@@ -33,7 +33,17 @@
     "goPay": "Pay now",
     "cancel": "Cancel order",
     "filterLabel": "Filter by order status",
-    "filterAll": "All"
+    "filterAll": "All",
+    "detailTitle": "Order details",
+    "back": "Back to my orders",
+    "orderNoLabel": "Order no.",
+    "product": "Product",
+    "amount": "Amount",
+    "createdAt": "Ordered at",
+    "paidAt": "Paid at",
+    "shipmentTitle": "Shipment",
+    "shippedAt": "Shipped at",
+    "notShipped": "Not shipped yet. You will also receive an email once it ships."
   },
   "product": {
     "buy": "Buy",

@@ -53,6 +53,27 @@ export interface OrderItem {
   createdAt: string
 }
 
+/** 用户可见的发货信息（镜像后端 ShipmentInfoResponse） */
+export interface ShipmentInfo {
+  content: string
+  /** 发货时间，ISO-8601 UTC */
+  shippedAt: string
+}
+
+/** 订单详情（镜像后端 OrderDetailResponse） */
+export interface OrderDetail {
+  orderNo: string
+  productName: string
+  quantity: number
+  amountCents: number
+  status: string
+  statusLabel: string
+  createdAt: string
+  paidAt: string | null
+  /** 最新一条发货信息，未发货为 null */
+  latestShipment: ShipmentInfo | null
+}
+
 /** 收银台信息（镜像后端 CheckoutInfoResponse） */
 export interface CheckoutInfo {
   methods: string[]
@@ -137,6 +158,11 @@ export function fetchMe(): Promise<Me> {
 /** 我的订单列表 */
 export function fetchMyOrders(): Promise<OrderItem[]> {
   return request<OrderItem[]>('/api/orders')
+}
+
+/** 我的订单详情（含最新发货信息） */
+export function fetchOrderDetail(orderNo: string): Promise<OrderDetail> {
+  return request<OrderDetail>(`/api/orders/${orderNo}`)
 }
 
 /** 收银台信息：可用支付方式 + Stripe publishable key */

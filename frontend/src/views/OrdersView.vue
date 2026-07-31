@@ -116,7 +116,9 @@ async function onCancel(order: OrderItem) {
         <li v-for="order in filteredOrders" :key="order.orderNo" class="order-card">
           <div class="order-main">
             <div class="name-row">
-              <span class="product-name">{{ order.productName }}</span>
+              <RouterLink :to="`/orders/${order.orderNo}`" class="product-name product-link">
+                {{ order.productName }}
+              </RouterLink>
               <span class="status-tag" :class="`status-tag--${order.status}`">{{ order.statusLabel }}</span>
             </div>
             <span class="order-no">{{ $t('orders.orderNo', { orderNo: order.orderNo }) }}</span>
@@ -241,6 +243,15 @@ async function onCancel(order: OrderItem) {
 .product-name {
   font-weight: 500;
   color: var(--color-ink);
+}
+
+.product-link {
+  color: var(--color-ink);
+}
+
+.product-link:hover {
+  color: var(--color-brand-deep);
+  text-decoration: underline;
 }
 
 /* 状态 tag 样式在 base.css（与管理端共用） */
