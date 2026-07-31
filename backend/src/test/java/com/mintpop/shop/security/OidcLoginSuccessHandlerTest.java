@@ -55,13 +55,13 @@ class OidcLoginSuccessHandlerTest {
     void loginSuccessIssuesSessionCookie() throws Exception {
         ShopUser user = new ShopUser();
         user.setId(7L);
-        when(userService.syncOnLogin("sub-1", "a@b.com", "小明", "https://img/x.png")).thenReturn(user);
+        when(userService.syncOnLogin("sub-1", "a@b.com", "小明", "https://img/x.png", "en-US")).thenReturn(user);
         when(sessionTokenService.issue(7L)).thenReturn("session-jwt");
 
         MockHttpServletResponse response = new MockHttpServletResponse();
         handler.onAuthenticationSuccess(new MockHttpServletRequest(), response, oidcAuthentication());
 
-        verify(userService).syncOnLogin("sub-1", "a@b.com", "小明", "https://img/x.png");
+        verify(userService).syncOnLogin("sub-1", "a@b.com", "小明", "https://img/x.png", "en-US");
         String setCookie = response.getHeader(HttpHeaders.SET_COOKIE);
         assertThat(setCookie)
                 .startsWith(AuthProperties.SESSION_COOKIE_NAME + "=session-jwt")

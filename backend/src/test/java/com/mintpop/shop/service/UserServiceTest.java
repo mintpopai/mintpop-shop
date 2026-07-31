@@ -62,7 +62,7 @@ class UserServiceTest {
             return 1;
         });
 
-        ShopUser result = userService.syncOnLogin("sub-1", "a@b.com", "小明", "https://img/x.png");
+        ShopUser result = userService.syncOnLogin("sub-1", "a@b.com", "小明", "https://img/x.png", "zh-CN");
 
         assertThat(result.getId()).isEqualTo(7L);
         assertThat(result.getEmail()).isEqualTo("a@b.com");
@@ -81,7 +81,7 @@ class UserServiceTest {
         when(userIdentityMapper.selectOne(any())).thenReturn(identity("sub-1", 7L));
         when(shopUserMapper.selectById(7L)).thenReturn(user(7L, "a@b.com"));
 
-        ShopUser result = userService.syncOnLogin("sub-1", "a@b.com", "新名字", "https://img/new.png");
+        ShopUser result = userService.syncOnLogin("sub-1", "a@b.com", "新名字", "https://img/new.png", "zh-CN");
 
         assertThat(result.getId()).isEqualTo(7L);
         verify(shopUserMapper, never()).insert(any(ShopUser.class));
@@ -95,7 +95,7 @@ class UserServiceTest {
         when(userIdentityMapper.selectOne(any())).thenReturn(identity("sub-1", 7L));
         when(shopUserMapper.selectById(7L)).thenReturn(user(7L, "old@b.com"));
 
-        ShopUser result = userService.syncOnLogin("sub-1", "new@b.com", "小明", null);
+        ShopUser result = userService.syncOnLogin("sub-1", "new@b.com", "小明", null, "zh-CN");
 
         assertThat(result.getEmail()).isEqualTo("new@b.com");
         ArgumentCaptor<ShopUser> captor = ArgumentCaptor.forClass(ShopUser.class);
@@ -134,5 +134,41 @@ class UserServiceTest {
                 .isInstanceOf(BizException.class)
                 .extracting(e -> ((BizException) e).getBizCode())
                 .isEqualTo(BizCodeEnum.USER_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("保存语言偏好：白名单值写库")
+    void updatesLocale() {
+        ShopUser user = user(5L, "a@b.com");
+        when(shopUserMapper.selectById(5L)).thenReturn(user);
+
+        userService.updateLocale(5L, "en-US");
+
+        ArgumentCaptor<ShopUser> captor = ArgumentCaptor.forClass(ShopUser.class);
+        verify(shopUserMapper).updateById(captor.capture());
+        assertThat(captor.getValue().getLocale()).isEqualTo("en-US");
+    }
+
+    @Test
+    @DisplayName("保存语言偏好：非白名单值报参数校验失败，不写库")
+    void rejectsUnknownLocale() {
+        assertThatThrownBy(() -> userService.updateLocale(5L, "ja-JP"))
+                .isInstanceOf(BizException.class)
+                .extracting(e -> ((BizException) e).getBizCode())
+                .isEqualTo(BizCodeEnum.PARAM_INVALID);
+
+        verify(shopUserMapper, never()).updateById(any(ShopUser.class));
+    }
+
+    @Test
+    @DisplayName("首次登录建号：按浏览器语言初始化偏好")
+    void initialisesLocaleOnRegister() {
+        when(userIdentityMapper.selectOne(any())).thenReturn(null);
+
+        userService.syncOnLogin("sub-1", "a@b.com", "小明", "https://img/x.png", "en-US");
+
+        ArgumentCaptor<ShopUser> captor = ArgumentCaptor.forClass(ShopUser.class);
+        verify(shopUserMapper).insert(captor.capture());
+        assertThat(captor.getValue().getLocale()).isEqualTo("en-US");
     }
 }

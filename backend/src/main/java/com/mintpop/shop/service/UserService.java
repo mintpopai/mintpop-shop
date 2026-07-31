@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * 用户服务：sub → userid 的边界解析（登录同步）与档案查询。
@@ -23,6 +24,9 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class UserService {
 
+    /** 支持的语言偏好（BCP47），与前端 AppLocale 一一对应 */
+    public static final Set<String> SUPPORTED_LOCALES = Set.of("zh-CN", "en-US");
+
     private final ShopUserMapper shopUserMapper;
     private final UserIdentityMapper userIdentityMapper;
 
@@ -31,7 +35,7 @@ public class UserService {
      * 用 ID Token 资料作种子建号 + 建映射（同一事务）。
      */
     @Transactional
-    public ShopUser syncOnLogin(String sub, String email, String nickname, String avatarUrl) {
+    public ShopUser syncOnLogin(String sub, String email, String nickname, String avatarUrl, String locale) {
         UserIdentity identity = userIdentityMapper.selectOne(
                 new LambdaQueryWrapper<UserIdentity>().eq(UserIdentity::getSub, sub));
         if (identity == null) {
@@ -39,6 +43,8 @@ public class UserService {
             user.setEmail(email);
             user.setNickname(nickname);
             user.setAvatarUrl(avatarUrl);
+            // 首次登录用浏览器语言作种子，此后由用户在站内切换语言时改写
+            user.setLocale(locale);
             // 注册一律普通用户；提权只由管理员直接改库
             user.setRole(UserRoleEnum.USER);
             shopUserMapper.insert(user);
@@ -66,6 +72,19 @@ public class UserService {
             throw new BizException(BizCodeEnum.USER_NOT_FOUND);
         }
         return new MeResponse(user.getId(), user.getEmail(), user.getNickname(), user.getAvatarUrl(),
-                user.getRole() == UserRoleEnum.ADMIN);
+                user.getRole() == UserRoleEnum.ADMIN, user.getLocale());
+    }
+
+    /** 保存语言偏好：只接受白名单取值，越界按参数校验失败处理 */
+    public void updateLocale(Long userId, String locale) {
+        if (locale == null || !SUPPORTED_LOCALES.contains(locale)) {
+            throw new BizException(BizCodeEnum.PARAM_INVALID);
+        }
+        ShopUser user = shopUserMapper.selectById(userId);
+        if (user == null) {
+            throw new BizException(BizCodeEnum.USER_NOT_FOUND);
+        }
+        user.setLocale(locale);
+        shopUserMapper.updateById(user);
     }
 }

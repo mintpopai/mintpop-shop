@@ -15,6 +15,7 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.Locale;
 
 /**
  * OIDC 登录成功处理：sub 在此边界换成 userid（建号/刷新 email），
@@ -33,7 +34,8 @@ public class OidcLoginSuccessHandler implements AuthenticationSuccessHandler {
                                         Authentication authentication) throws IOException {
         OidcUser oidcUser = (OidcUser) authentication.getPrincipal();
         ShopUser user = userService.syncOnLogin(
-                oidcUser.getSubject(), oidcUser.getEmail(), oidcUser.getFullName(), oidcUser.getPicture());
+                oidcUser.getSubject(), oidcUser.getEmail(), oidcUser.getFullName(), oidcUser.getPicture(),
+                preferredLocale(request));
 
         ResponseCookie cookie = ResponseCookie.from(
                         AuthProperties.SESSION_COOKIE_NAME, sessionTokenService.issue(user.getId()))
@@ -45,5 +47,11 @@ public class OidcLoginSuccessHandler implements AuthenticationSuccessHandler {
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
         response.sendRedirect(authProperties.getFrontendBaseUrl());
+    }
+
+    /** 首次登录的语言种子：按 Accept-Language 判定，语言子标签为 en 视为英文（与 I18nUtil 同规则） */
+    private String preferredLocale(HttpServletRequest request) {
+        Locale locale = request.getLocale();
+        return locale != null && "en".equals(locale.getLanguage()) ? "en-US" : "zh-CN";
     }
 }

@@ -9,6 +9,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,8 +19,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.util.List;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -49,7 +52,7 @@ class MeControllerTest {
     @DisplayName("返回当前登录用户档案")
     void returnsCurrentUser() throws Exception {
         when(userService.getMe(42L)).thenReturn(
-                new MeResponse(42L, "a@b.com", "小明", "https://img/x.png", false));
+                new MeResponse(42L, "a@b.com", "小明", "https://img/x.png", false, "zh-CN"));
 
         mockMvc.perform(get("/api/me"))
                 .andExpect(status().isOk())
@@ -57,5 +60,17 @@ class MeControllerTest {
                 .andExpect(jsonPath("$.data.id").value(42))
                 .andExpect(jsonPath("$.data.email").value("a@b.com"))
                 .andExpect(jsonPath("$.data.nickname").value("小明"));
+    }
+
+    @Test
+    @DisplayName("保存语言偏好")
+    void updatesLocale() throws Exception {
+        mockMvc.perform(put("/api/me/locale")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"locale\":\"en-US\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+
+        verify(userService).updateLocale(42L, "en-US");
     }
 }
