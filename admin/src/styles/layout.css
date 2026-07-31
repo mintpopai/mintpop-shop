@@ -28,6 +28,9 @@
   --counter-deep-text: #9db2aa;
   --counter-danger: #b3341f;
   --counter-danger-deep: #932a19;
+  /* 焦点绿：品牌绿压暗到刚好够 3:1（白 3.53、Cloud 3.30）。品牌绿本身只有 2.7，
+     画成线达不到非文字图形的门槛；压暗后仍是薄荷家族，焦点态才像自家的东西 */
+  --counter-focus: #0a9b73;
 
   --font-fact: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --rail-width: 208px;
@@ -562,15 +565,29 @@ body {
   vertical-align: -1px;
 }
 
-/* —— 质量地板：键盘焦点在深浅两种底上都看得见 ——
-   焦点环画在元素外侧（offset 2px），所以决定它对比度的是元素周围的底、不是元素自己的底：
-   白卡面、Cloud 页面底、以及深墨 chip 周围的 Cloud——全是浅底。品牌绿在这三种底上只有
-   2.5~2.7:1，达不到非文字图形要求的 3:1，故焦点环用深墨（16.6:1 起）。
-   不在这里设 border-radius：那会真的改掉元素本身的圆角（药丸 chip 一按 Tab 就塌成方角），
-   不设时 outline 自动贴合各元素自己的圆角。 */
+/* —— 质量地板：焦点态 ——
+   两个要求同时满足才算过关：够得着 3:1（否则键盘用户找不着自己在哪），
+   以及不能长得像浏览器默认焦点框。深墨 + 2px 间隙恰好踩中后一个坑——那正是 Chrome
+   自带的黑环长相，还会和控件自身的边框叠成三层同心圆角矩形。所以改成：
+   压暗到达标的品牌绿，环收到 1px 间隙贴住控件，读起来是「这个控件的边缘亮起来了」。
+   不在这里设 border-radius：那会真的改掉元素自身的圆角（药丸 chip 一按 Tab 就塌成方角）；
+   不设时 outline 自动贴合各元素本来的圆角。
+   环画在元素外侧，故它的对比度由元素周围的底决定、与元素自身底色无关——深墨 chip
+   的绿环也是对着它外面的 Cloud 页底算的（3.30:1）。 */
 :focus-visible {
-  outline: 2px solid var(--counter-deep);
-  outline-offset: 2px;
+  outline: 2px solid var(--counter-focus);
+  outline-offset: 1px;
+}
+
+/* 表单控件本来就有一圈灰边。焦点时把它一起染绿，并让外环贴着它画（offset 0）：
+   1px 边 + 2px 环 拼成一条 3px 的绿边，而不是「灰边外面又套一个环」的双线——
+   双线正是上一版看着像原生焦点框的另一半原因。按钮、chip 没有可见边框，
+   仍留 1px 间隙，环才不会糊在文字上 */
+.admin-input:focus-visible,
+.admin-select:focus-visible,
+.admin-textarea:focus-visible {
+  border-color: var(--counter-focus);
+  outline-offset: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

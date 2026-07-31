@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import Modal from '../components/Modal.vue'
+import Select from '../components/Select.vue'
 import { formatPrice } from '../api'
 import {
   createAdminProduct,
@@ -38,6 +39,23 @@ const filteredProducts = computed(() =>
 
 /** 页头那行事实：当前筛选下的上下架构成 */
 const onSaleCount = computed(() => filteredProducts.value.filter((p) => p.onSale).length)
+
+/** 下拉选项：分组筛选带「全部」，弹窗里的分组选择不带 */
+const groupFilterOptions = computed(() => [
+  { value: 0, label: '全部分组' },
+  ...groups.value.map((g) => ({ value: g.id, label: g.nameZh })),
+])
+const groupOptions = computed(() => groups.value.map((g) => ({ value: g.id, label: g.nameZh })))
+/** 主题色带色点：值本身就是颜色，只写名字看不出是哪个色 */
+const accentOptions = Object.entries(ACCENTS).map(([name, color]) => ({
+  value: name,
+  label: name,
+  dot: color,
+}))
+const onSaleOptions = [
+  { value: true, label: '上架' },
+  { value: false, label: '下架' },
+]
 
 /** 管理端固定中文：分组显示中文名 */
 function groupName(groupId: number): string {
@@ -169,10 +187,7 @@ async function onToggleSale(product: AdminProduct) {
   </header>
 
   <div class="admin-toolbar">
-    <select v-model.number="groupFilter" class="admin-select" aria-label="按分组筛选">
-      <option :value="0">全部分组</option>
-      <option v-for="group in groups" :key="group.id" :value="group.id">{{ group.nameZh }}</option>
-    </select>
+    <Select v-model="groupFilter" :options="groupFilterOptions" aria-label="按分组筛选" />
     <span class="spacer"></span>
     <button type="button" class="admin-btn" @click="openCreate">新增商品</button>
   </div>
@@ -264,15 +279,12 @@ async function onToggleSale(product: AdminProduct) {
       <div class="admin-form-row">
         <div class="admin-field">
           <label for="p-group">分组</label>
-          <select id="p-group" v-model.number="form.groupId" class="admin-select" required>
-            <option v-for="group in groups" :key="group.id" :value="group.id">{{ group.nameZh }}</option>
-          </select>
+          <Select id="p-group" v-model="form.groupId" :options="groupOptions" />
         </div>
         <div class="admin-field">
           <label for="p-accent">主题色</label>
-          <select id="p-accent" v-model="form.accent" class="admin-select">
-            <option v-for="(color, name) in ACCENTS" :key="name" :value="name">{{ name }}</option>
-          </select>
+          <!-- 主题色是枚举值，走等宽，与商品表里那一列同一种排版 -->
+          <Select id="p-accent" v-model="form.accent" :options="accentOptions" mono />
         </div>
       </div>
       <div class="admin-form-row">
@@ -290,10 +302,7 @@ async function onToggleSale(product: AdminProduct) {
         </div>
         <div class="admin-field">
           <label for="p-on-sale">是否上架</label>
-          <select id="p-on-sale" v-model="form.onSale" class="admin-select">
-            <option :value="true">上架</option>
-            <option :value="false">下架</option>
-          </select>
+          <Select id="p-on-sale" v-model="form.onSale" :options="onSaleOptions" />
         </div>
       </div>
       <div class="admin-field">
