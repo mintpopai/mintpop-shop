@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.util.WebUtils;
 
 import java.nio.charset.StandardCharsets;
@@ -30,7 +31,9 @@ public class PostLoginRedirectCookie {
 
     /**
      * 判定是否为合法的站内相对路径：非空白、不超长、以单个 / 开头、
-     * 不以 // 开头（协议相对 URL）、不含反斜杠、不含 :// 、不含控制字符。
+     * 不以 // 开头（协议相对 URL）、不含反斜杠、不含 :// 、不含控制字符、不含 /../ 路径段
+     * 且不以 /.. 结尾（同源不构成开放重定向，但 Tomcat 在 use-relative-redirects=false 且
+     * ForwardedHeaderFilter 未介入时，路径起始处的 /../ 会让 Response.normalize 直接抛异常）。
      */
     public boolean isValidPath(String path) {
         if (path == null || path.isBlank()) {
@@ -43,6 +46,9 @@ public class PostLoginRedirectCookie {
             return false;
         }
         if (path.contains("\\") || path.contains("://")) {
+            return false;
+        }
+        if (path.contains("/../") || path.endsWith("/..")) {
             return false;
         }
         return !CONTROL_CHARS.matcher(path).find();
@@ -58,7 +64,7 @@ public class PostLoginRedirectCookie {
     /** 读取并再次校验 Cookie 中的回跳路径；不存在/损坏/不合法一律返回 null（静默回退，不报错、不回显） */
     public String readValid(HttpServletRequest request) {
         Cookie cookie = WebUtils.getCookie(request, COOKIE_NAME);
-        if (cookie == null || cookie.getValue().isBlank()) {
+        if (cookie == null || !StringUtils.hasText(cookie.getValue())) {
             return null;
         }
         String path;

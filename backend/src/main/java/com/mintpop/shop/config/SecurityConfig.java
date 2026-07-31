@@ -2,6 +2,7 @@ package com.mintpop.shop.config;
 
 import com.mintpop.shop.security.CookieOAuth2AuthorizationRequestRepository;
 import com.mintpop.shop.security.OidcLoginSuccessHandler;
+import com.mintpop.shop.security.PostLoginRedirectCookie;
 import com.mintpop.shop.security.SessionCookieAuthFilter;
 import com.mintpop.shop.service.SessionTokenService;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ public class SecurityConfig {
     private final SessionTokenService sessionTokenService;
     private final OidcLoginSuccessHandler oidcLoginSuccessHandler;
     private final ClientRegistrationRepository clientRegistrationRepository;
+    private final PostLoginRedirectCookie postLoginRedirectCookie;
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -62,9 +64,11 @@ public class SecurityConfig {
                         // 回调路径按统一账号接入规范固定为 /auth/callback
                         .redirectionEndpoint(re -> re.baseUri("/auth/callback"))
                         .successHandler(oidcLoginSuccessHandler)
-                        // 握手失败（用户取消/state 不符等）：记录原因后回前端带标记，由前端按语言提示
+                        // 握手失败（用户取消/state 不符等）：记录原因后回前端带标记，由前端按语言提示；
+                        // 同时清掉回跳路径 Cookie，避免这次没走完的登录污染下一次登录的落点
                         .failureHandler((request, response, exception) -> {
                             log.warn("OIDC 登录失败", exception);
+                            postLoginRedirectCookie.expire(request, response);
                             response.sendRedirect(authProperties.getFrontendBaseUrl() + "?login_error=1");
                         }))
                 // 未登录访问受保护接口：返回 401（规范允许鉴权中间件用原生状态码），不重定向登录页

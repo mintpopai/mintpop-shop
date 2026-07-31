@@ -23,9 +23,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.Optional;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -114,5 +117,20 @@ class SecurityChainTest {
         mockMvc.perform(get("/oauth2/authorization/logto"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(header().string("Location", containsString("prompt=login")));
+    }
+
+    @Test
+    @DisplayName("OIDC 握手失败（如 state 不符/用户取消）：清掉回跳路径 Cookie，避免污染下一次登录")
+    void oidcLoginFailureClearsPostLoginRedirectCookie() throws Exception {
+        when(authProperties.getFrontendBaseUrl()).thenReturn("/");
+
+        // 无 mp_oidc_flow 中间态 Cookie 时携带 error 参数回调 /auth/callback：
+        // OAuth2LoginAuthenticationFilter 会因找不到握手中间态而判定失败，走到 failureHandler，
+        // 与「state 不符/用户取消」殊途同归，足以覆盖 failureHandler 这条清 Cookie 的分支
+        mockMvc.perform(get("/auth/callback").param("error", "access_denied").param("state", "s1"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/?login_error=1"));
+
+        verify(postLoginRedirectCookie).expire(any(), any());
     }
 }

@@ -13,6 +13,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -56,7 +58,7 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("带合法 redirect 参数时下发回跳路径 Cookie")
+    @DisplayName("带合法 redirect 参数时下发回跳路径 Cookie，10 分钟有效期、根路径、值可还原为原路径")
     void loginWithValidRedirectIssuesCookie() throws Exception {
         MvcResult result = mockMvc.perform(get("/auth/login").param("redirect", "/orders/mintpopshop_x"))
                 .andExpect(status().is3xxRedirection())
@@ -67,32 +69,53 @@ class AuthControllerTest {
         assertThat(setCookie)
                 .startsWith(PostLoginRedirectCookie.COOKIE_NAME + "=")
                 .contains("HttpOnly")
-                .contains("SameSite=Lax");
+                .contains("SameSite=Lax")
+                .contains("Max-Age=600")
+                .contains("Path=/");
         assertThat(setCookie).doesNotContain(PostLoginRedirectCookie.COOKIE_NAME + "=;");
+
+        String cookieValue = setCookie.substring(
+                setCookie.indexOf('=') + 1, setCookie.indexOf(';'));
+        String decoded = new String(Base64.getUrlDecoder().decode(cookieValue), StandardCharsets.UTF_8);
+        assertThat(decoded).isEqualTo("/orders/mintpopshop_x");
     }
 
     @Test
-    @DisplayName("带非法 redirect 参数（开放重定向）时不下发回跳路径 Cookie")
-    void loginWithInvalidRedirectDoesNotIssueCookie() throws Exception {
+    @DisplayName("带非法 redirect 参数（开放重定向）时清掉回跳路径 Cookie（不继承任何历史值）")
+    void loginWithInvalidRedirectClearsCookie() throws Exception {
         MvcResult result = mockMvc.perform(get("/auth/login").param("redirect", "//evil.com"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/oauth2/authorization/logto"))
                 .andReturn();
 
         assertThat(result.getResponse().getHeaders(HttpHeaders.SET_COOKIE))
-                .noneMatch(h -> h.startsWith(PostLoginRedirectCookie.COOKIE_NAME + "="));
+                .anyMatch(h -> h.startsWith(PostLoginRedirectCookie.COOKIE_NAME + "=") && h.contains("Max-Age=0"));
     }
 
     @Test
-    @DisplayName("不带 redirect 参数时行为与原来一致：不下发回跳路径 Cookie")
-    void loginWithoutRedirectParamBehavesAsBefore() throws Exception {
+    @DisplayName("redirect 参数经 URL 编码后（解码后才校验）仍被判非法并清掉 Cookie")
+    void loginWithEncodedInvalidRedirectClearsCookie() throws Exception {
+        // %2F%2Fevil.com 解码后为 //evil.com；直接走原始查询串，覆盖「解码后再校验」这一步，
+        // 不能像其余用例那样用 .param() 直接喂解码后的值（那会跳过 Spring 的查询串解码阶段）
+        MvcResult result = mockMvc.perform(get("/auth/login?redirect=%2F%2Fevil.com"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/oauth2/authorization/logto"))
+                .andReturn();
+
+        assertThat(result.getResponse().getHeaders(HttpHeaders.SET_COOKIE))
+                .anyMatch(h -> h.startsWith(PostLoginRedirectCookie.COOKIE_NAME + "=") && h.contains("Max-Age=0"));
+    }
+
+    @Test
+    @DisplayName("不带 redirect 参数时也清掉回跳路径 Cookie（不继承任何历史值）")
+    void loginWithoutRedirectParamClearsCookie() throws Exception {
         MvcResult result = mockMvc.perform(get("/auth/login"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/oauth2/authorization/logto"))
                 .andReturn();
 
         assertThat(result.getResponse().getHeaders(HttpHeaders.SET_COOKIE))
-                .noneMatch(h -> h.startsWith(PostLoginRedirectCookie.COOKIE_NAME + "="));
+                .anyMatch(h -> h.startsWith(PostLoginRedirectCookie.COOKIE_NAME + "=") && h.contains("Max-Age=0"));
     }
 
     @Test

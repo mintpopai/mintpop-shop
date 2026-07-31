@@ -35,12 +35,16 @@ public class AuthController {
      * 登录入口：跳到 Spring Security 的授权发起端点（授权码 + PKCE）。
      * 可选 redirect 参数携带登录前原路径（如深链邮件里的 /orders/xxx），校验通过写成短命 Cookie，
      * 登录成功后由 OidcLoginSuccessHandler 读取并回跳；非法值静默丢弃，不影响登录本身。
+     * redirect 缺失或非法时显式清掉旧 Cookie：每次发起登录都必须显式定义落点，不继承任何历史值，
+     * 否则上一次没走完的登录会污染这一次的回跳目标。
      */
     @GetMapping("/auth/login")
     public void login(HttpServletRequest request, HttpServletResponse response,
                       @RequestParam(name = "redirect", required = false) String redirect) throws IOException {
         if (redirect != null && postLoginRedirectCookie.isValidPath(redirect)) {
             postLoginRedirectCookie.write(request, response, redirect);
+        } else {
+            postLoginRedirectCookie.expire(request, response);
         }
         response.sendRedirect("/oauth2/authorization/" + REGISTRATION_ID);
     }

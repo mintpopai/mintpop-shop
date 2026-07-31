@@ -26,6 +26,14 @@ class PostLoginRedirectCookieTest {
             "https://evil.com",
             "http:/\\/\\evil.com",
             "orders/1",
+            // 以 / 开头但内嵌绝对 URL：唯一能验证 contains("://") 规则鉴别力的形态
+            // （上面几条含 :// 的载荷首字符都不是 /，早被 startsWith("/") 拦下，验证不到这条规则）
+            "/go?next=https://evil.com",
+            "/x://evil.com",
+            // /../ 路径段：同源不构成开放重定向，但会让 Tomcat Response.normalize 抛异常
+            "/../x",
+            "/a/../../x",
+            "/a/..",
     })
     void rejectsMaliciousOrInvalidPaths(String path) {
         assertThat(cookie.isValidPath(path)).isFalse();
