@@ -42,6 +42,16 @@ mise run run-admin        # 终端 3：启动管理端（5174，/api 代理到 8
 
 > 若日后在前端启用 CSP 头，需在 `script-src` / `frame-src` 中放行 `https://*.stripe.com`。
 
+## 发货与发货邮件
+
+管理员在管理端订单页给**已付款**订单发货：填一段发货文本（兑换码、下载地址、账号信息等）即可，订单随之变为「已完成」，系统同时给买家邮箱发一封发货邮件。
+
+- **多次发货**：内容发错可重新发货，此时**必须填写原因**。所有发货记录全量留痕（发货弹窗里可查），买家侧只看最新一条。
+- **买家查看**：商城「我的订单」点进订单详情页即可看到最新发货内容与发货时间。
+- **邮件语言**：按买家的语言偏好（`shop_user.locale`）渲染中/英文，偏好在买家站内切换语言时写入。
+- **邮件配置**：SMTP 参数写在 jar 外 `backend/config/application.yml`（见 `application.example.yml` 的 `spring.mail` 与 `app.mail` 两段），不进仓库。**整段可选**——不配置时发货照常成功，只是发货记录里邮件状态记为「发送失败：邮件服务未配置」，管理员可在配好后重新发货补发。
+- **邮件失败不回滚发货**：发货已落库即生效，管理端会明确提示「已发货，但邮件发送失败：…」。
+
 ## 常用命令
 
 | 命令 | 说明 |
@@ -71,6 +81,10 @@ mise run run-admin        # 终端 3：启动管理端（5174，/api 代理到 8
 | `POST /api/payment/orders/{orderNo}/cancel` | 需登录 + 归属校验 | 取消订单 |
 | `POST /api/v1/payment/webhook/stripe` | 验签，无登录态 | Stripe 事件回调 |
 | `/api/admin/**` | 需登录 + 管理员 | 管理端接口（概览/商品/分组/订单/用户），非管理员返回业务码 110003 |
+| `GET /api/orders/{orderNo}` | 登录 | 我的订单详情，含最新发货信息 |
+| `PUT /api/me/locale` | 登录 | 保存语言偏好（zh-CN/en-US） |
+| `POST /api/admin/orders/{orderNo}/shipments` | 管理员 | 发货/重新发货，返回邮件发送结果 |
+| `GET /api/admin/orders/{orderNo}/shipments` | 管理员 | 发货历史（时间倒序） |
 
 登录采用 MintPop 统一账号中心（Logto，OIDC 授权码 + PKCE）：后端为机密客户端（BFF），登录后自签会话 JWT（只含内部 userid）写 HttpOnly Cookie，账号中心 token 不进浏览器；用户主键为本地 `shop_user.id`，与账号中心 `sub` 通过 `user_identity` 映射表关联。
 
