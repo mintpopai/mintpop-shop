@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title th:text="#{mail.shipment.title}">发货通知</title>
+</head>
+<body style="margin:0;padding:24px;background:#f5f7f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#1f2d28;">
+<div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(15,26,22,0.08);">
+    <div style="background:#2fa37a;padding:20px 24px;">
+        <h1 style="margin:0;font-size:18px;color:#ffffff;font-weight:600;" th:text="#{mail.shipment.title}">发货通知</h1>
+    </div>
+    <div style="padding:24px;">
+        <p style="margin:0 0 16px;font-size:15px;" th:text="#{mail.shipment.greeting(${nickname})}">你好，小明</p>
+        <p style="margin:0 0 20px;font-size:14px;line-height:1.6;color:#4a5c55;" th:text="#{mail.shipment.intro}">你的订单已发货，以下是发货信息。</p>
+
+        <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:20px;">
+            <tr>
+                <td style="padding:6px 0;color:#7a8b84;width:96px;" th:text="#{mail.shipment.orderNo}">订单号</td>
+                <td style="padding:6px 0;" th:text="${orderNo}">mintpopshop_x</td>
+            </tr>
+            <tr>
+                <td style="padding:6px 0;color:#7a8b84;" th:text="#{mail.shipment.product}">商品</td>
+                <td style="padding:6px 0;" th:text="${productName} + ' × ' + ${quantity}">商品 × 1</td>
+            </tr>
+            <tr>
+                <td style="padding:6px 0;color:#7a8b84;" th:text="#{mail.shipment.amount}">金额</td>
+                <td style="padding:6px 0;" th:text="${amount}">$19.99</td>
+            </tr>
+            <tr>
+                <td style="padding:6px 0;color:#7a8b84;" th:text="#{mail.shipment.shippedAt}">发货时间</td>
+                <td style="padding:6px 0;" th:text="${shippedAt}">2026-07-31 12:00:00 UTC</td>
+            </tr>
+        </table>
+
+        <p style="margin:0 0 8px;font-size:14px;font-weight:600;" th:text="#{mail.shipment.contentTitle}">发货内容</p>
+        <!-- th:text 而非 th:utext：管理员输入原样转义，不给 HTML 注入留口子；换行靠 pre-wrap 保留 -->
+        <div style="white-space:pre-wrap;word-break:break-word;background:#f5f7f6;border:1px solid #e2e8e5;border-radius:8px;padding:14px;font-size:14px;line-height:1.6;"
+             th:text="${content}">发货内容</div>
+
+        <p style="margin:24px 0 0;font-size:14px;">
+            <a th:href="${orderUrl}" style="color:#2fa37a;" th:text="#{mail.shipment.viewOrder}">查看订单</a>
+        </p>
+        <p style="margin:20px 0 0;font-size:12px;color:#9aa8a2;" th:text="#{mail.shipment.footer}">本邮件由系统自动发送，请勿直接回复。</p>
+    </div>
+</div>
+</body>
+</html>

@@ -25,6 +25,20 @@ spring:
             # 回调路径按统一账号接入规范固定为 /auth/callback，不要改
             redirect-uri: "{baseUrl}/auth/callback"
 
+  # —— 发货邮件（SMTP）——整段可选：不配则发货照常成功、邮件记为发送失败 ——
+  mail:
+    host: 填SMTP主机（如 smtp.feishu.cn）
+    port: 465
+    username: 填发信账号
+    password: 填发信口令/应用专用密码
+    properties:
+      "[mail.smtp.auth]": true
+      "[mail.smtp.ssl.enable]": true
+      # 短超时：发货接口同步等邮件，绝不许被不响应的 SMTP 挂住
+      "[mail.smtp.connectiontimeout]": 5000
+      "[mail.smtp.timeout]": 5000
+      "[mail.smtp.writetimeout]": 5000
+
 # —— 自签会话（BFF）——
 app:
   auth:
@@ -41,6 +55,11 @@ app:
   # order 整段为可选项及默认值，不改可不写：
   # order:
   #   expire-minutes: 30         # 待支付订单的支付时限（分钟），超时懒惰过期为「已过期」
+  mail:
+    from: 填发信地址（通常同 username）
+    # 以下为可选项及默认值，不改可不写：
+    # from-name: MintPop Shop
+    # site-base-url: https://mintpop.ai   # 邮件里「查看订单详情」链接的站点前缀
 
 # —— 支付（Stripe）——密钥只写进真实 config/application.yml，绝不进仓库 ——
 payment:
