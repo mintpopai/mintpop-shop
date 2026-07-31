@@ -1,4 +1,4 @@
-import { locale, t } from './i18n'
+import { locale, t, type AppLocale } from './i18n'
 
 /** 后端统一返回结构：code=0 成功，非 0 失败取 msg */
 export interface ApiResponse<T> {
@@ -39,6 +39,8 @@ export interface Me {
   email: string
   nickname: string | null
   avatarUrl: string | null
+  /** 语言偏好（zh-CN/en-US），未设置为 null */
+  locale: string | null
 }
 
 /** 我的订单列表项（镜像后端 OrderItemResponse） */
@@ -153,6 +155,14 @@ export function createOrder(productId: number): Promise<CreateOrderResult> {
 /** 当前登录用户（401 抛 UnauthorizedError 表示游客） */
 export function fetchMe(): Promise<Me> {
   return request<Me>('/api/me')
+}
+
+/** 保存语言偏好（登录用户切换语言时调用，跨设备保持一致） */
+export function updateMyLocale(next: AppLocale): Promise<null> {
+  return request<null>('/api/me/locale', {
+    method: 'PUT',
+    body: JSON.stringify({ locale: next }),
+  })
 }
 
 /** 我的订单列表 */

@@ -1,17 +1,23 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { updateMyLocale } from './api'
 import { currentUser, gotoLogin, gotoLogout } from './auth'
 import { showToast, toast } from './toast'
-import { locale, setLocale, t } from './i18n'
+import { locale, setLocale, t, type AppLocale } from './i18n'
 
 const menuOpen = ref(false)
 
 /** 联系方式页在官网（mintpop.ai），按当前语言指向对应路径 */
 const contactUrl = locale === 'zh-CN' ? 'https://mintpop.ai/zh/contact/' : 'https://mintpop.ai/contact/'
 
-/** 中英互切：写偏好后整页刷新 */
-function toggleLocale() {
-  setLocale(locale === 'zh-CN' ? 'en-US' : 'zh-CN')
+/** 中英互切：登录用户先把偏好写到服务端（失败不挡切换），再写本地偏好并整页刷新 */
+async function toggleLocale() {
+  const next: AppLocale = locale === 'zh-CN' ? 'en-US' : 'zh-CN'
+  // 登录用户把偏好写到服务端；失败不挡切换（本地偏好照样生效）
+  if (currentUser.value) {
+    await updateMyLocale(next).catch(() => undefined)
+  }
+  setLocale(next)
 }
 
 onMounted(() => {
