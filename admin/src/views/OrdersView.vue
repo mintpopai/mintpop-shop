@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { formatPrice } from '../api'
 import { fetchAdminOrders, type AdminOrderItem } from '../api-admin'
 import { formatDateTime } from '../datetime'
+import ShipmentModal from '../components/ShipmentModal.vue'
 
 /** 筛选条状态与中文标签（顺序与后端 OrderStatusEnum 对齐） */
 const STATUS_FILTERS: Array<{ status: string; label: string }> = [
@@ -73,6 +74,17 @@ function gotoPage(next: number) {
   page.value = next
   reload()
 }
+
+/** 正在发货的订单号，null = 弹窗关闭 */
+const shippingOrderNo = ref<string | null>(null)
+
+/** 已付款可发货，已完成可重新发货；其余状态没有发货动作 */
+function shipAction(status: string): '发货' | '重新发货' | null {
+  if (status === 'PAID') {
+    return '发货'
+  }
+  return status === 'COMPLETED' ? '重新发货' : null
+}
 </script>
 
 <template>
@@ -133,6 +145,7 @@ function gotoPage(next: number) {
             <th>支付方式</th>
             <th>下单时间</th>
             <th>支付时间</th>
+            <th>操作</th>
           </tr>
         </thead>
         <tbody>
@@ -148,6 +161,17 @@ function gotoPage(next: number) {
             <td class="fact muted">{{ order.paymentProvider ?? '—' }}</td>
             <td class="fact muted">{{ formatDateTime(order.createdAt) }}</td>
             <td class="fact muted">{{ order.paidAt ? formatDateTime(order.paidAt) : '—' }}</td>
+            <td>
+              <button
+                v-if="shipAction(order.status)"
+                type="button"
+                class="admin-btn-ghost"
+                @click="shippingOrderNo = order.orderNo"
+              >
+                {{ shipAction(order.status) }}
+              </button>
+              <span v-else class="muted">—</span>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -171,6 +195,13 @@ function gotoPage(next: number) {
       </button>
     </div>
   </template>
+
+  <ShipmentModal
+    v-if="shippingOrderNo"
+    :order-no="shippingOrderNo"
+    @close="shippingOrderNo = null"
+    @shipped="reload"
+  />
 </template>
 
 <style scoped>

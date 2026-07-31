@@ -164,3 +164,38 @@ export function fetchAdminOrders(params: {
 export function fetchAdminUsers(page: number, size: number): Promise<PageResult<AdminUser>> {
   return request<PageResult<AdminUser>>(`/api/admin/users?page=${page}&size=${size}`)
 }
+
+/** 管理端发货历史项（镜像后端 AdminShipmentItemResponse） */
+export interface AdminShipmentItem {
+  id: number
+  content: string
+  reason: string | null
+  operatorEmail: string | null
+  emailTo: string
+  emailStatus: 'SENT' | 'FAILED'
+  emailError: string | null
+  shippedAt: string
+}
+
+/** 发货结果（镜像后端 AdminShipmentResponse） */
+export interface AdminShipResult {
+  shippedAt: string
+  emailStatus: 'SENT' | 'FAILED'
+  emailError: string | null
+}
+
+/** 某订单的发货历史（时间倒序） */
+export function fetchAdminShipments(orderNo: string): Promise<AdminShipmentItem[]> {
+  return request<AdminShipmentItem[]>(`/api/admin/orders/${orderNo}/shipments`)
+}
+
+/** 发货 / 重新发货（重新发货必须带 reason） */
+export function shipAdminOrder(
+  orderNo: string,
+  body: { content: string; reason?: string },
+): Promise<AdminShipResult> {
+  return request<AdminShipResult>(`/api/admin/orders/${orderNo}/shipments`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
