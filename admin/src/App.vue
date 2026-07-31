@@ -186,8 +186,11 @@ const initial = computed(() => (currentUser.value?.nickname ?? currentUser.value
   z-index: 40;
 }
 
+/* 成功用品牌绿，但绿只做底、字换深墨——沿用主按钮那对经过校验的配色（9.1:1）。
+   原先是绿底白字，只有 2.7:1，正是 layout.css 开头写明要避开的用法 */
 .toast.success {
-  background: var(--color-brand-deep);
+  background: var(--color-brand);
+  color: var(--counter-deep);
 }
 
 .toast.error {

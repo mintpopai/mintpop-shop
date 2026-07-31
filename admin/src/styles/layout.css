@@ -17,7 +17,9 @@
    · 新增状态语义色板：基线未定义状态色。取值均在白底达 AA，且一律「色点 + 文字」
      并行，不靠颜色单独传达状态。
    · 深墨 --counter-deep 只用于浮层类元素（纸带浮层、toast、选中的筛选 chip、
-     管理员徽章）——这些是盖在页面之上的小面积对象，不构成一个深色面。
+     管理员徽章、键盘焦点环）——这些是盖在页面之上的小面积对象，不构成一个深色面。
+     焦点环归到这一类：它同样是压在页面之上的一圈细线，且必须在白面、Cloud 面、
+     深墨 chip 三种底上都看得见，只有深墨同时满足（对白 17.8:1、对 Cloud 16.6:1）。
    其余（主色、文本色、背景 Cloud、分隔线、圆角、4 的倍数间距刻度）全部沿用基线。 */
 
 :root {
@@ -25,6 +27,7 @@
   --counter-deep: #0f1a16;
   --counter-deep-text: #9db2aa;
   --counter-danger: #b3341f;
+  --counter-danger-deep: #932a19;
 
   --font-fact: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --rail-width: 208px;
@@ -52,17 +55,17 @@ body {
   --state-color: #b3341f;
 }
 
-[data-state='CANCELLED'],
-[data-state='EXPIRED'] {
-  --state-color: #7a857f;
-}
-
 [data-state='ON_SALE'] {
   --state-color: #0a8a6a;
 }
 
+/* 「没在跑」的几种状态共用一个灰：原先 OFF_SALE 另给了浅一档的 #8a938e，
+   对 Cloud 底只有 2.95:1，够不着非文字图形的 3:1；且它与 CANCELLED 语义同类
+   （这东西现在不生效），本就没有分两个灰的理由 */
+[data-state='CANCELLED'],
+[data-state='EXPIRED'],
 [data-state='OFF_SALE'] {
-  --state-color: #8a938e;
+  --state-color: #7a857f;
 }
 
 /* —— 外壳：全高导航轨常驻左侧，长表格滚动时导航不跟着走。
@@ -358,13 +361,21 @@ body {
   transition: background 0.15s ease;
 }
 
-.admin-btn:hover {
+/* :not(:disabled) 兜住「禁用元素照样匹配 :hover」的浏览器行为，
+   否则禁用的主按钮划过去还会变绿，看着像能点 */
+.admin-btn:hover:not(:disabled) {
   background: var(--color-brand-deep);
 }
 
-.admin-btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+/* 破坏性主操作：只出现在确认弹窗里，页面上不摆。红底白字 6.1:1；
+   danger 底色够深，白字比深墨字更清楚，故这里不套用「绿底配深墨字」那条 */
+.admin-btn.danger {
+  background: var(--counter-danger);
+  color: #ffffff;
+}
+
+.admin-btn.danger:hover:not(:disabled) {
+  background: var(--counter-danger-deep);
 }
 
 .admin-btn-ghost {
@@ -375,15 +386,20 @@ body {
   transition: border-color 0.15s ease;
 }
 
-.admin-btn-ghost:hover {
+.admin-btn-ghost:hover:not(:disabled) {
   border-color: var(--color-ink-secondary);
 }
 
+/* 禁用态两款按钮长一个样——禁用就是禁用，不必再区分它原本是主操作还是次操作。
+   不用 opacity 压：半透明会把「保存中…」「上一页」这些仍要读的文字一起压到 2.5:1；
+   改用 Cloud 底 + 次要文字色（4.5:1），既明显失活、又读得清 */
+.admin-btn:disabled,
 .admin-btn-ghost:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
   border-color: var(--color-border);
+  background: var(--color-bg-cloud);
   color: var(--color-ink-secondary);
+  font-weight: 500;
+  cursor: not-allowed;
 }
 
 .admin-link {
@@ -546,11 +562,15 @@ body {
   vertical-align: -1px;
 }
 
-/* —— 质量地板：键盘焦点在深浅两种底上都看得见 —— */
+/* —— 质量地板：键盘焦点在深浅两种底上都看得见 ——
+   焦点环画在元素外侧（offset 2px），所以决定它对比度的是元素周围的底、不是元素自己的底：
+   白卡面、Cloud 页面底、以及深墨 chip 周围的 Cloud——全是浅底。品牌绿在这三种底上只有
+   2.5~2.7:1，达不到非文字图形要求的 3:1，故焦点环用深墨（16.6:1 起）。
+   不在这里设 border-radius：那会真的改掉元素本身的圆角（药丸 chip 一按 Tab 就塌成方角），
+   不设时 outline 自动贴合各元素自己的圆角。 */
 :focus-visible {
-  outline: 2px solid var(--color-brand-deep);
+  outline: 2px solid var(--counter-deep);
   outline-offset: 2px;
-  border-radius: 3px;
 }
 
 @media (prefers-reduced-motion: reduce) {

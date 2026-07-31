@@ -72,16 +72,27 @@ async function onSave() {
   }
 }
 
-async function onDelete(group: AdminGroup) {
-  if (!window.confirm(`确定删除分组「${group.nameZh}」吗？`)) {
+/** 待确认删除的分组；非空即打开确认弹窗。
+    不用 window.confirm：那是操作系统画的框，字体、圆角、按钮次序都不归这套设计管，
+    而且它把「删掉哪一个」压成一行系统文案，说不清后果 */
+const deleting = ref<AdminGroup | null>(null)
+const deletingBusy = ref(false)
+
+async function onDelete() {
+  const group = deleting.value
+  if (!group) {
     return
   }
+  deletingBusy.value = true
   try {
     await deleteAdminGroup(group.id)
     showToast('success', '已删除')
+    deleting.value = null
     await reload()
   } catch (e) {
     showToast('error', e instanceof Error ? e.message : '请求失败，请稍后重试')
+  } finally {
+    deletingBusy.value = false
   }
 }
 </script>
@@ -100,7 +111,7 @@ async function onDelete(group: AdminGroup) {
     <button type="button" class="admin-btn" @click="openCreate">新增分组</button>
   </div>
 
-  <p v-if="loading" class="admin-hint loading">加载中……</p>
+  <p v-if="loading" class="admin-hint">加载中……</p>
   <p v-else-if="loadError" class="admin-hint error">{{ loadError }}</p>
 
   <div v-else class="admin-card">
@@ -130,7 +141,7 @@ async function onDelete(group: AdminGroup) {
               class="admin-link danger"
               :disabled="group.productCount > 0"
               :title="group.productCount > 0 ? '组内有商品，不可删除' : ''"
-              @click="onDelete(group)"
+              @click="deleting = group"
             >
               删除
             </button>
@@ -164,4 +175,25 @@ async function onDelete(group: AdminGroup) {
       </button>
     </template>
   </Modal>
+
+  <!-- 删除确认：说清删的是哪一个、以及删掉之后会怎样，按钮直接写动作而不是「确定」 -->
+  <Modal v-if="deleting" title="删除分组" @close="deleting = null">
+    <p class="confirm-text">
+      分组「{{ deleting.nameZh }}」将从商城下架，这个操作无法撤销。组里现在没有商品，删除不影响任何商品。
+    </p>
+    <template #footer>
+      <button type="button" class="admin-btn-ghost" @click="deleting = null">取消</button>
+      <button type="button" class="admin-btn danger" :disabled="deletingBusy" @click="onDelete">
+        {{ deletingBusy ? '删除中…' : '删除分组' }}
+      </button>
+    </template>
+  </Modal>
 </template>
+
+<style scoped>
+.confirm-text {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--color-ink-secondary);
+}
+</style>

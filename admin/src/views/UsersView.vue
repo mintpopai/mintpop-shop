@@ -46,7 +46,7 @@ function gotoPage(next: number) {
     </p>
   </header>
 
-  <p v-if="loading" class="admin-hint loading">加载中……</p>
+  <p v-if="loading" class="admin-hint">加载中……</p>
   <p v-else-if="loadError" class="admin-hint error">{{ loadError }}</p>
 
   <template v-else>

@@ -177,7 +177,7 @@ async function onToggleSale(product: AdminProduct) {
     <button type="button" class="admin-btn" @click="openCreate">新增商品</button>
   </div>
 
-  <p v-if="loading" class="admin-hint loading">加载中……</p>
+  <p v-if="loading" class="admin-hint">加载中……</p>
   <p v-else-if="loadError" class="admin-hint error">{{ loadError }}</p>
 
   <div v-else class="admin-card">
