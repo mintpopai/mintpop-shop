@@ -1,6 +1,7 @@
 package com.mintpop.shop.controller;
 
 import com.mintpop.shop.config.AuthProperties;
+import com.mintpop.shop.security.PostLoginRedirectCookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,7 +42,8 @@ class AuthControllerTest {
     void setUp() {
         clientRegistrationRepository = mock(ClientRegistrationRepository.class);
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new AuthController(clientRegistrationRepository, new AuthProperties()))
+                .standaloneSetup(new AuthController(
+                        clientRegistrationRepository, new AuthProperties(), new PostLoginRedirectCookie()))
                 .build();
     }
 
@@ -51,6 +53,46 @@ class AuthControllerTest {
         mockMvc.perform(get("/auth/login"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/oauth2/authorization/logto"));
+    }
+
+    @Test
+    @DisplayName("带合法 redirect 参数时下发回跳路径 Cookie")
+    void loginWithValidRedirectIssuesCookie() throws Exception {
+        MvcResult result = mockMvc.perform(get("/auth/login").param("redirect", "/orders/mintpopshop_x"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/oauth2/authorization/logto"))
+                .andReturn();
+
+        String setCookie = result.getResponse().getHeader(HttpHeaders.SET_COOKIE);
+        assertThat(setCookie)
+                .startsWith(PostLoginRedirectCookie.COOKIE_NAME + "=")
+                .contains("HttpOnly")
+                .contains("SameSite=Lax");
+        assertThat(setCookie).doesNotContain(PostLoginRedirectCookie.COOKIE_NAME + "=;");
+    }
+
+    @Test
+    @DisplayName("带非法 redirect 参数（开放重定向）时不下发回跳路径 Cookie")
+    void loginWithInvalidRedirectDoesNotIssueCookie() throws Exception {
+        MvcResult result = mockMvc.perform(get("/auth/login").param("redirect", "//evil.com"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/oauth2/authorization/logto"))
+                .andReturn();
+
+        assertThat(result.getResponse().getHeaders(HttpHeaders.SET_COOKIE))
+                .noneMatch(h -> h.startsWith(PostLoginRedirectCookie.COOKIE_NAME + "="));
+    }
+
+    @Test
+    @DisplayName("不带 redirect 参数时行为与原来一致：不下发回跳路径 Cookie")
+    void loginWithoutRedirectParamBehavesAsBefore() throws Exception {
+        MvcResult result = mockMvc.perform(get("/auth/login"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/oauth2/authorization/logto"))
+                .andReturn();
+
+        assertThat(result.getResponse().getHeaders(HttpHeaders.SET_COOKIE))
+                .noneMatch(h -> h.startsWith(PostLoginRedirectCookie.COOKIE_NAME + "="));
     }
 
     @Test

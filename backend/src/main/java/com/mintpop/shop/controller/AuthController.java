@@ -1,6 +1,7 @@
 package com.mintpop.shop.controller;
 
 import com.mintpop.shop.config.AuthProperties;
+import com.mintpop.shop.security.PostLoginRedirectCookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,7 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -27,10 +29,19 @@ public class AuthController {
 
     private final ClientRegistrationRepository clientRegistrationRepository;
     private final AuthProperties authProperties;
+    private final PostLoginRedirectCookie postLoginRedirectCookie;
 
-    /** 登录入口：跳到 Spring Security 的授权发起端点（授权码 + PKCE） */
+    /**
+     * 登录入口：跳到 Spring Security 的授权发起端点（授权码 + PKCE）。
+     * 可选 redirect 参数携带登录前原路径（如深链邮件里的 /orders/xxx），校验通过写成短命 Cookie，
+     * 登录成功后由 OidcLoginSuccessHandler 读取并回跳；非法值静默丢弃，不影响登录本身。
+     */
     @GetMapping("/auth/login")
-    public void login(HttpServletResponse response) throws IOException {
+    public void login(HttpServletRequest request, HttpServletResponse response,
+                      @RequestParam(name = "redirect", required = false) String redirect) throws IOException {
+        if (redirect != null && postLoginRedirectCookie.isValidPath(redirect)) {
+            postLoginRedirectCookie.write(request, response, redirect);
+        }
         response.sendRedirect("/oauth2/authorization/" + REGISTRATION_ID);
     }
 

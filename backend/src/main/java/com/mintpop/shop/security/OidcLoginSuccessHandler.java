@@ -28,6 +28,7 @@ public class OidcLoginSuccessHandler implements AuthenticationSuccessHandler {
     private final UserService userService;
     private final SessionTokenService sessionTokenService;
     private final AuthProperties authProperties;
+    private final PostLoginRedirectCookie postLoginRedirectCookie;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
@@ -46,7 +47,11 @@ public class OidcLoginSuccessHandler implements AuthenticationSuccessHandler {
                 .sameSite("Lax")
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-        response.sendRedirect(authProperties.getFrontendBaseUrl());
+
+        // 回跳路径 Cookie 是客户端可改的，真正把用户送走前必须再校验一遍；无论合法与否，读取后即刻清掉，用完即弃
+        String redirectPath = postLoginRedirectCookie.readValid(request);
+        postLoginRedirectCookie.expire(request, response);
+        response.sendRedirect(redirectPath != null ? redirectPath : authProperties.getFrontendBaseUrl());
     }
 
     /** 首次登录的语言种子：按 Accept-Language 判定，语言子标签为 en 视为英文（与 I18nUtil 同规则） */

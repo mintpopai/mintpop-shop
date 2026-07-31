@@ -4,6 +4,7 @@ import com.mintpop.shop.controller.AuthController;
 import com.mintpop.shop.exception.GlobalExceptionHandler;
 import com.mintpop.shop.mapper.ShopUserMapper;
 import com.mintpop.shop.security.OidcLoginSuccessHandler;
+import com.mintpop.shop.security.PostLoginRedirectCookie;
 import com.mintpop.shop.service.SessionTokenService;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.DisplayName;
@@ -52,6 +53,8 @@ class SecurityChainTest {
     // WebConfig 注册的管理端拦截器依赖 mapper，切片无 SqlSessionFactory，mock 兜底
     @MockitoBean
     private ShopUserMapper shopUserMapper;
+    @MockitoBean
+    private PostLoginRedirectCookie postLoginRedirectCookie;
 
     @Test
     @DisplayName("未登录访问 /api/me 返回 401")

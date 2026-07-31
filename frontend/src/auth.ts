@@ -32,9 +32,14 @@ function syncLocale(serverLocale: string | null): void {
   }
 }
 
-/** 整页跳转后端登录入口（OIDC 授权码流程） */
+/**
+ * 整页跳转后端登录入口（OIDC 授权码流程）。
+ * 带上当前路径（仅 path + query，不含 hash/origin），登录成功后由后端原样回跳，
+ * 避免发货邮件深链等场景登录完丢失原本要看的页面。
+ */
 export function gotoLogin(): void {
-  window.location.href = '/auth/login'
+  const redirect = encodeURIComponent(location.pathname + location.search)
+  window.location.href = `/auth/login?redirect=${redirect}`
 }
 
 /** 整页跳转登出（清会话 + 账号中心单点登出） */
