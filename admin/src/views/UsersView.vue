@@ -53,6 +53,7 @@ function gotoPage(next: number) {
             <th>ID</th>
             <th>用户</th>
             <th>邮箱</th>
+            <th>角色</th>
             <th>订单数</th>
             <th>注册时间</th>
           </tr>
@@ -70,6 +71,10 @@ function gotoPage(next: number) {
               </div>
             </td>
             <td>{{ user.email }}</td>
+            <td>
+              <span v-if="user.role === 'ADMIN'" class="role-badge">管理员</span>
+              <span v-else class="secondary">普通用户</span>
+            </td>
             <td>{{ user.orderCount }}</td>
             <td class="secondary">{{ formatDateTime(user.createdAt) }}</td>
           </tr>
@@ -121,6 +126,17 @@ function gotoPage(next: number) {
 .secondary {
   color: var(--color-ink-secondary);
   font-size: 13px;
+  white-space: nowrap;
+}
+
+/* 管理员标记：只读展示，角色由管理员直接改库维护 */
+.role-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: #ffffff;
+  font-size: 12px;
   white-space: nowrap;
 }
 </style>

@@ -3,7 +3,6 @@ package com.mintpop.shop.controller;
 import com.mintpop.shop.enumeration.BizCodeEnum;
 import com.mintpop.shop.exception.BizException;
 import com.mintpop.shop.mapper.ShopUserMapper;
-import com.mintpop.shop.security.AdminChecker;
 import com.mintpop.shop.service.GroupService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,11 +36,9 @@ class DefaultLocaleTest {
     @MockitoBean
     private GroupService groupService;
 
-    // WebConfig 注册的管理端拦截器依赖 mapper 与判定器，切片无 SqlSessionFactory，mock 兜底
+    // WebConfig 注册的管理端拦截器依赖 mapper，切片无 SqlSessionFactory，mock 兜底
     @MockitoBean
     private ShopUserMapper shopUserMapper;
-    @MockitoBean
-    private AdminChecker adminChecker;
 
     @Test
     @DisplayName("不带 Accept-Language 头：默认落到中文（spring.web.locale=zh-CN）")

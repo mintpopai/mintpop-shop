@@ -4,7 +4,6 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Duration;
-import java.util.List;
 
 /**
  * 自签会话配置（app.auth.*）：密钥来自 jar 外 config/application.yml，不入库。
@@ -22,6 +21,4 @@ public class AuthProperties {
     private Duration sessionTtl = Duration.ofDays(7);
     /** 登录/登出完成后回跳的前端地址（同源部署用默认 /；本地开发经 Vite 代理也是 /） */
     private String frontendBaseUrl = "/";
-    /** 管理员邮箱白名单（忽略大小写），默认空=无人是管理员；名单低频变更，走外置 config/application.yml */
-    private List<String> adminEmails = List.of();
 }

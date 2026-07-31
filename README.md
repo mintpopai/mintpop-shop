@@ -79,7 +79,15 @@ mise run run-admin        # 终端 3：启动管理端（5174，/api 代理到 8
 店主管理后台是独立前端项目（`admin/`），部署在独立子域 `admin.mintpop.ai`（概览 / 商品 / 分组 / 订单 / 用户），界面固定中文、不做双语。权限是**两道防线**：
 
 1. **Cloudflare Zero Trust Access（第一道，生产必配）**：Access → Applications → Self-hosted 建应用，Domain 填 `admin.mintpop.ai`（整域，**不填 path**），Allow 策略限定管理员邮箱（邮箱 OTP 验证）。整域拦截意味着 `/auth/callback`、`/oauth2/*` 也在防线内——`CF_Authorization` 是 hostname 级 Cookie，OIDC 回调是带该 Cookie 的顶级导航，能正常通过。
-2. **后端管理员白名单（第二道）**：外置 `application.yml` 配 `app.auth.admin-emails` 邮箱白名单（忽略大小写，见 `application.example.yml`）。`/api/admin/**` 由拦截器逐请求校验，非管理员返回业务码 110003。Cloudflare 被绕过（如源站直连）时该防线仍然成立。
+2. **后端角色字段（第二道）**：管理员身份存在 `shop_user.role`（`USER`/`ADMIN`，默认 `USER`）。`/api/admin/**` 由拦截器逐请求校验当前用户的 role，非管理员返回业务码 110003。Cloudflare 被绕过（如源站直连）时该防线仍然成立。
+
+   角色**没有产品侧写入口**，提权只由管理员直接改库，改完即时生效、无需重启：
+
+   ```sql
+   UPDATE shop_user SET `role` = 'ADMIN' WHERE email = '管理员邮箱';
+   ```
+
+   ⚠️ 该字段由 `V9__user_role.sql` 引入且**不回填**，所以首次升级到这一版后**没有任何人是管理员**，必须先执行上面这条 SQL 才进得去后台。改完可在管理端「用户」页的「角色」列核对（只读展示）。
 
 管理端会话与商城**互不共享**：admin 子域自带 nginx 反代 `/api`、`/auth`、`/oauth2` 到同一个 backend，`mp_session` 以 host-only 形式单独下发在 `admin.mintpop.ai` 上。项目对授权请求强制 `prompt=login`，因此在商城登录过之后进管理端仍会重新走一遍账号中心登录——对管理端而言这是优点。
 
@@ -87,7 +95,7 @@ mise run run-admin        # 终端 3：启动管理端（5174，/api 代理到 8
 - `https://admin.mintpop.ai/auth/callback`（生产）
 - `http://localhost:5174/auth/callback`（本地开发）
 
-本地开发不经 Cloudflare，仅第二道防线生效——给自己的开发账号邮箱配进白名单即可。
+本地开发不经 Cloudflare，仅第二道防线生效——首次登录建号后，把自己那行的 `role` 改成 `ADMIN` 即可。
 
 > **本地开发注意**：本地商城（5173）与管理端（5174）都是 `localhost`，而 **Cookie 作用域不区分端口**，两者会共用同一份 `mp_session`。生产是不同 hostname，会话隔离才真正成立——不要拿本地行为推断生产行为。
 

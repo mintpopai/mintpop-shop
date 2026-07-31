@@ -6,8 +6,8 @@ import com.mintpop.shop.enumeration.BizCodeEnum;
 import com.mintpop.shop.exception.BizException;
 import com.mintpop.shop.mapper.ShopUserMapper;
 import com.mintpop.shop.mapper.UserIdentityMapper;
+import com.mintpop.shop.enumeration.UserRoleEnum;
 import com.mintpop.shop.response.MeResponse;
-import com.mintpop.shop.security.AdminChecker;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,8 +30,6 @@ class UserServiceTest {
     private ShopUserMapper shopUserMapper;
     @Mock
     private UserIdentityMapper userIdentityMapper;
-    @Mock
-    private AdminChecker adminChecker;
     @InjectMocks
     private UserService userService;
 
@@ -43,10 +41,15 @@ class UserServiceTest {
     }
 
     private ShopUser user(Long id, String email) {
+        return user(id, email, UserRoleEnum.USER);
+    }
+
+    private ShopUser user(Long id, String email, UserRoleEnum role) {
         ShopUser u = new ShopUser();
         u.setId(id);
         u.setEmail(email);
         u.setNickname("旧昵称");
+        u.setRole(role);
         return u;
     }
 
@@ -64,6 +67,8 @@ class UserServiceTest {
         assertThat(result.getId()).isEqualTo(7L);
         assertThat(result.getEmail()).isEqualTo("a@b.com");
         assertThat(result.getNickname()).isEqualTo("小明");
+        // 注册一律普通用户，提权只由管理员改库
+        assertThat(result.getRole()).isEqualTo(UserRoleEnum.USER);
         ArgumentCaptor<UserIdentity> captor = ArgumentCaptor.forClass(UserIdentity.class);
         verify(userIdentityMapper).insert(captor.capture());
         assertThat(captor.getValue().getSub()).isEqualTo("sub-1");
@@ -101,16 +106,23 @@ class UserServiceTest {
     }
 
     @Test
-    @DisplayName("getMe：返回用户档案，管理员标志由 AdminChecker 裁决")
+    @DisplayName("getMe：返回用户档案，ADMIN 角色带管理员标志")
     void getMeReturnsProfile() {
-        when(shopUserMapper.selectById(7L)).thenReturn(user(7L, "a@b.com"));
-        when(adminChecker.isAdmin("a@b.com")).thenReturn(true);
+        when(shopUserMapper.selectById(7L)).thenReturn(user(7L, "a@b.com", UserRoleEnum.ADMIN));
 
         MeResponse me = userService.getMe(7L);
 
         assertThat(me.getId()).isEqualTo(7L);
         assertThat(me.getEmail()).isEqualTo("a@b.com");
         assertThat(me.isAdmin()).isTrue();
+    }
+
+    @Test
+    @DisplayName("getMe：USER 角色不带管理员标志")
+    void getMeForNormalUserIsNotAdmin() {
+        when(shopUserMapper.selectById(8L)).thenReturn(user(8L, "b@b.com", UserRoleEnum.USER));
+
+        assertThat(userService.getMe(8L).isAdmin()).isFalse();
     }
 
     @Test

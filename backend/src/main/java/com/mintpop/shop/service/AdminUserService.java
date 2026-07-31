@@ -50,7 +50,7 @@ public class AdminUserService {
 
         List<AdminUserResponse> records = users.stream()
                 .map(u -> new AdminUserResponse(u.getId(), u.getEmail(), u.getNickname(), u.getAvatarUrl(),
-                        orderCountByUser.getOrDefault(u.getId(), 0L),
+                        u.getRole(), orderCountByUser.getOrDefault(u.getId(), 0L),
                         u.getCreatedAt().toInstant(ZoneOffset.UTC)))
                 .toList();
         return new PageResponse<>(records, result.getTotal(), safePage, safeSize);

@@ -69,6 +69,8 @@ export interface AdminUser {
   email: string
   nickname: string | null
   avatarUrl: string | null
+  /** 角色：只读展示，改角色只能直接改库 */
+  role: 'ADMIN' | 'USER'
   orderCount: number
   createdAt: string
 }

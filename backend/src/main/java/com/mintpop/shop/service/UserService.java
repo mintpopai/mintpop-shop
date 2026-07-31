@@ -4,11 +4,11 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.mintpop.shop.entity.ShopUser;
 import com.mintpop.shop.entity.UserIdentity;
 import com.mintpop.shop.enumeration.BizCodeEnum;
+import com.mintpop.shop.enumeration.UserRoleEnum;
 import com.mintpop.shop.exception.BizException;
 import com.mintpop.shop.mapper.ShopUserMapper;
 import com.mintpop.shop.mapper.UserIdentityMapper;
 import com.mintpop.shop.response.MeResponse;
-import com.mintpop.shop.security.AdminChecker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +25,6 @@ public class UserService {
 
     private final ShopUserMapper shopUserMapper;
     private final UserIdentityMapper userIdentityMapper;
-    private final AdminChecker adminChecker;
 
     /**
      * 登录同步：sub 命中映射则复用用户并刷新 email 副本；未命中视为首次登录（注册），
@@ -40,6 +39,8 @@ public class UserService {
             user.setEmail(email);
             user.setNickname(nickname);
             user.setAvatarUrl(avatarUrl);
+            // 注册一律普通用户；提权只由管理员直接改库
+            user.setRole(UserRoleEnum.USER);
             shopUserMapper.insert(user);
 
             UserIdentity mapping = new UserIdentity();
@@ -65,6 +66,6 @@ public class UserService {
             throw new BizException(BizCodeEnum.USER_NOT_FOUND);
         }
         return new MeResponse(user.getId(), user.getEmail(), user.getNickname(), user.getAvatarUrl(),
-                adminChecker.isAdmin(user.getEmail()));
+                user.getRole() == UserRoleEnum.ADMIN);
     }
 }

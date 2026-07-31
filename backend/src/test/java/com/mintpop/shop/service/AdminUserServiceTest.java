@@ -2,6 +2,7 @@ package com.mintpop.shop.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mintpop.shop.entity.ShopUser;
+import com.mintpop.shop.enumeration.UserRoleEnum;
 import com.mintpop.shop.mapper.ShopOrderMapper;
 import com.mintpop.shop.mapper.ShopUserMapper;
 import com.mintpop.shop.response.AdminUserResponse;
@@ -34,9 +35,14 @@ class AdminUserServiceTest {
     private AdminUserService adminUserService;
 
     private ShopUser user(long id, String email) {
+        return user(id, email, UserRoleEnum.USER);
+    }
+
+    private ShopUser user(long id, String email, UserRoleEnum role) {
         ShopUser u = new ShopUser();
         u.setId(id);
         u.setEmail(email);
+        u.setRole(role);
         u.setCreatedAt(LocalDateTime.of(2026, 7, 1, 0, 0));
         return u;
     }
@@ -45,7 +51,7 @@ class AdminUserServiceTest {
     @DisplayName("分页附各用户订单数，无订单用户计 0")
     void pageAttachesOrderCounts() {
         Page<ShopUser> page = new Page<>(1, 20);
-        page.setRecords(List.of(user(7L, "a@b.com"), user(8L, "c@d.com")));
+        page.setRecords(List.of(user(7L, "a@b.com", UserRoleEnum.ADMIN), user(8L, "c@d.com")));
         page.setTotal(2);
         when(shopUserMapper.selectPage(any(), any())).thenReturn(page);
         when(shopOrderMapper.selectMaps(any())).thenReturn(List.of(
@@ -57,6 +63,9 @@ class AdminUserServiceTest {
         assertThat(result.getRecords().get(0).getOrderCount()).isEqualTo(5L);
         assertThat(result.getRecords().get(1).getOrderCount()).isEqualTo(0L);
         assertThat(result.getRecords().get(0).getCreatedAt().toString()).isEqualTo("2026-07-01T00:00:00Z");
+        // 角色原样透出，供管理端只读展示
+        assertThat(result.getRecords().get(0).getRole()).isEqualTo(UserRoleEnum.ADMIN);
+        assertThat(result.getRecords().get(1).getRole()).isEqualTo(UserRoleEnum.USER);
     }
 
     @Test

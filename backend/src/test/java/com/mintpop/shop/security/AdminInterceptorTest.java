@@ -2,6 +2,7 @@ package com.mintpop.shop.security;
 
 import com.mintpop.shop.entity.ShopUser;
 import com.mintpop.shop.enumeration.BizCodeEnum;
+import com.mintpop.shop.enumeration.UserRoleEnum;
 import com.mintpop.shop.exception.BizException;
 import com.mintpop.shop.mapper.ShopUserMapper;
 import org.junit.jupiter.api.AfterEach;
@@ -28,8 +29,6 @@ class AdminInterceptorTest {
 
     @Mock
     private ShopUserMapper shopUserMapper;
-    @Mock
-    private AdminChecker adminChecker;
     @InjectMocks
     private AdminInterceptor interceptor;
 
@@ -44,19 +43,19 @@ class AdminInterceptorTest {
                         userId, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))));
     }
 
-    private ShopUser user(long id, String email) {
+    private ShopUser user(long id, UserRoleEnum role) {
         ShopUser u = new ShopUser();
         u.setId(id);
-        u.setEmail(email);
+        u.setEmail("u" + id + "@mintpop.ai");
+        u.setRole(role);
         return u;
     }
 
     @Test
-    @DisplayName("管理员放行")
+    @DisplayName("ADMIN 放行")
     void adminPasses() {
         loginAs(7L);
-        when(shopUserMapper.selectById(7L)).thenReturn(user(7L, "boss@mintpop.ai"));
-        when(adminChecker.isAdmin("boss@mintpop.ai")).thenReturn(true);
+        when(shopUserMapper.selectById(7L)).thenReturn(user(7L, UserRoleEnum.ADMIN));
 
         boolean pass = interceptor.preHandle(new MockHttpServletRequest(), new MockHttpServletResponse(), new Object());
 
@@ -64,11 +63,23 @@ class AdminInterceptorTest {
     }
 
     @Test
-    @DisplayName("非管理员抛 110003 权限不足")
+    @DisplayName("USER 抛 110003 权限不足")
     void nonAdminRejected() {
         loginAs(8L);
-        when(shopUserMapper.selectById(8L)).thenReturn(user(8L, "user@x.com"));
-        when(adminChecker.isAdmin("user@x.com")).thenReturn(false);
+        when(shopUserMapper.selectById(8L)).thenReturn(user(8L, UserRoleEnum.USER));
+
+        assertThatThrownBy(() -> interceptor.preHandle(
+                new MockHttpServletRequest(), new MockHttpServletResponse(), new Object()))
+                .isInstanceOf(BizException.class)
+                .extracting(e -> ((BizException) e).getBizCode())
+                .isEqualTo(BizCodeEnum.PERMISSION_DENIED);
+    }
+
+    @Test
+    @DisplayName("角色缺失（理论上不会，列为 NOT NULL）按非管理员拒绝")
+    void missingRoleRejected() {
+        loginAs(10L);
+        when(shopUserMapper.selectById(10L)).thenReturn(user(10L, null));
 
         assertThatThrownBy(() -> interceptor.preHandle(
                 new MockHttpServletRequest(), new MockHttpServletResponse(), new Object()))

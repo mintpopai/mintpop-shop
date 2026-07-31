@@ -3,6 +3,7 @@ package com.mintpop.shop.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.mintpop.shop.enumeration.UserRoleEnum;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -23,6 +24,8 @@ public class ShopUser {
     private String nickname;
     /** 头像URL（首次登录种子，此后本产品托管） */
     private String avatarUrl;
+    /** 角色（USER/ADMIN；由管理员直接改库维护，产品侧无写入口） */
+    private UserRoleEnum role;
     /** 创建时间（数据库默认值维护） */
     private LocalDateTime createdAt;
     /** 更新时间（数据库默认值维护） */
