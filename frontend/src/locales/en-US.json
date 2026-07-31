@@ -42,7 +42,7 @@
     "createdAt": "Ordered at",
     "paidAt": "Paid at",
     "shipmentTitle": "Shipment",
-    "shippedAt": "Shipped at",
+    "shippedAtLine": "Shipped at: {time}",
     "notShipped": "Not shipped yet. You will also receive an email once it ships."
   },
   "product": {

@@ -69,7 +69,7 @@ onMounted(async () => {
         <template v-if="detail.latestShipment">
           <pre class="shipment-content">{{ detail.latestShipment.content }}</pre>
           <p class="shipped-at">
-            {{ $t('orders.shippedAt') }}：{{ formatDateTime(detail.latestShipment.shippedAt) }}
+            {{ $t('orders.shippedAtLine', { time: formatDateTime(detail.latestShipment.shippedAt) }) }}
           </p>
         </template>
         <p v-else class="hint">{{ $t('orders.notShipped') }}</p>

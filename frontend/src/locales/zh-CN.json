@@ -42,7 +42,7 @@
     "createdAt": "下单时间",
     "paidAt": "支付时间",
     "shipmentTitle": "发货信息",
-    "shippedAt": "发货时间",
+    "shippedAtLine": "发货时间：{time}",
     "notShipped": "商家尚未发货，发货后会同时发送邮件到你的邮箱。"
   },
   "product": {
