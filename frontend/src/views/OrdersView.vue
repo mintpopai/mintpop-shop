@@ -62,6 +62,11 @@ function isPayable(order: OrderItem): boolean {
   return order.status === 'PENDING' || order.status === 'FAILED'
 }
 
+/** 只有付款成功的订单才有详情可看（发货信息、支付时间）；未支付/已过期的详情页是空壳，不给入口 */
+function hasDetail(order: OrderItem): boolean {
+  return order.status === 'PAID' || order.status === 'COMPLETED'
+}
+
 async function onCancel(order: OrderItem) {
   if (!window.confirm(t('payment.cancelConfirm'))) {
     return
@@ -116,9 +121,7 @@ async function onCancel(order: OrderItem) {
         <li v-for="order in filteredOrders" :key="order.orderNo" class="order-card">
           <div class="order-main">
             <div class="name-row">
-              <RouterLink :to="`/orders/${order.orderNo}`" class="product-name product-link">
-                {{ order.productName }}
-              </RouterLink>
+              <span class="product-name">{{ order.productName }}</span>
               <span class="status-tag" :class="`status-tag--${order.status}`">{{ order.statusLabel }}</span>
             </div>
             <span class="order-no">{{ $t('orders.orderNo', { orderNo: order.orderNo }) }}</span>
@@ -128,13 +131,18 @@ async function onCancel(order: OrderItem) {
             <span class="meta">
               {{ $t('orders.quantity', { n: order.quantity }) }} · {{ formatDateTime(order.createdAt) }}
             </span>
-            <div v-if="isPayable(order)" class="order-actions">
-              <RouterLink :to="`/pay/${order.orderNo}`" class="pay-link">
-                {{ $t('orders.goPay') }}
+            <div v-if="isPayable(order) || hasDetail(order)" class="order-actions">
+              <template v-if="isPayable(order)">
+                <button type="button" class="cancel-link" @click="onCancel(order)">
+                  {{ $t('orders.cancel') }}
+                </button>
+                <RouterLink :to="`/pay/${order.orderNo}`" class="pay-link">
+                  {{ $t('orders.goPay') }}
+                </RouterLink>
+              </template>
+              <RouterLink v-if="hasDetail(order)" :to="`/orders/${order.orderNo}`" class="detail-link">
+                {{ $t('orders.viewDetail') }}
               </RouterLink>
-              <button type="button" class="cancel-link" @click="onCancel(order)">
-                {{ $t('orders.cancel') }}
-              </button>
             </div>
           </div>
         </li>
@@ -245,15 +253,6 @@ async function onCancel(order: OrderItem) {
   color: var(--color-ink);
 }
 
-.product-link {
-  color: var(--color-ink);
-}
-
-.product-link:hover {
-  color: var(--color-brand-deep);
-  text-decoration: underline;
-}
-
 /* 状态 tag 样式在 base.css（与管理端共用） */
 
 .order-no {
@@ -281,8 +280,23 @@ async function onCancel(order: OrderItem) {
 
 .order-actions {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
+  margin-top: 4px;
+}
+
+/* 详情入口是次级操作：描边按钮，与主色「去支付」区分轻重 */
+.detail-link {
+  padding: 6px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-button);
+  color: var(--color-ink-secondary);
+  font-size: 13px;
+}
+
+.detail-link:hover {
+  border-color: var(--color-brand);
+  color: var(--color-brand-deep);
 }
 
 .pay-link {
@@ -298,6 +312,7 @@ async function onCancel(order: OrderItem) {
 }
 
 .cancel-link {
+  padding: 6px 8px;
   border: none;
   background: none;
   color: var(--color-ink-secondary);

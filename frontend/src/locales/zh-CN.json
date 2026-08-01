@@ -33,6 +33,7 @@
     "quantity": "数量 {n}",
     "goPay": "去支付",
     "cancel": "取消订单",
+    "viewDetail": "查看详情",
     "filterLabel": "按订单状态筛选",
     "filterAll": "全部",
     "detailTitle": "订单详情",

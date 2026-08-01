@@ -33,6 +33,7 @@
     "quantity": "Qty {n}",
     "goPay": "Pay now",
     "cancel": "Cancel order",
+    "viewDetail": "View details",
     "filterLabel": "Filter by order status",
     "filterAll": "All",
     "detailTitle": "Order details",
