@@ -129,4 +129,28 @@ class ShipmentMailSenderTest {
         assertThat(result.sent()).isFalse();
         assertThat(result.error()).isEqualTo("邮件服务未配置，请联系管理员");
     }
+
+    @Test
+    @DisplayName("配了 SMTP 却漏配 app.mail.from：同样按未配置返回可读文案，不抛底层的 From address must not be null")
+    void reportsNotConfiguredWhenFromMissing() {
+        properties.setFrom(null);
+
+        MailResult result = build(mailSender).send(
+                order(), "会员账号", buyer(), "兑换码：ABC-123", Locale.SIMPLIFIED_CHINESE);
+
+        assertThat(result.sent()).isFalse();
+        assertThat(result.error()).isEqualTo("邮件服务未配置，请联系管理员");
+    }
+
+    @Test
+    @DisplayName("app.mail.from 是空白串：与漏配等价，按未配置处理")
+    void reportsNotConfiguredWhenFromBlank() {
+        properties.setFrom("  ");
+
+        MailResult result = build(mailSender).send(
+                order(), "Membership", buyer(), "Code: ABC-123", Locale.US);
+
+        assertThat(result.sent()).isFalse();
+        assertThat(result.error()).isEqualTo("Email service is not configured, please contact the administrator");
+    }
 }

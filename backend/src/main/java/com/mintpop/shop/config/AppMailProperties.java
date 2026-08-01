@@ -11,7 +11,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "app.mail")
 public class AppMailProperties {
 
-    /** 发信地址（通常与 spring.mail.username 相同） */
+    /** 发信地址（通常与 spring.mail.username 相同）。留空 = 邮件未配置，等同于没配 spring.mail.host */
     private String from;
     /** 发信人展示名 */
     private String fromName = "MintPop Shop";

@@ -41,11 +41,15 @@ public class ShipmentMailSender {
 
     /**
      * 发一封发货邮件。locale 决定主题与正文文案，发货内容原样带出。
-     * 未配置 spring.mail.host 时 JavaMailSender bean 不存在，按「未配置」失败返回。
+     * 未配置 spring.mail.host（JavaMailSender bean 不存在）或 app.mail.from 时，均按「未配置」失败返回。
      */
     public MailResult send(ShopOrder order, String productName, ShopUser buyer, String content, Locale locale) {
         JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
-        if (mailSender == null) {
+        // 邮件配置分属两段（SMTP 走 spring.mail.*、发信地址走 app.mail.from），少任一段都发不出信，
+        // 一律按「未配置」给出同一句可读文案：漏了 from 时底层只会抛 "From address must not be null"，
+        // 这句会被原样截进 order_shipment.email_error 展示给管理员，看不出该去补哪个配置项。
+        // 空白串同样要拦：setFrom("  ") 不报错，会把一封发件人异常的信真发出去。
+        if (mailSender == null || mailProperties.getFrom() == null || mailProperties.getFrom().isBlank()) {
             return MailResult.failed(
                     messageSource.getMessage(BizCodeEnum.MAIL_NOT_CONFIGURED.getMessageKey(), null, locale));
         }
