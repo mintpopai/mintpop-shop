@@ -1,6 +1,8 @@
 package com.mintpop.shop.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -39,8 +41,10 @@ public class Product {
     private String imageUrl;
     /** 是否上架 */
     private Boolean onSale;
-    /** 创建时间（数据库默认值维护） */
+    /** 创建时间（数据库默认值维护）；updateStrategy=NEVER 防止整实体写回时把该列带进 UPDATE 的 SET，压制数据库侧的默认值/触发逻辑 */
+    @TableField(updateStrategy = FieldStrategy.NEVER)
     private LocalDateTime createdAt;
-    /** 更新时间（数据库默认值维护） */
+    /** 更新时间（数据库 ON UPDATE CURRENT_TIMESTAMP 维护）；updateStrategy=NEVER 防止整实体写回时显式回填旧值，导致 ON UPDATE 不触发、时间戳停滞 */
+    @TableField(updateStrategy = FieldStrategy.NEVER)
     private LocalDateTime updatedAt;
 }

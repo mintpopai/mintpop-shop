@@ -75,16 +75,22 @@ public class UserService {
                 user.getRole() == UserRoleEnum.ADMIN, user.getLocale());
     }
 
-    /** 保存语言偏好：只接受白名单取值，越界按参数校验失败处理 */
+    /**
+     * 保存语言偏好：只接受白名单取值，越界按参数校验失败处理。
+     * 用最小实体（只 set id + locale）写回，不先 selectById 再整实体回写：
+     * README 允许管理员用裸 SQL 提权（UPDATE shop_user SET role=... WHERE email=...），
+     * 若这里查询与写回之间恰好夹了一次提权，整实体写回会把它静默覆盖回旧角色；
+     * 最小实体从根上避免这个 lost update，顺带省掉一次 selectById 及其自带的 TOCTOU。
+     */
     public void updateLocale(Long userId, String locale) {
         if (locale == null || !SUPPORTED_LOCALES.contains(locale)) {
             throw new BizException(BizCodeEnum.PARAM_INVALID);
         }
-        ShopUser user = shopUserMapper.selectById(userId);
-        if (user == null) {
+        ShopUser patch = new ShopUser();
+        patch.setId(userId);
+        patch.setLocale(locale);
+        if (shopUserMapper.updateById(patch) == 0) {
             throw new BizException(BizCodeEnum.USER_NOT_FOUND);
         }
-        user.setLocale(locale);
-        shopUserMapper.updateById(user);
     }
 }

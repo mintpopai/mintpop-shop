@@ -126,8 +126,12 @@ public class AdminShipmentService {
                                   String reason, Long operatorUserId) {
         return transactionTemplate.execute(status -> {
             if (order.getStatus() != OrderStatusEnum.COMPLETED) {
-                order.setStatus(OrderStatusEnum.COMPLETED);
-                shopOrderMapper.updateById(order);
+                // 只想把订单状态改成已完成，用最小实体（只 set id + status）写回，
+                // 不把整个 order 实体（含 created_at/updated_at 等其余字段）搬进 UPDATE 的 SET
+                ShopOrder patch = new ShopOrder();
+                patch.setId(order.getId());
+                patch.setStatus(OrderStatusEnum.COMPLETED);
+                shopOrderMapper.updateById(patch);
             }
             OrderShipment shipment = new OrderShipment();
             shipment.setOrderId(order.getId());

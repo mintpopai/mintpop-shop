@@ -51,8 +51,9 @@ class OrderServiceTest {
     /** 纯单测无 MyBatis 容器，需手动注册实体元数据，lambda 条件才能渲染出 SQL 段与参数 */
     @BeforeAll
     static void initTableInfo() {
-        TableInfoHelper.initTableInfo(
-                new MapperBuilderAssistant(new MybatisConfiguration(), ""), ShopOrder.class);
+        MapperBuilderAssistant assistant = new MapperBuilderAssistant(new MybatisConfiguration(), "");
+        TableInfoHelper.initTableInfo(assistant, ShopOrder.class);
+        TableInfoHelper.initTableInfo(assistant, OrderShipment.class);
     }
 
     @Mock
@@ -236,6 +237,13 @@ class OrderServiceTest {
         when(orderShipmentMapper.selectList(any())).thenReturn(List.of(newer, older));
 
         OrderDetailResponse detail = orderService.getMyOrderDetail(11L, "order-1");
+
+        // 锁定查询确实按 id 降序排列：stub 直接返回「已排好序」的列表无法验证服务层真实生成的
+        // 排序意图（orderByDesc 被改成 orderByAsc 或整句删掉，靠 mock 顺序断言的用例照样会绿），
+        // 必须捕获 wrapper 本身、断言其生成的 SQL 片段确实含 ORDER BY ... DESC
+        ArgumentCaptor<LambdaQueryWrapper<OrderShipment>> wrapperCaptor = ArgumentCaptor.forClass(LambdaQueryWrapper.class);
+        verify(orderShipmentMapper).selectList(wrapperCaptor.capture());
+        assertThat(wrapperCaptor.getValue().getSqlSegment()).contains("ORDER BY id DESC");
 
         assertThat(detail.getOrderNo()).isEqualTo(order.getOrderNo());
         assertThat(detail.getLatestShipment().getContent()).isEqualTo("第二次");

@@ -1,6 +1,7 @@
 package com.mintpop.shop.service;
 
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.mintpop.shop.config.AppMailProperties;
 import com.mintpop.shop.entity.OrderShipment;
@@ -322,6 +323,13 @@ class AdminShipmentServiceTest {
         when(shopUserMapper.selectByIds(any())).thenReturn(List.of(operator));
 
         var history = service.listShipments("mintpopshop_20260731120000123456");
+
+        // 锁定查询确实按 id 降序排列：stub 直接返回「已排好序」的列表无法验证服务层真实生成的
+        // 排序意图（orderByDesc 被改成 orderByAsc 或整句删掉，靠 mock 顺序断言的用例照样会绿），
+        // 必须捕获 wrapper 本身、断言其生成的 SQL 片段确实含 ORDER BY ... DESC
+        ArgumentCaptor<LambdaQueryWrapper<OrderShipment>> wrapperCaptor = ArgumentCaptor.forClass(LambdaQueryWrapper.class);
+        verify(orderShipmentMapper).selectList(wrapperCaptor.capture());
+        assertThat(wrapperCaptor.getValue().getSqlSegment()).contains("ORDER BY id DESC");
 
         assertThat(history).hasSize(2);
         assertThat(history.get(0).getContent()).isEqualTo("第二次");

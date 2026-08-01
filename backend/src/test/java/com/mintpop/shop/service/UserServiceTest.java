@@ -139,14 +139,30 @@ class UserServiceTest {
     @Test
     @DisplayName("保存语言偏好：白名单值写库")
     void updatesLocale() {
-        ShopUser user = user(5L, "a@b.com");
-        when(shopUserMapper.selectById(5L)).thenReturn(user);
+        when(shopUserMapper.updateById(any(ShopUser.class))).thenReturn(1);
 
         userService.updateLocale(5L, "en-US");
 
+        // 改为最小实体写回后：不再 selectById 读整行，只 set id + locale 两个字段就发起 updateById，
+        // 断言这一点比原来（断言从整行读出的实体上 locale 被改）更强——它锁住了「不整实体回写」本身
         ArgumentCaptor<ShopUser> captor = ArgumentCaptor.forClass(ShopUser.class);
         verify(shopUserMapper).updateById(captor.capture());
+        assertThat(captor.getValue().getId()).isEqualTo(5L);
         assertThat(captor.getValue().getLocale()).isEqualTo("en-US");
+        assertThat(captor.getValue().getEmail()).isNull();
+        assertThat(captor.getValue().getNickname()).isNull();
+        verify(shopUserMapper, never()).selectById(any());
+    }
+
+    @Test
+    @DisplayName("保存语言偏好：用户不存在（受影响行数为 0）抛 310001，不再依赖 selectById 判存在性")
+    void updateLocaleMissingUserThrows() {
+        when(shopUserMapper.updateById(any(ShopUser.class))).thenReturn(0);
+
+        assertThatThrownBy(() -> userService.updateLocale(99L, "en-US"))
+                .isInstanceOf(BizException.class)
+                .extracting(e -> ((BizException) e).getBizCode())
+                .isEqualTo(BizCodeEnum.USER_NOT_FOUND);
     }
 
     @Test
