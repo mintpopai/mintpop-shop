@@ -15,6 +15,8 @@ const emit = defineEmits<{ close: []; shipped: [] }>()
 const history = ref<AdminShipmentItem[]>([])
 const historyLoading = ref(true)
 const historyError = ref('')
+/** 展开中的历史条目 id：默认只展开最近一条，更早的折叠成一行，免得内容长时要滚很久 */
+const expanded = ref(new Set<number>())
 
 const content = ref('')
 const reason = ref('')
@@ -27,12 +29,24 @@ const isReship = computed(() => history.value.length > 0)
 onMounted(async () => {
   try {
     history.value = await fetchAdminShipments(props.orderNo)
+    // 重发时最该核对的是「上次发了什么」，所以最近一条默认展开
+    if (history.value.length > 0) {
+      expanded.value.add(history.value[0].id)
+    }
   } catch (e) {
     historyError.value = e instanceof Error ? e.message : '发货历史加载失败'
   } finally {
     historyLoading.value = false
   }
 })
+
+function toggle(id: number) {
+  if (expanded.value.has(id)) {
+    expanded.value.delete(id)
+  } else {
+    expanded.value.add(id)
+  }
+}
 
 async function onSubmit() {
   const trimmed = content.value.trim()
@@ -78,24 +92,35 @@ async function onSubmit() {
     </p>
 
     <section class="history">
-      <h4 class="section-title">发货历史</h4>
+      <h4 class="section-title">
+        发货历史<template v-if="history.length > 0">（{{ history.length }} 次）</template>
+      </h4>
       <p v-if="historyLoading" class="admin-hint">加载中……</p>
       <p v-else-if="historyError" class="admin-hint error">{{ historyError }}</p>
       <p v-else-if="history.length === 0" class="admin-hint">还没有发货记录。</p>
       <ul v-else class="history-list">
         <li v-for="item in history" :key="item.id" class="history-item">
-          <div class="history-head">
+          <button
+            type="button"
+            class="history-head"
+            :aria-expanded="expanded.has(item.id)"
+            @click="toggle(item.id)"
+          >
+            <span class="caret" aria-hidden="true" :data-open="expanded.has(item.id)">▸</span>
             <span class="fact muted">{{ formatDateTime(item.shippedAt) }}</span>
             <span class="mail-state" :data-sent="item.emailStatus === 'SENT'">
               {{ item.emailStatus === 'SENT' ? '邮件已发送' : '邮件发送失败' }}
             </span>
+          </button>
+          <div v-if="expanded.has(item.id)" class="history-body">
+            <!-- 两边都是邮箱，光一个箭头看不出谁是谁，标签写死在前面 -->
+            <p class="history-meta">
+              操作人 {{ item.operatorEmail ?? '未知' }} · 收件人 {{ item.emailTo }}
+              <template v-if="item.reason">· 原因：{{ item.reason }}</template>
+            </p>
+            <pre class="history-content">{{ item.content }}</pre>
+            <p v-if="item.emailError" class="history-error">{{ item.emailError }}</p>
           </div>
-          <p class="history-meta">
-            {{ item.operatorEmail ?? '未知操作人' }} → {{ item.emailTo }}
-            <template v-if="item.reason">· 原因：{{ item.reason }}</template>
-          </p>
-          <pre class="history-content">{{ item.content }}</pre>
-          <p v-if="item.emailError" class="history-error">{{ item.emailError }}</p>
         </li>
       </ul>
     </section>
@@ -142,6 +167,7 @@ async function onSubmit() {
   margin-bottom: 20px;
 }
 
+/* 不再自带滚动条：条目折叠后高度可控，滚动统一交给 Modal 的内容区，免去嵌套滚动 */
 .history-list {
   list-style: none;
   padding: 0;
@@ -149,8 +175,6 @@ async function onSubmit() {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-height: 220px;
-  overflow-y: auto;
 }
 
 .history-item {
@@ -162,8 +186,29 @@ async function onSubmit() {
 .history-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* 邮件状态推到最右，时间与折叠箭头留在左侧 */
+.history-head .mail-state {
+  margin-left: auto;
+}
+
+.caret {
+  color: var(--color-ink-secondary);
+  font-size: 11px;
+  transition: transform 0.15s ease;
+}
+
+.caret[data-open='true'] {
+  transform: rotate(90deg);
 }
 
 /* 弹窗经 Teleport 渲染到 body，不在 .admin-table 下，layout.css 里限定祖先的 .muted 命中不到，这里补一份局部定义 */

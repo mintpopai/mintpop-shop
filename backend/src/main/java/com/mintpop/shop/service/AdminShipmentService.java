@@ -1,6 +1,7 @@
 package com.mintpop.shop.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mintpop.shop.config.AppMailProperties;
 import com.mintpop.shop.entity.OrderShipment;
 import com.mintpop.shop.entity.Product;
@@ -44,6 +45,9 @@ public class AdminShipmentService {
 
     /** email_error 列宽 512，入库前截断 */
     private static final int MAX_EMAIL_ERROR_LENGTH = 512;
+
+    /** 发货历史一次最多返回的条数 */
+    private static final int MAX_HISTORY_SIZE = 50;
 
     private final ShopOrderMapper shopOrderMapper;
     private final OrderShipmentMapper orderShipmentMapper;
@@ -94,13 +98,17 @@ public class AdminShipmentService {
                 emailError);
     }
 
-    /** 某订单的全部发货记录，时间倒序，带操作人邮箱 */
+    /** 某订单的发货记录，时间倒序、最多 {@value #MAX_HISTORY_SIZE} 条，带操作人邮箱 */
     public List<AdminShipmentItemResponse> listShipments(String orderNo) {
         ShopOrder order = requireOrder(orderNo);
-        List<OrderShipment> shipments = orderShipmentMapper.selectList(
+        // 一单重发几十次已属异常，但接口不能没有上限：单条 content 最长 2000 字，
+        // 真出现失控重发时全量返回会把响应体和管理端弹窗一起拖垮。只取最近一页、不做 count
+        List<OrderShipment> shipments = orderShipmentMapper.selectPage(
+                Page.of(1, MAX_HISTORY_SIZE, false),
                 new LambdaQueryWrapper<OrderShipment>()
                         .eq(OrderShipment::getOrderId, order.getId())
-                        .orderByDesc(OrderShipment::getId));
+                        .orderByDesc(OrderShipment::getId))
+                .getRecords();
         if (shipments.isEmpty()) {
             return List.of();
         }

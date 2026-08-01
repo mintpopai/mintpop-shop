@@ -3,6 +3,7 @@ package com.mintpop.shop.service;
 import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mintpop.shop.config.AppMailProperties;
 import com.mintpop.shop.entity.OrderShipment;
 import com.mintpop.shop.entity.Product;
@@ -316,7 +317,7 @@ class AdminShipmentServiceTest {
         when(shopOrderMapper.selectOne(any())).thenReturn(order(OrderStatusEnum.COMPLETED));
         OrderShipment first = shipment(1L, "第一次", null, ShipmentEmailStatusEnum.SENT);
         OrderShipment second = shipment(2L, "第二次", "发错了", ShipmentEmailStatusEnum.FAILED);
-        when(orderShipmentMapper.selectList(any())).thenReturn(List.of(second, first));
+        when(orderShipmentMapper.selectPage(any(), any())).thenReturn(page(List.of(second, first)));
         ShopUser operator = buyer("zh-CN");
         operator.setId(99L);
         operator.setEmail("admin@mintpop.ai");
@@ -328,7 +329,7 @@ class AdminShipmentServiceTest {
         // 排序意图（orderByDesc 被改成 orderByAsc 或整句删掉，靠 mock 顺序断言的用例照样会绿），
         // 必须捕获 wrapper 本身、断言其生成的 SQL 片段确实含 ORDER BY ... DESC
         ArgumentCaptor<LambdaQueryWrapper<OrderShipment>> wrapperCaptor = ArgumentCaptor.forClass(LambdaQueryWrapper.class);
-        verify(orderShipmentMapper).selectList(wrapperCaptor.capture());
+        verify(orderShipmentMapper).selectPage(any(), wrapperCaptor.capture());
         assertThat(wrapperCaptor.getValue().getSqlSegment()).contains("ORDER BY id DESC");
 
         assertThat(history).hasSize(2);
@@ -337,6 +338,27 @@ class AdminShipmentServiceTest {
         assertThat(history.get(0).getEmailStatus()).isEqualTo("FAILED");
         assertThat(history.get(0).getOperatorEmail()).isEqualTo("admin@mintpop.ai");
         assertThat(history.get(1).getContent()).isEqualTo("第一次");
+    }
+
+    @Test
+    @DisplayName("发货历史只取最近一页：50 条封顶且不做 count，不全量返回")
+    void capsShipmentHistory() {
+        when(shopOrderMapper.selectOne(any())).thenReturn(order(OrderStatusEnum.COMPLETED));
+        when(orderShipmentMapper.selectPage(any(), any())).thenReturn(page(List.of()));
+
+        service.listShipments("mintpopshop_20260731120000123456");
+
+        ArgumentCaptor<Page<OrderShipment>> pageCaptor = ArgumentCaptor.forClass(Page.class);
+        verify(orderShipmentMapper).selectPage(pageCaptor.capture(), any());
+        assertThat(pageCaptor.getValue().getSize()).isEqualTo(50L);
+        // 弹窗只展示列表、不显示总数，多打一条 count SQL 是白费
+        assertThat(pageCaptor.getValue().searchCount()).isFalse();
+    }
+
+    private Page<OrderShipment> page(List<OrderShipment> records) {
+        Page<OrderShipment> page = new Page<>(1, 50, false);
+        page.setRecords(records);
+        return page;
     }
 
     private OrderShipment shipment(long id, String content, String reason, ShipmentEmailStatusEnum status) {

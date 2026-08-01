@@ -94,8 +94,9 @@ describe('发货历史', () => {
 
     const item = $('.history-item')?.textContent ?? ''
     expect(item).toContain('2026/08/01 13:45')
-    expect(item).toContain('admin@example.com')
-    expect(item).toContain('buyer@example.com')
+    // 操作人与收件人都是邮箱，各自带标签，别让人对着一个箭头猜哪边是哪边
+    expect(item).toContain('操作人 admin@example.com')
+    expect(item).toContain('收件人 buyer@example.com')
     expect(item).toContain('CDKEY-ABCD')
   })
 
@@ -106,16 +107,54 @@ describe('发货历史', () => {
     expect($('.history-error')?.textContent).toContain('SMTP 超时')
   })
 
-  it('操作人为空时显示「未知操作人」，不渲染 null', async () => {
+  it('操作人为空时显示「未知」，不渲染 null', async () => {
     await render([shipment({ operatorEmail: null })])
 
-    expect($('.history-meta')?.textContent).toContain('未知操作人')
+    expect($('.history-meta')?.textContent).toContain('操作人 未知')
   })
 
   it('重新发货的原因展示在历史条目里', async () => {
     await render([shipment({ reason: '上次发错卡密' })])
 
     expect($('.history-meta')?.textContent).toContain('上次发错卡密')
+  })
+
+  it('标题带上发货次数，不必滚到底去数', async () => {
+    await render([shipment({ id: 3 }), shipment({ id: 2 }), shipment({ id: 1 })])
+
+    expect($('.history .section-title')?.textContent).toContain('发货历史（3 次）')
+  })
+
+  it('多条历史时只默认展开最近一条，更早的折叠成一行', async () => {
+    await render([
+      shipment({ id: 2, content: '第二次的卡密' }),
+      shipment({ id: 1, content: '第一次的卡密' }),
+    ])
+
+    const items = document.querySelectorAll('.history-item')
+    expect(items[0].textContent).toContain('第二次的卡密')
+    // 折叠的条目只留时间与邮件状态那一行，内容不进 DOM
+    expect(items[1].textContent).not.toContain('第一次的卡密')
+    expect(items[1].querySelector('.history-body')).toBeNull()
+    expect(items[1].querySelector('.history-head')?.getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('点折叠条目的标题行可展开看内容，再点收起', async () => {
+    await render([
+      shipment({ id: 2, content: '第二次的卡密' }),
+      shipment({ id: 1, content: '第一次的卡密' }),
+    ])
+    const older = document.querySelectorAll('.history-item')[1]
+    const head = older.querySelector('.history-head') as HTMLElement
+
+    head.click()
+    await flushPromises()
+    expect(older.textContent).toContain('第一次的卡密')
+    expect(head.getAttribute('aria-expanded')).toBe('true')
+
+    head.click()
+    await flushPromises()
+    expect(older.textContent).not.toContain('第一次的卡密')
   })
 
   it('历史加载失败时给出提示，但仍可继续发货', async () => {
