@@ -5,7 +5,8 @@
     "myOrders": "我的订单",
     "logout": "退出登录",
     "loginFailed": "登录未完成，请重试",
-    "shop": "商店"
+    "shop": "商店",
+    "settings": "账号设置"
   },
   "common": {
     "loading": "加载中……",
@@ -93,5 +94,19 @@
     "network": "网络异常，请稍后重试",
     "requestFailed": "请求失败，请稍后重试",
     "unauthorized": "未登录或会话已过期"
+  },
+  "settings": {
+    "title": "账号设置",
+    "email": "邮箱",
+    "emailHint": "由账号中心维护，此处不可修改",
+    "nickname": "昵称",
+    "nicknamePlaceholder": "请输入昵称",
+    "nicknameRequired": "昵称不能为空",
+    "nicknameTooLong": "昵称最多 {max} 字符",
+    "language": "语言",
+    "languageHint": "保存后整站按所选语言显示，换设备登录同样生效",
+    "save": "保存",
+    "saving": "保存中……",
+    "saved": "已保存"
   }
 }

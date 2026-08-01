@@ -18,7 +18,9 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -72,5 +74,41 @@ class MeControllerTest {
                 .andExpect(jsonPath("$.code").value(0));
 
         verify(userService).updateLocale(42L, "en-US");
+    }
+
+    @Test
+    @DisplayName("保存个人档案：昵称与语言一次提交")
+    void updatesProfile() throws Exception {
+        mockMvc.perform(put("/api/me")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nickname\":\"小明\",\"locale\":\"en-US\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+
+        verify(userService).updateProfile(42L, "小明", "en-US");
+    }
+
+    @Test
+    @DisplayName("保存个人档案：昵称为空被请求校验拦下，不进 service")
+    void rejectsBlankNickname() throws Exception {
+        mockMvc.perform(put("/api/me")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nickname\":\"\",\"locale\":\"zh-CN\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(110002));
+
+        verify(userService, never()).updateProfile(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("保存个人档案：昵称超过 30 字符被请求校验拦下，不进 service")
+    void rejectsTooLongNickname() throws Exception {
+        mockMvc.perform(put("/api/me")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nickname\":\"" + "名".repeat(31) + "\",\"locale\":\"zh-CN\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(110002));
+
+        verify(userService, never()).updateProfile(any(), any(), any());
     }
 }

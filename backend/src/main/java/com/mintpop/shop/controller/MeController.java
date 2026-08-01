@@ -1,6 +1,7 @@
 package com.mintpop.shop.controller;
 
 import com.mintpop.shop.request.UpdateLocaleRequest;
+import com.mintpop.shop.request.UpdateProfileRequest;
 import com.mintpop.shop.response.ApiResponse;
 import com.mintpop.shop.response.MeResponse;
 import com.mintpop.shop.security.CurrentUserId;
@@ -29,7 +30,15 @@ public class MeController {
         return ApiResponse.success(userService.getMe(userId));
     }
 
-    /** 保存语言偏好（站内切换语言时调用，跨设备保持一致） */
+    /** 保存个人档案（设置页「保存」：昵称 + 语言偏好一次提交） */
+    @PutMapping("/me")
+    public ApiResponse<Void> updateProfile(@CurrentUserId Long userId,
+                                           @Valid @RequestBody UpdateProfileRequest request) {
+        userService.updateProfile(userId, request.getNickname(), request.getLocale());
+        return ApiResponse.success();
+    }
+
+    /** 保存语言偏好（游客登录后补写偏好等场景，不带昵称） */
     @PutMapping("/me/locale")
     public ApiResponse<Void> updateLocale(@CurrentUserId Long userId,
                                           @Valid @RequestBody UpdateLocaleRequest request) {

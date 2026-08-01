@@ -157,7 +157,15 @@ export function fetchMe(): Promise<Me> {
   return request<Me>('/api/me')
 }
 
-/** 保存语言偏好（登录用户切换语言时调用，跨设备保持一致） */
+/** 保存个人档案（设置页「保存」：昵称与语言一次提交，避免半截生效） */
+export function updateMyProfile(nickname: string, nextLocale: AppLocale): Promise<null> {
+  return request<null>('/api/me', {
+    method: 'PUT',
+    body: JSON.stringify({ nickname, locale: nextLocale }),
+  })
+}
+
+/** 保存语言偏好（游客登录后把本地偏好补写到服务端，不带昵称） */
 export function updateMyLocale(next: AppLocale): Promise<null> {
   return request<null>('/api/me/locale', {
     method: 'PUT',

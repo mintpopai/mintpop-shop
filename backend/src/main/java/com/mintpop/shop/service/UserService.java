@@ -27,6 +27,9 @@ public class UserService {
     /** 支持的语言偏好（BCP47），与前端 AppLocale 一一对应 */
     public static final Set<String> SUPPORTED_LOCALES = Set.of("zh-CN", "en-US");
 
+    /** 昵称长度上限（去首尾空格后计），远小于列宽 VARCHAR(128)，纯产品约束 */
+    public static final int NICKNAME_MAX_LENGTH = 30;
+
     private final ShopUserMapper shopUserMapper;
     private final UserIdentityMapper userIdentityMapper;
 
@@ -88,6 +91,26 @@ public class UserService {
         }
         ShopUser patch = new ShopUser();
         patch.setId(userId);
+        patch.setLocale(locale);
+        if (shopUserMapper.updateById(patch) == 0) {
+            throw new BizException(BizCodeEnum.USER_NOT_FOUND);
+        }
+    }
+
+    /**
+     * 保存个人档案（设置页「保存」）：昵称去首尾空格后与语言一次写回，避免两个接口出现「昵称成了、语言没成」的半截状态。
+     * 请求层已做非空/长度校验，这里按同一规则再判一次（服务不假设只有 controller 会调），
+     * 且仍走最小实体写回（只 set id + nickname + locale），理由同 updateLocale。
+     */
+    public void updateProfile(Long userId, String nickname, String locale) {
+        String trimmed = nickname == null ? "" : nickname.trim();
+        if (trimmed.isEmpty() || trimmed.length() > NICKNAME_MAX_LENGTH
+                || locale == null || !SUPPORTED_LOCALES.contains(locale)) {
+            throw new BizException(BizCodeEnum.PARAM_INVALID);
+        }
+        ShopUser patch = new ShopUser();
+        patch.setId(userId);
+        patch.setNickname(trimmed);
         patch.setLocale(locale);
         if (shopUserMapper.updateById(patch) == 0) {
             throw new BizException(BizCodeEnum.USER_NOT_FOUND);

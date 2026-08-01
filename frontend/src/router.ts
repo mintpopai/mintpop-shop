@@ -4,6 +4,7 @@ import OrdersView from './views/OrdersView.vue'
 import OrderDetailView from './views/OrderDetailView.vue'
 import PayView from './views/PayView.vue'
 import PaymentResultView from './views/PaymentResultView.vue'
+import SettingsView from './views/SettingsView.vue'
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -13,5 +14,6 @@ export const router = createRouter({
     { path: '/orders/:orderNo', component: OrderDetailView },
     { path: '/pay/:orderNo', component: PayView },
     { path: '/payment/result', component: PaymentResultView },
+    { path: '/settings', component: SettingsView },
   ],
 })

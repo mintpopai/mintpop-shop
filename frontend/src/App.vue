@@ -1,23 +1,17 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { updateMyLocale } from './api'
 import { currentUser, gotoLogin, gotoLogout } from './auth'
 import { showToast, toast } from './toast'
-import { locale, setLocale, t, type AppLocale } from './i18n'
+import { locale, setLocale, t } from './i18n'
 
 const menuOpen = ref(false)
 
 /** 联系方式页在官网（mintpop.ai），按当前语言指向对应路径 */
 const contactUrl = locale === 'zh-CN' ? 'https://mintpop.ai/zh/contact/' : 'https://mintpop.ai/contact/'
 
-/** 中英互切：登录用户先把偏好写到服务端（失败不挡切换），再写本地偏好并整页刷新 */
-async function toggleLocale() {
-  const next: AppLocale = locale === 'zh-CN' ? 'en-US' : 'zh-CN'
-  // 登录用户把偏好写到服务端；失败不挡切换（本地偏好照样生效）
-  if (currentUser.value) {
-    await updateMyLocale(next).catch(() => undefined)
-  }
-  setLocale(next)
+/** 游客的中英互切（切了立即刷新生效）；登录用户的语言偏好统一在设置页里改 */
+function toggleLocale() {
+  setLocale(locale === 'zh-CN' ? 'en-US' : 'zh-CN')
 }
 
 onMounted(() => {
@@ -55,7 +49,8 @@ onMounted(() => {
       <a class="contact-link" :href="contactUrl" target="_blank" rel="noopener">
         {{ $t('app.contact') }}
       </a>
-      <button type="button" class="lang-btn" @click="toggleLocale">
+      <!-- 语言按钮只给游客：登录用户改语言走设置页（点保存才生效） -->
+      <button v-if="!currentUser" type="button" class="lang-btn" @click="toggleLocale">
         {{ locale === 'zh-CN' ? 'EN' : '中文' }}
       </button>
       <button v-if="!currentUser" type="button" class="login-btn" @click="gotoLogin">
@@ -75,6 +70,7 @@ onMounted(() => {
           <span class="nickname">{{ currentUser.nickname ?? currentUser.email }}</span>
         </button>
         <div v-if="menuOpen" class="menu" @click="menuOpen = false">
+          <RouterLink to="/settings" class="menu-item">{{ $t('app.settings') }}</RouterLink>
           <button type="button" class="menu-item" @click="gotoLogout">{{ $t('app.logout') }}</button>
         </div>
       </div>

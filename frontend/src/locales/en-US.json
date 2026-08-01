@@ -5,7 +5,8 @@
     "myOrders": "My Orders",
     "logout": "Sign out",
     "loginFailed": "Sign-in was not completed, please try again",
-    "shop": "Shop"
+    "shop": "Shop",
+    "settings": "Account settings"
   },
   "common": {
     "loading": "Loading…",
@@ -93,5 +94,19 @@
     "network": "Network error, please try again later",
     "requestFailed": "Request failed, please try again later",
     "unauthorized": "Not signed in or session expired"
+  },
+  "settings": {
+    "title": "Account settings",
+    "email": "Email",
+    "emailHint": "Managed by the account center and not editable here",
+    "nickname": "Nickname",
+    "nicknamePlaceholder": "Enter a nickname",
+    "nicknameRequired": "Nickname is required",
+    "nicknameTooLong": "Nickname must be at most {max} characters",
+    "language": "Language",
+    "languageHint": "Applies to the whole site after saving, and follows you across devices",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved"
   }
 }

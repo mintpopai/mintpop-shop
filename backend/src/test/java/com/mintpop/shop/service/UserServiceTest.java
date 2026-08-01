@@ -177,6 +177,68 @@ class UserServiceTest {
     }
 
     @Test
+    @DisplayName("保存个人档案：昵称去首尾空格后与语言一同最小实体写回")
+    void updatesProfile() {
+        when(shopUserMapper.updateById(any(ShopUser.class))).thenReturn(1);
+
+        userService.updateProfile(5L, "  小明  ", "en-US");
+
+        ArgumentCaptor<ShopUser> captor = ArgumentCaptor.forClass(ShopUser.class);
+        verify(shopUserMapper).updateById(captor.capture());
+        assertThat(captor.getValue().getId()).isEqualTo(5L);
+        assertThat(captor.getValue().getNickname()).isEqualTo("小明");
+        assertThat(captor.getValue().getLocale()).isEqualTo("en-US");
+        // 与 updateLocale 同理：只带要改的列，避免整实体写回把 role/email 覆盖回旧值
+        assertThat(captor.getValue().getEmail()).isNull();
+        assertThat(captor.getValue().getRole()).isNull();
+        verify(shopUserMapper, never()).selectById(any());
+    }
+
+    @Test
+    @DisplayName("保存个人档案：昵称只有空白字符按参数校验失败，不写库")
+    void rejectsBlankNickname() {
+        assertThatThrownBy(() -> userService.updateProfile(5L, "   ", "zh-CN"))
+                .isInstanceOf(BizException.class)
+                .extracting(e -> ((BizException) e).getBizCode())
+                .isEqualTo(BizCodeEnum.PARAM_INVALID);
+
+        verify(shopUserMapper, never()).updateById(any(ShopUser.class));
+    }
+
+    @Test
+    @DisplayName("保存个人档案：昵称超过 30 字符按参数校验失败，不写库")
+    void rejectsTooLongNickname() {
+        assertThatThrownBy(() -> userService.updateProfile(5L, "名".repeat(31), "zh-CN"))
+                .isInstanceOf(BizException.class)
+                .extracting(e -> ((BizException) e).getBizCode())
+                .isEqualTo(BizCodeEnum.PARAM_INVALID);
+
+        verify(shopUserMapper, never()).updateById(any(ShopUser.class));
+    }
+
+    @Test
+    @DisplayName("保存个人档案：语言非白名单按参数校验失败，不写库")
+    void rejectsUnknownLocaleOnProfile() {
+        assertThatThrownBy(() -> userService.updateProfile(5L, "小明", "ja-JP"))
+                .isInstanceOf(BizException.class)
+                .extracting(e -> ((BizException) e).getBizCode())
+                .isEqualTo(BizCodeEnum.PARAM_INVALID);
+
+        verify(shopUserMapper, never()).updateById(any(ShopUser.class));
+    }
+
+    @Test
+    @DisplayName("保存个人档案：用户不存在（受影响行数为 0）抛 310001")
+    void updateProfileMissingUserThrows() {
+        when(shopUserMapper.updateById(any(ShopUser.class))).thenReturn(0);
+
+        assertThatThrownBy(() -> userService.updateProfile(99L, "小明", "zh-CN"))
+                .isInstanceOf(BizException.class)
+                .extracting(e -> ((BizException) e).getBizCode())
+                .isEqualTo(BizCodeEnum.USER_NOT_FOUND);
+    }
+
+    @Test
     @DisplayName("首次登录建号：按浏览器语言初始化偏好")
     void initialisesLocaleOnRegister() {
         when(userIdentityMapper.selectOne(any())).thenReturn(null);
