@@ -16,5 +16,7 @@ jobs:
           install_args: node pnpm
       - name: 安装前端依赖（按 lockfile 精确安装）
         run: mise run install-frontend --frozen
+      - name: 运行前端单元测试
+        run: mise run test-frontend
       - name: 类型检查并构建前端
         run: mise run build-frontend

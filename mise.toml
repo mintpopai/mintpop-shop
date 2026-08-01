@@ -94,6 +94,16 @@ description = "运行 后端单元测试"
 dir = "backend"
 run = "mvn test"
 
+[tasks.test-frontend]
+description = "运行 前端单元测试（Vitest，跑完即退出）"
+dir = "frontend"
+run = "pnpm vitest run"
+
+[tasks.test-admin]
+description = "运行 管理端单元测试（Vitest，跑完即退出）"
+dir = "admin"
+run = "pnpm vitest run"
+
 # —— 发版 ——
 # 共用逻辑收口在隐藏任务 release，release-backend / release-frontend 只负责传组件名，
 # 两个组件的发版流程永远是同一份定义、不漂移

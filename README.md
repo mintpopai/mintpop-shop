@@ -57,7 +57,7 @@ mise run run-admin        # 终端 3：启动管理端（5174，/api 代理到 8
 | 命令 | 说明 |
 |---|---|
 | `mise run run-backend` / `run-frontend` / `run-admin` | 启动后端 / 商城前端 / 管理端（管理端 5174，见「管理端」章节） |
-| `mise run test-backend` | 后端单元测试 |
+| `mise run test-backend` / `test-frontend` / `test-admin` | 后端单元测试（JUnit）/ 商城前端、管理端单元测试（Vitest + happy-dom） |
 | `mise run build-backend` / `build-frontend` / `build-admin` | 构建后端 jar / 商城前端 / 管理端产物 |
 | `mise run image-backend` / `image-frontend` / `image-admin` | 本地构建后端 / 商城前端 / 管理端 Docker 镜像 |
 | `mise run release-backend` / `release-frontend` / `release-admin` | 发版（校验→打 tag→推送，tag 触发发布 workflow） |

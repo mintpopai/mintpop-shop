@@ -1,4 +1,6 @@
-import { defineConfig } from 'vite'
+// defineConfig 取自 vitest/config（vite 版本的超集，多带 test 字段类型）：
+// 测试与开发构建共用同一份插件配置，不另起 vitest.config.ts 造成 vue 插件重复定义
+import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 
 // 开发期将后端路径代理到本地 8080，避免跨域：
@@ -15,5 +17,15 @@ export default defineConfig({
       '/auth': backendProxy,
       '/oauth2': backendProxy,
     },
+  },
+  test: {
+    // 被测代码大量触碰 localStorage / navigator / location / document，一律跑在 DOM 环境
+    environment: 'happy-dom',
+    // 用例源码与被测模块同目录，后缀 .test.ts 区分
+    include: ['src/**/*.test.ts'],
+    // 固定时区：datetime.ts 在模块加载时就建好 Intl 格式化器，不钉 TZ 则断言随机器时区漂移
+    env: { TZ: 'UTC' },
+    // 每个用例前复位 mock 调用记录，避免跨用例互相看见对方的调用
+    clearMocks: true,
   },
 })
