@@ -296,6 +296,54 @@ body {
   width: 100%;
 }
 
+/* 操作列钉在右侧：列多的宽表格横向滚动时，操作按钮不会被滚出视野
+   （滚动容器是 .admin-card 自身）。给需要的表加 .sticky-actions 修饰类。
+   富余宽度改给倒数第二列——否则表格没占满卡片时操作列被撑宽，
+   那条分隔线会孤零零落在表格中间 */
+.admin-table.sticky-actions tr > *:last-child {
+  position: sticky;
+  right: 0;
+  width: auto;
+  /* 左侧留出比常规单元格更宽的檐口：底下滚过的数据被硬切在边界上，
+     按钮再紧挨着切口就会跟它读成同一格 */
+  padding-left: 28px;
+  /* 这一列是结构性的浮层，不是一种状态，所以不占色相：底色与表格同白。
+     色相在这套后台里只留给语义（状态点、主操作），给一整列铺品牌绿会跟
+     隔壁状态色点互相打架。分层改由两件中性的东西表达：一条与表格横线同款
+     的发丝线，加下面伪元素画的一道投影 */
+  background: var(--color-bg);
+  /* ⚠️ 这条线必须用 border 画，不能用 box-shadow：本表是 border-collapse:
+     collapse，Chrome / Safari 在合并边框的表格里直接忽略单元格上的
+     box-shadow，写了等于没写（边界上什么都不显示，两列就糊到一起） */
+  border-left: 1px solid var(--color-border);
+}
+
+/* 「数据从这一层底下穿过去」这件事得画出来，否则被硬切的时间戳看着就像
+   跟发货按钮同处一格。同样因为上面那条 box-shadow 限制，投影改用伪元素
+   （sticky 单元格本身是定位元素，可作包含块，也保证这道影子盖在邻列文字之上）。
+   宽度 12px < 单元格 20px 的横向内边距：没内容可藏时它只落在留白上，
+   不会给完整可见的时间戳蒙上一层灰 */
+.admin-table.sticky-actions tr > *:last-child::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 100%;
+  width: 12px;
+  background: linear-gradient(to left, rgba(11, 11, 12, 0.1), rgba(11, 11, 12, 0));
+  pointer-events: none;
+}
+
+.admin-table.sticky-actions tr > *:nth-last-child(2) {
+  width: 100%;
+}
+
+/* sticky 单元格有自己的不透明底色，盖住了行 hover 的底色，得原样补一份，
+   否则悬停时整行高亮唯独它不亮 */
+.admin-table.sticky-actions tbody tr:hover > *:last-child {
+  background: var(--color-bg-cloud);
+}
+
 /* 金额列右对齐，靠等宽数字自然成列。
    选择器要盖过 .admin-table th 的 text-align: left，故不能只写 .col-amount */
 .admin-table .col-amount {

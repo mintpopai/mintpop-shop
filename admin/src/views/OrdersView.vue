@@ -133,7 +133,7 @@ function shipAction(status: string): '发货' | '重新发货' | null {
       <p v-if="records.length === 0" class="admin-hint">
         {{ keyword || activeStatus !== 'ALL' ? '没有符合条件的订单，换个状态或搜索词试试。' : '还没有订单。' }}
       </p>
-      <table v-else class="admin-table">
+      <table v-else class="admin-table sticky-actions">
         <thead>
           <tr>
             <th>订单号</th>
