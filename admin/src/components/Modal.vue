@@ -52,7 +52,8 @@ function onKeydown(event: KeyboardEvent) {
 
 <template>
   <Teleport to="body">
-    <div class="overlay" @click.self="emit('close')">
+    <!-- 遮罩不响应点击：管理端弹窗里多是填了一半的表单，误点空白处关掉会丢数据，只留 Esc 与关闭按钮 -->
+    <div class="overlay">
       <!-- tabindex="-1"：弹窗里万一没有可聚焦元素时，焦点也有地方落，键盘事件才收得到 -->
       <div
         ref="dialog"

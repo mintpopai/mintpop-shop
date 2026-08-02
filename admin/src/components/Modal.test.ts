@@ -61,17 +61,17 @@ describe('打开与关闭', () => {
     expect(w.emitted('close')).toHaveLength(1)
   })
 
-  it('点击遮罩层关闭', async () => {
+  it('点击遮罩层不关闭，避免误点丢掉填了一半的表单', () => {
     const w = render()
 
-    await (document.querySelector('.overlay') as HTMLElement).dispatchEvent(
+    ;(document.querySelector('.overlay') as HTMLElement).dispatchEvent(
       new MouseEvent('click', { bubbles: true }),
     )
 
-    expect(w.emitted('close')).toHaveLength(1)
+    expect(w.emitted('close')).toBeUndefined()
   })
 
-  it('点击弹窗内部不关闭（click.self 只认遮罩自己）', () => {
+  it('点击弹窗内部不关闭', () => {
     const w = render()
 
     dialog().dispatchEvent(new MouseEvent('click', { bubbles: true }))
