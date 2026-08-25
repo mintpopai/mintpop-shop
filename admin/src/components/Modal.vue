@@ -3,7 +3,16 @@
 // 缺这三件事时键盘用户会在被遮住的页面里继续 Tab，等于弹窗根本没拦住他。
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 
-defineProps<{ title: string }>()
+withDefaults(
+  defineProps<{
+    title: string
+    /** md=常规表单弹窗；lg=需要工作区的弹窗（商品编辑这类，右侧还挂一条参数栏） */
+    size?: 'md' | 'lg'
+    /** 内容区不留内边距：内部要自己分栏、且分栏底色要铺到弹窗边缘时用 */
+    flush?: boolean
+  }>(),
+  { size: 'md', flush: false },
+)
 const emit = defineEmits<{ close: [] }>()
 
 const dialog = ref<HTMLElement | null>(null)
@@ -58,6 +67,7 @@ function onKeydown(event: KeyboardEvent) {
       <div
         ref="dialog"
         class="dialog"
+        :class="[`size-${size}`, { flush }]"
         role="dialog"
         aria-modal="true"
         :aria-label="title"
@@ -70,7 +80,7 @@ function onKeydown(event: KeyboardEvent) {
             ×
           </button>
         </header>
-        <div class="content">
+        <div class="content" :class="{ flush }">
           <slot />
         </div>
         <footer class="foot">
@@ -95,7 +105,6 @@ function onKeydown(event: KeyboardEvent) {
 
 .dialog {
   width: 100%;
-  max-width: 560px;
   max-height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
@@ -104,10 +113,23 @@ function onKeydown(event: KeyboardEvent) {
   box-shadow: 0 18px 56px rgba(15, 26, 22, 0.28);
 }
 
+.dialog.size-md {
+  max-width: 560px;
+}
+
+/* 工作区型弹窗：宽度给到两栏放得下，高度直接占满可用空间——
+   富文本编辑区要「有多少给多少」，高度随内容长短跳来跳去反而更难用 */
+.dialog.size-lg {
+  max-width: 1080px;
+  height: calc(100vh - 48px);
+  max-height: 860px;
+}
+
 .head {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   padding: 16px 20px;
   border-bottom: 1px solid var(--color-border);
 }
@@ -119,15 +141,23 @@ function onKeydown(event: KeyboardEvent) {
 }
 
 .close {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: none;
+  border-radius: var(--radius-button);
   background: none;
-  font-size: 22px;
+  font-size: 20px;
   line-height: 1;
   color: var(--color-ink-secondary);
   cursor: pointer;
 }
 
 .close:hover {
+  background: var(--color-bg-cloud);
   color: var(--color-ink);
 }
 
@@ -136,11 +166,34 @@ function onKeydown(event: KeyboardEvent) {
   overflow-y: auto;
 }
 
+/* 分栏型内容自己管内边距与滚动：外层留内边距会让栏底色浮在中间、够不到弹窗边 */
+.content.flush {
+  padding: 0;
+  overflow: hidden;
+  min-height: 0;
+  flex: 1;
+  display: flex;
+}
+
 .foot {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: 12px;
   padding: 16px 20px;
   border-top: 1px solid var(--color-border);
+}
+
+@media (max-width: 640px) {
+  .overlay {
+    padding: 0;
+  }
+
+  .dialog,
+  .dialog.size-lg {
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+  }
 }
 </style>

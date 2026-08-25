@@ -99,6 +99,27 @@ async function type(selector: string, value: string) {
   await flushPromises()
 }
 
+/** 语言开关按钮在 Teleport 出去的弹窗里，按可见文字点它 */
+async function switchLang(label: string) {
+  const tab = Array.from(document.querySelectorAll<HTMLElement>('.lang-tab')).find(
+    (b) => b.textContent?.trim() === label,
+  )
+  if (!tab) {
+    throw new Error(`没有「${label}」语言页签`)
+  }
+  tab.click()
+  await flushPromises()
+}
+
+/** 某个字段所在的语言面板（v-show 把 display 写在面板上，不写在字段上） */
+function panelOf(selector: string): HTMLElement {
+  const panel = $(selector)?.closest('.lang-panel')
+  if (!panel) {
+    throw new Error(`${selector} 不在任何语言面板里`)
+  }
+  return panel as HTMLElement
+}
+
 /** 弹窗页脚最后一个按钮是「保存」 */
 async function save() {
   const buttons = Array.from(document.querySelectorAll<HTMLElement>('.foot button'))
@@ -269,7 +290,7 @@ describe('新增商品', () => {
 
     await save()
 
-    expect(toast.value).toEqual({ type: 'error', text: '请完整填写必填项' })
+    expect(toast.value).toEqual({ type: 'error', text: '请填写商品的中文名称' })
     expect(createMock).not.toHaveBeenCalled()
   })
 
@@ -460,7 +481,7 @@ describe('商品详情富文本', () => {
     expect(editorOf(w, 'p-detail-zh').props('modelValue')).toBe('')
   })
 
-  it('中英详情用两个页签切换，默认停在中文', async () => {
+  it('中英文案用一个语言开关整体切换，默认停在中文', async () => {
     const w = await render()
     await openCreate()
 
@@ -468,20 +489,43 @@ describe('商品详情富文本', () => {
     expect(editorOf(w, 'p-detail-en').isVisible()).toBe(false)
   })
 
-  it('切到英文页签后显示英文编辑器，中文的内容留在原地不丢', async () => {
+  it('切到英文后显示英文编辑器，中文的内容留在原地不丢', async () => {
     const w = await render()
     await openCreate()
     await typeDetail(w, 'p-detail-zh', '<p>中文草稿</p>')
 
-    // 弹窗被 Teleport 到 body，页签按钮得从 document 上取
-    const enTab = Array.from(document.querySelectorAll<HTMLElement>('.detail-tab')).find((b) =>
-      b.textContent?.includes('英文'),
-    )!
-    enTab.click()
-    await flushPromises()
+    await switchLang('English')
 
     expect(editorOf(w, 'p-detail-en').isVisible()).toBe(true)
     expect(editorOf(w, 'p-detail-zh').isVisible()).toBe(false)
     expect(editorOf(w, 'p-detail-zh').props('modelValue')).toBe('<p>中文草稿</p>')
+  })
+})
+
+describe('语言开关', () => {
+  it('名称、描述、角标随语言一起切换，不再左右并排各占半栏', async () => {
+    await render()
+    await openCreate()
+
+    expect(($('#p-name-zh') as HTMLElement).offsetParent).not.toBeNull()
+
+    await switchLang('English')
+
+    // v-show 切换：中文那套字段仍在 DOM 里（草稿不丢），只是不显示
+    expect($('#p-name-zh')).not.toBeNull()
+    expect(panelOf('#p-name-zh').style.display).toBe('none')
+    expect(panelOf('#p-name-en').style.display).toBe('')
+  })
+
+  it('中文名为空时报错并把中文面板翻回来，别让人对着英文面板找那个框', async () => {
+    await render()
+    await openCreate()
+    await type('#p-price', '9.99')
+    await switchLang('English')
+
+    await save()
+
+    expect(toast.value).toEqual({ type: 'error', text: '请填写商品的中文名称' })
+    expect(panelOf('#p-name-zh').style.display).toBe('')
   })
 })
