@@ -76,6 +76,24 @@ class AdminProductServiceTest {
     }
 
     @Test
+    @DisplayName("编辑：清空英文名落成空串而非 null，因为 name_en 是 NOT NULL DEFAULT ''")
+    void updateBlankNameEnBecomesEmptyString() {
+        Product existing = new Product();
+        existing.setId(7L);
+        existing.setNameEn("Mint Cat");
+        when(productMapper.selectById(7L)).thenReturn(existing);
+        when(productGroupMapper.selectById(1L)).thenReturn(new ProductGroup());
+        AdminProductUpsertRequest request = request(1L);
+        request.setNameEn("  ");
+
+        adminProductService.updateProduct(7L, request);
+
+        ArgumentCaptor<Product> captor = ArgumentCaptor.forClass(Product.class);
+        verify(productMapper).updateById(captor.capture());
+        assertThat(captor.getValue().getNameEn()).isEmpty();
+    }
+
+    @Test
     @DisplayName("编辑：商品不存在抛 210002")
     void updateMissingProductRejected() {
         when(productMapper.selectById(9L)).thenReturn(null);

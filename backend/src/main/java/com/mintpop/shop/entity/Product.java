@@ -11,6 +11,10 @@ import java.time.LocalDateTime;
 
 /**
  * 商品实体（表 product）。
+ *
+ * <p>DDL 可空的列一律标 updateStrategy=ALWAYS：MyBatis-Plus 默认策略 NOT_NULL 会把值为 null 的属性
+ * 整个排除出 UPDATE 的 SET 子句，导致管理端「把字段清空再保存」被静默忽略、库里仍是原值。
+ * 标 ALWAYS 才能把 null 真正写回去。NOT NULL 的列（含 name_en 这种 DEFAULT '' 的）值永不为 null，无需标注。
  */
 @Data
 @TableName("product")
@@ -26,22 +30,29 @@ public class Product {
     /** 商品名（英文），空串回退中文 */
     private String nameEn;
     /** 商品描述（中文） */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String descriptionZh;
     /** 商品描述（英文），空回退中文 */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String descriptionEn;
     /** 商品详情富文本HTML（中文），空=详情页回退短描述 */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String detailZh;
     /** 商品详情富文本HTML（英文），空回退中文 */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String detailEn;
     /** 角标（中文），空=不显示 */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String badgeZh;
     /** 角标（英文），空串回退中文 */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String badgeEn;
     /** 卡片主题色枚举：MINT/VIOLET/SKY/AMBER/ROSE */
     private String accent;
     /** 价格，单位美分 */
     private Long priceCents;
     /** 商品图URL，可空 */
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private String imageUrl;
     /** 是否上架 */
     private Boolean onSale;

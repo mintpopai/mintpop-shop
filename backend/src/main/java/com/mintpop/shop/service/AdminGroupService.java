@@ -78,8 +78,9 @@ public class AdminGroupService {
 
     private void apply(ProductGroup group, AdminGroupUpsertRequest request) {
         group.setNameZh(request.getNameZh().trim());
+        // name_en 是 NOT NULL DEFAULT ''：空白落空串而非 null，否则清空英文名写不进数据库
         group.setNameEn(request.getNameEn() == null || request.getNameEn().isBlank()
-                ? null : request.getNameEn().trim());
+                ? "" : request.getNameEn().trim());
         group.setSortOrder(request.getSortOrder());
     }
 }

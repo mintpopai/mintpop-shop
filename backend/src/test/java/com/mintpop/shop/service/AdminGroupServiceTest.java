@@ -94,11 +94,25 @@ class AdminGroupServiceTest {
     }
 
     @Test
-    @DisplayName("新增分组：英文名空白归一为 null")
+    @DisplayName("新增分组：英文名空白归一为空串，因为 name_en 是 NOT NULL DEFAULT ''")
     void createNormalizesBlankEnglishName() {
         adminGroupService.createGroup(new AdminGroupUpsertRequest(" 盲盒 ", "  ", 5));
 
         verify(productGroupMapper).insert(org.mockito.ArgumentMatchers.<ProductGroup>argThat(g ->
-                g.getNameZh().equals("盲盒") && g.getNameEn() == null && g.getSortOrder() == 5));
+                g.getNameZh().equals("盲盒") && g.getNameEn().isEmpty() && g.getSortOrder() == 5));
+    }
+
+    @Test
+    @DisplayName("编辑分组：清空英文名落成空串，真的写回数据库")
+    void updateBlankEnglishNameBecomesEmptyString() {
+        ProductGroup existing = group(3L, "盲盒");
+        existing.setNameEn("Blind Boxes");
+        when(productGroupMapper.selectById(3L)).thenReturn(existing);
+        when(productMapper.selectCount(any())).thenReturn(0L);
+
+        adminGroupService.updateGroup(3L, new AdminGroupUpsertRequest("盲盒", "  ", 1));
+
+        verify(productGroupMapper).updateById(org.mockito.ArgumentMatchers.<ProductGroup>argThat(g ->
+                g.getNameEn().isEmpty()));
     }
 }

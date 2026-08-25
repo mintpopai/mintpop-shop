@@ -79,7 +79,8 @@ public class AdminProductService {
     private void apply(Product product, AdminProductUpsertRequest request) {
         product.setGroupId(request.getGroupId());
         product.setNameZh(request.getNameZh().trim());
-        product.setNameEn(normalize(request.getNameEn()));
+        // name_en 是 NOT NULL DEFAULT ''：它的「空」是空串，归一成 null 会让清空英文名写不进去
+        product.setNameEn(normalizeNotNull(request.getNameEn()));
         product.setDescriptionZh(normalize(request.getDescriptionZh()));
         product.setDescriptionEn(normalize(request.getDescriptionEn()));
         // 详情是富文本，不能按普通文本 trim 了事：脏 HTML 必须在入库前被白名单剥干净
@@ -93,7 +94,13 @@ public class AdminProductService {
         product.setOnSale(request.getOnSale());
     }
 
+    /** 可空列（DDL 为 NULL）的归一：空白一律落 null，库里不混存空串 */
     private String normalize(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    /** 非空列（DDL 为 NOT NULL DEFAULT ''）的归一：空白落空串，不能落 null */
+    private String normalizeNotNull(String value) {
+        return value == null || value.isBlank() ? "" : value.trim();
     }
 }
