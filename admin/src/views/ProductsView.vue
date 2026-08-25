@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import Modal from '../components/Modal.vue'
+import RichTextEditor from '../components/RichTextEditor.vue'
 import Select from '../components/Select.vue'
 import { formatPrice } from '../api'
 import {
@@ -65,12 +66,17 @@ function groupName(groupId: number): string {
 /** 弹窗状态：editingId 为空表示新增；价格以美元字符串编辑、提交时转美分 */
 const modalOpen = ref(false)
 const editingId = ref<number | null>(null)
+/** 详情编辑区当前停在哪个语种（两个编辑器都常驻，只切显示，切页签不丢草稿） */
+const detailTab = ref<'ZH' | 'EN'>('ZH')
+
 const form = ref({
   groupId: 0,
   nameZh: '',
   nameEn: '',
   descriptionZh: '',
   descriptionEn: '',
+  detailZh: '',
+  detailEn: '',
   badgeZh: '',
   badgeEn: '',
   accent: 'MINT',
@@ -95,12 +101,15 @@ onMounted(reload)
 
 function openCreate() {
   editingId.value = null
+  detailTab.value = 'ZH'
   form.value = {
     groupId: groupFilter.value || groups.value[0]?.id || 0,
     nameZh: '',
     nameEn: '',
     descriptionZh: '',
     descriptionEn: '',
+    detailZh: '',
+    detailEn: '',
     badgeZh: '',
     badgeEn: '',
     accent: 'MINT',
@@ -113,12 +122,15 @@ function openCreate() {
 
 function openEdit(product: AdminProduct) {
   editingId.value = product.id
+  detailTab.value = 'ZH'
   form.value = {
     groupId: product.groupId,
     nameZh: product.nameZh,
     nameEn: product.nameEn ?? '',
     descriptionZh: product.descriptionZh ?? '',
     descriptionEn: product.descriptionEn ?? '',
+    detailZh: product.detailZh ?? '',
+    detailEn: product.detailEn ?? '',
     badgeZh: product.badgeZh ?? '',
     badgeEn: product.badgeEn ?? '',
     accent: product.accent,
@@ -142,6 +154,8 @@ async function onSave() {
     nameEn: form.value.nameEn,
     descriptionZh: form.value.descriptionZh,
     descriptionEn: form.value.descriptionEn,
+    detailZh: form.value.detailZh,
+    detailEn: form.value.detailEn,
     badgeZh: form.value.badgeZh,
     badgeEn: form.value.badgeEn,
     accent: form.value.accent,
@@ -207,6 +221,7 @@ async function onToggleSale(product: AdminProduct) {
           <th>分组</th>
           <th class="col-amount">价格</th>
           <th>角标</th>
+          <th>详情</th>
           <th>主题色</th>
           <th>状态</th>
           <th>操作</th>
@@ -224,6 +239,7 @@ async function onToggleSale(product: AdminProduct) {
           <td>{{ groupName(product.groupId) }}</td>
           <td class="fact col-amount">{{ formatPrice(product.priceCents) }}</td>
           <td>{{ product.badgeZh ?? '—' }}</td>
+          <td class="col-detail">{{ product.detailZh ? '✓' : '—' }}</td>
           <td class="fact">
             <span class="accent-dot" :style="{ background: ACCENTS[product.accent] ?? ACCENTS.MINT }"></span
             >{{ product.accent }}
@@ -276,6 +292,36 @@ async function onToggleSale(product: AdminProduct) {
           <input id="p-badge-en" v-model="form.badgeEn" class="admin-input" />
         </div>
       </div>
+      <div class="admin-field detail-field">
+        <div class="detail-head">
+          <label>商品详情（展示在商城的商品详情页）</label>
+          <div class="detail-tabs" role="tablist" aria-label="详情语言">
+            <button
+              type="button"
+              class="detail-tab"
+              :class="{ active: detailTab === 'ZH' }"
+              role="tab"
+              :aria-selected="detailTab === 'ZH'"
+              @click="detailTab = 'ZH'"
+            >
+              中文
+            </button>
+            <button
+              type="button"
+              class="detail-tab"
+              :class="{ active: detailTab === 'EN' }"
+              role="tab"
+              :aria-selected="detailTab === 'EN'"
+              @click="detailTab = 'EN'"
+            >
+              英文（留空回退中文）
+            </button>
+          </div>
+        </div>
+        <!-- 两个编辑器都常驻、只切显示：v-if 会把没在看的那一份连同草稿一起销毁 -->
+        <RichTextEditor v-show="detailTab === 'ZH'" id="p-detail-zh" v-model="form.detailZh" />
+        <RichTextEditor v-show="detailTab === 'EN'" id="p-detail-en" v-model="form.detailEn" />
+      </div>
       <div class="admin-form-row">
         <div class="admin-field">
           <label for="p-group">分组</label>
@@ -320,6 +366,46 @@ async function onToggleSale(product: AdminProduct) {
 </template>
 
 <style scoped>
+/* 详情区跨整行：富文本编辑器挤在半列里没法用 */
+.detail-field {
+  gap: 8px;
+}
+
+.detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.detail-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.detail-tab {
+  padding: 4px 10px;
+  border: 1px solid var(--admin-line);
+  border-radius: var(--admin-radius-pill, 999px);
+  background: transparent;
+  color: var(--admin-ink-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.detail-tab.active {
+  border-color: transparent;
+  background: var(--admin-ink);
+  color: var(--admin-bg);
+}
+
+.detail-tab:focus-visible {
+  outline: 2px solid var(--admin-brand, #17d1a7);
+  outline-offset: 1px;
+}
+
 .name-cell {
   display: flex;
   flex-direction: column;

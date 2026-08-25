@@ -9,6 +9,10 @@ export interface AdminProduct {
   nameEn: string | null
   descriptionZh: string | null
   descriptionEn: string | null
+  /** 详情富文本HTML（中文），null=未配置 */
+  detailZh: string | null
+  /** 详情富文本HTML（英文），null=未配置 */
+  detailEn: string | null
   badgeZh: string | null
   badgeEn: string | null
   accent: string
@@ -24,6 +28,8 @@ export interface AdminProductUpsert {
   nameEn: string
   descriptionZh: string
   descriptionEn: string
+  detailZh: string
+  detailEn: string
   badgeZh: string
   badgeEn: string
   accent: string

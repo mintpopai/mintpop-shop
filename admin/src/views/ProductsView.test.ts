@@ -36,6 +36,8 @@ function product(overrides: Partial<AdminProduct> = {}): AdminProduct {
     nameEn: 'Claude Pro',
     descriptionZh: '官方渠道',
     descriptionEn: null,
+    detailZh: null,
+    detailEn: null,
     badgeZh: '热销',
     badgeEn: null,
     accent: 'MINT',
@@ -51,12 +53,38 @@ const GROUPS: AdminGroup[] = [
   { id: 20, nameZh: '卡密', nameEn: 'Codes', sortOrder: 20, productCount: 1 },
 ]
 
+/** 富文本编辑器有自己的用例，这里只关心「表单怎么用它」，用轻量替身顶掉 ProseMirror */
+const RichTextEditorStub = {
+  name: 'RichTextEditor',
+  props: { id: { type: String, required: true }, modelValue: { type: String, default: '' } },
+  emits: ['update:modelValue'],
+  template: '<div class="rte-stub" :data-editor-id="id">{{ modelValue }}</div>',
+}
+
 async function render(products: AdminProduct[] = [product()], groups = GROUPS) {
   fetchGroupsMock.mockResolvedValue(groups)
   fetchProductsMock.mockResolvedValue(products)
-  wrapper = mount(ProductsView, { attachTo: document.body })
+  wrapper = mount(ProductsView, {
+    attachTo: document.body,
+    global: { stubs: { RichTextEditor: RichTextEditorStub } },
+  })
   await flushPromises()
   return wrapper
+}
+
+/** 按 id 取某一语言的富文本编辑器 */
+function editorOf(w: VueWrapper, id: string) {
+  const found = w.findAllComponents(RichTextEditorStub).find((c) => c.props('id') === id)
+  if (!found) {
+    throw new Error(`没有 id 为 ${id} 的富文本编辑器`)
+  }
+  return found
+}
+
+/** 在某个富文本编辑器里「输入」内容 */
+async function typeDetail(w: VueWrapper, id: string, html: string) {
+  editorOf(w, id).vm.$emit('update:modelValue', html)
+  await flushPromises()
 }
 
 /** 弹窗被 Teleport 到 body，统一从 document 取 */
@@ -381,5 +409,79 @@ describe('上下架', () => {
 
     expect(toast.value).toEqual({ type: 'error', text: '商品不存在' })
     expect(w.find('tbody tr').text()).toContain('上架中')
+  })
+})
+
+describe('商品详情富文本', () => {
+  it('列表用一列标出哪些商品还没配详情', async () => {
+    const w = await render([
+      product({ id: 1, detailZh: '<p>有详情</p>' }),
+      product({ id: 2, detailZh: null }),
+    ])
+    const rows = w.findAll('tbody tr')
+
+    expect(rows[0].find('.col-detail').text()).toBe('✓')
+    expect(rows[1].find('.col-detail').text()).toBe('—')
+  })
+
+  it('新增：中英详情随表单一起提交', async () => {
+    const w = await render()
+    await openCreate()
+    await type('#p-name-zh', '新商品')
+    await type('#p-price', '9.99')
+    await typeDetail(w, 'p-detail-zh', '<h2>中文详情</h2>')
+    await typeDetail(w, 'p-detail-en', '<h2>English detail</h2>')
+    createMock.mockResolvedValue(product())
+
+    await save()
+
+    expect(createMock.mock.calls[0][0]).toMatchObject({
+      detailZh: '<h2>中文详情</h2>',
+      detailEn: '<h2>English detail</h2>',
+    })
+  })
+
+  it('编辑：已有详情回填进两个编辑器', async () => {
+    const w = await render([product({ detailZh: '<p>中文</p>', detailEn: '<p>EN</p>' })])
+
+    await w.find('tbody tr .admin-link').trigger('click')
+    await flushPromises()
+
+    expect(editorOf(w, 'p-detail-zh').props('modelValue')).toBe('<p>中文</p>')
+    expect(editorOf(w, 'p-detail-en').props('modelValue')).toBe('<p>EN</p>')
+  })
+
+  it('编辑：没配详情的商品回填空串，不把 null 塞进编辑器', async () => {
+    const w = await render([product({ detailZh: null, detailEn: null })])
+
+    await w.find('tbody tr .admin-link').trigger('click')
+    await flushPromises()
+
+    expect(editorOf(w, 'p-detail-zh').props('modelValue')).toBe('')
+  })
+
+  it('中英详情用两个页签切换，默认停在中文', async () => {
+    const w = await render()
+    await openCreate()
+
+    expect(editorOf(w, 'p-detail-zh').isVisible()).toBe(true)
+    expect(editorOf(w, 'p-detail-en').isVisible()).toBe(false)
+  })
+
+  it('切到英文页签后显示英文编辑器，中文的内容留在原地不丢', async () => {
+    const w = await render()
+    await openCreate()
+    await typeDetail(w, 'p-detail-zh', '<p>中文草稿</p>')
+
+    // 弹窗被 Teleport 到 body，页签按钮得从 document 上取
+    const enTab = Array.from(document.querySelectorAll<HTMLElement>('.detail-tab')).find((b) =>
+      b.textContent?.includes('英文'),
+    )!
+    enTab.click()
+    await flushPromises()
+
+    expect(editorOf(w, 'p-detail-en').isVisible()).toBe(true)
+    expect(editorOf(w, 'p-detail-zh').isVisible()).toBe(false)
+    expect(editorOf(w, 'p-detail-zh').props('modelValue')).toBe('<p>中文草稿</p>')
   })
 })

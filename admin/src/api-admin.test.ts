@@ -45,6 +45,8 @@ function productUpsert(overrides: Partial<AdminProductUpsert> = {}): AdminProduc
     nameEn: 'Monthly',
     descriptionZh: '',
     descriptionEn: '',
+    detailZh: '',
+    detailEn: '',
     badgeZh: '',
     badgeEn: '',
     accent: 'MINT',
