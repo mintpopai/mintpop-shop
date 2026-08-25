@@ -131,7 +131,7 @@ async function onDelete() {
         <tr v-for="group in groups" :key="group.id">
           <td class="fact muted">{{ group.id }}</td>
           <td>{{ group.nameZh }}</td>
-          <td>{{ group.nameEn ?? '—' }}</td>
+          <td>{{ group.nameEn || '—' }}</td>
           <td class="fact col-amount">{{ group.sortOrder }}</td>
           <td class="fact col-amount">{{ group.productCount }}</td>
           <td class="actions">

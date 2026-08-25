@@ -91,6 +91,13 @@ describe('列表加载', () => {
     expect(w.find('tbody tr').text()).toContain('—')
   })
 
+  // name_en 是 NOT NULL DEFAULT ''，后端把「没填英文名」落成空串，占位符同样要顶上
+  it('英文名为空串时同样显示占位符', async () => {
+    const w = await render([group({ nameEn: '' })])
+
+    expect(w.find('tbody tr').text()).toContain('—')
+  })
+
   it('页头汇总分组数与所覆盖的商品总数', async () => {
     const w = await render([group({ id: 1, productCount: 2 }), group({ id: 2, productCount: 3 })])
 
