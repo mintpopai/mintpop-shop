@@ -49,7 +49,8 @@
   },
   "product": {
     "buy": "Buy",
-    "buying": "Ordering…"
+    "buying": "Ordering…",
+    "viewDetail": "View details of {name}"
   },
   "payment": {
     "title": "Checkout",
@@ -109,5 +110,10 @@
     "save": "Save",
     "saving": "Saving…",
     "saved": "Saved"
+  },
+  "productDetail": {
+    "back": "Back to shop",
+    "detailTitle": "Product details",
+    "noDetail": "The seller has not added a detailed description yet."
   }
 }

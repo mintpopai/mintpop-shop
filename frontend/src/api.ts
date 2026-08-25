@@ -20,6 +20,12 @@ export interface Product {
   accent: string
 }
 
+/** 商品详情（镜像后端 ProductDetailResponse，比列表多一段富文本详情） */
+export interface ProductDetail extends Product {
+  /** 富文本详情 HTML（后端已净化），空=未配置，详情页回退短描述 */
+  detail: string | null
+}
+
 /** 分组含商品（镜像后端 GroupWithProductsResponse） */
 export interface GroupWithProducts {
   id: number
@@ -142,6 +148,11 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
 /** 拉取全部分组及上架商品 */
 export function fetchGroups(): Promise<GroupWithProducts[]> {
   return request<GroupWithProducts[]>('/api/groups')
+}
+
+/** 商品详情（仅上架商品；下架与不存在都按「商品不存在」返回业务错误） */
+export function fetchProduct(id: number): Promise<ProductDetail> {
+  return request<ProductDetail>(`/api/products/${id}`)
 }
 
 /** 创建待支付订单（骨架阶段数量固定 1） */

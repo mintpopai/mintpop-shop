@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { mount, RouterLinkStub } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import ProductCard from './ProductCard.vue'
 import type { Product } from '../api'
@@ -20,7 +20,7 @@ function product(overrides: Partial<Product> = {}): Product {
 function render(overrides: Partial<Product> = {}, buying = false) {
   return mount(ProductCard, {
     props: { product: product(overrides), buying },
-    global: { plugins: [i18n] },
+    global: { plugins: [i18n], stubs: { RouterLink: RouterLinkStub } },
   })
 }
 
@@ -115,5 +115,29 @@ describe('ProductCard 购买按钮', () => {
     await wrapper.find('.buy-btn').trigger('click')
 
     expect(wrapper.emitted('buy')).toBeUndefined()
+  })
+})
+
+describe('ProductCard 进入详情页', () => {
+  it('整张卡片是一条指向商品详情页的链接', () => {
+    const link = render({ id: 42 }).findComponent(RouterLinkStub)
+
+    expect(link.props('to')).toBe('/products/42')
+  })
+
+  it('链接用商品名做无障碍标签，读屏不会只听到「链接」', () => {
+    const link = render({ name: '薄荷猫手办' }).findComponent(RouterLinkStub)
+
+    expect(link.attributes('aria-label')).toContain('薄荷猫手办')
+  })
+
+  it('购买按钮不落在链接内部，点它只下单、不跳详情', async () => {
+    const wrapper = render({ id: 42 })
+    const link = wrapper.findComponent(RouterLinkStub)
+
+    expect(link.find('.buy-btn').exists()).toBe(false)
+
+    await wrapper.find('.buy-btn').trigger('click')
+    expect(wrapper.emitted('buy')).toHaveLength(1)
   })
 })

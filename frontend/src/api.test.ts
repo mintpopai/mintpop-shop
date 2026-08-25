@@ -8,6 +8,7 @@ import {
   fetchMe,
   fetchMyOrders,
   fetchOrderDetail,
+  fetchProduct,
   formatPrice,
   request,
   UnauthorizedError,
@@ -116,6 +117,12 @@ describe('各接口的请求形状', () => {
   it('fetchGroups 走 GET /api/groups', async () => {
     await fetchGroups()
     expect(lastCall()[0]).toBe('/api/groups')
+    expect(lastCall()[1].method).toBeUndefined()
+  })
+
+  it('fetchProduct 走 GET /api/products/{id}', async () => {
+    await fetchProduct(42)
+    expect(lastCall()[0]).toBe('/api/products/42')
     expect(lastCall()[1].method).toBeUndefined()
   })
 

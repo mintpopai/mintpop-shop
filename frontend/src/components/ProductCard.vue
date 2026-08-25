@@ -1,24 +1,24 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
+import { accentColors } from '../accent'
 import { formatPrice, type Product } from '../api'
 
 const props = defineProps<{ product: Product; buying: boolean }>()
 const emit = defineEmits<{ buy: [product: Product] }>()
 
-/** accent 枚举 → 渐变色对与点缀色，未知值回退 MINT（与后端约定一致） */
-const ACCENTS: Record<string, { from: string; to: string; ink: string }> = {
-  MINT: { from: '#d9f7ec', to: '#b7f0dd', ink: '#0fb389' },
-  VIOLET: { from: '#e6e1fb', to: '#d3ccf7', ink: '#6d5bd0' },
-  SKY: { from: '#ddebfa', to: '#c5ddf6', ink: '#2f7fd1' },
-  AMBER: { from: '#faeeda', to: '#f6e2c0', ink: '#c07f1f' },
-  ROSE: { from: '#fae3e7', to: '#f6ccd4', ink: '#d04a68' },
-}
-
-const accent = computed(() => ACCENTS[props.product.accent] ?? ACCENTS.MINT)
+const accent = computed(() => accentColors(props.product.accent))
 </script>
 
 <template>
   <article class="card">
+    <!-- 铺满整卡的链接（stretched link）：整张卡可点、可 Tab、可右键新开，
+         又不至于把 <button> 塞进 <a> 里造出非法嵌套 -->
+    <RouterLink
+      class="card-link"
+      :to="`/products/${product.id}`"
+      :aria-label="$t('product.viewDetail', { name: product.name })"
+    />
     <div
       class="thumb"
       :style="{ background: `linear-gradient(135deg, ${accent.from}, ${accent.to})` }"
@@ -63,6 +63,7 @@ const accent = computed(() => ACCENTS[props.product.accent] ?? ACCENTS.MINT)
 
 <style scoped>
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
   background: var(--color-bg);
@@ -75,6 +76,18 @@ const accent = computed(() => ACCENTS[props.product.accent] ?? ACCENTS.MINT)
 .card:hover {
   box-shadow: 0 10px 28px rgba(11, 11, 12, 0.1);
   transform: translateY(-2px);
+}
+
+.card-link {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+}
+
+.card-link:focus-visible {
+  outline: 2px solid var(--color-brand-deep);
+  outline-offset: 2px;
 }
 
 /* 图形区：accent 渐变（内联 style）+ 点阵纹理 + 角标 */
@@ -167,6 +180,9 @@ const accent = computed(() => ACCENTS[props.product.accent] ?? ACCENTS.MINT)
 }
 
 .buy-btn {
+  /* 抬到铺满整卡的链接之上，否则点购买会被链接接走变成跳转 */
+  position: relative;
+  z-index: 2;
   display: inline-flex;
   align-items: center;
   gap: 6px;
