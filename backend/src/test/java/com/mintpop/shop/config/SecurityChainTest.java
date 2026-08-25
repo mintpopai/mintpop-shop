@@ -79,6 +79,12 @@ class SecurityChainTest {
     }
 
     @Test
+    @DisplayName("公开路径不拦截：/api/products/{id} 游客可看商品详情")
+    void productDetailIsPublic() throws Exception {
+        mockMvc.perform(get("/api/products/11")).andExpect(status().isNotFound());
+    }
+
+    @Test
     @DisplayName("带有效会话 Cookie 可通过鉴权（切片中无 MeController，404 即已过鉴权）")
     void validSessionCookiePassesAuth() throws Exception {
         when(sessionTokenService.parse("token-1")).thenReturn(Optional.of(42L));

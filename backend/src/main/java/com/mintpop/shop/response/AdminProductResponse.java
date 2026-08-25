@@ -23,6 +23,10 @@ public class AdminProductResponse {
     private String descriptionZh;
     /** 商品描述（英文） */
     private String descriptionEn;
+    /** 商品详情富文本HTML（中文） */
+    private String detailZh;
+    /** 商品详情富文本HTML（英文） */
+    private String detailEn;
     /** 角标（中文） */
     private String badgeZh;
     /** 角标（英文） */
@@ -38,7 +42,8 @@ public class AdminProductResponse {
 
     public static AdminProductResponse of(Product p) {
         return new AdminProductResponse(p.getId(), p.getGroupId(), p.getNameZh(), p.getNameEn(),
-                p.getDescriptionZh(), p.getDescriptionEn(), p.getBadgeZh(), p.getBadgeEn(),
+                p.getDescriptionZh(), p.getDescriptionEn(), p.getDetailZh(), p.getDetailEn(),
+                p.getBadgeZh(), p.getBadgeEn(),
                 p.getAccent(), p.getPriceCents(), p.getImageUrl(), p.getOnSale());
     }
 }

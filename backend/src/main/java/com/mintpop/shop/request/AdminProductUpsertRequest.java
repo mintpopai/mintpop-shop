@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -32,6 +33,14 @@ public class AdminProductUpsertRequest {
 
     /** 商品描述（英文），空回退中文 */
     private String descriptionEn;
+
+    /** 商品详情富文本HTML（中文），后端入库前净化；上限防撑爆 MEDIUMTEXT */
+    @Size(max = 50000, message = "{biz.validation.detail-too-long}")
+    private String detailZh;
+
+    /** 商品详情富文本HTML（英文），空回退中文 */
+    @Size(max = 50000, message = "{biz.validation.detail-too-long}")
+    private String detailEn;
 
     /** 角标（中文），空=不显示 */
     private String badgeZh;

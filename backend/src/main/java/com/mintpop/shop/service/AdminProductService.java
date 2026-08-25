@@ -8,6 +8,7 @@ import com.mintpop.shop.mapper.ProductGroupMapper;
 import com.mintpop.shop.mapper.ProductMapper;
 import com.mintpop.shop.request.AdminProductUpsertRequest;
 import com.mintpop.shop.response.AdminProductResponse;
+import com.mintpop.shop.util.HtmlSanitizer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +24,7 @@ public class AdminProductService {
 
     private final ProductMapper productMapper;
     private final ProductGroupMapper productGroupMapper;
+    private final HtmlSanitizer htmlSanitizer;
 
     /** 全部商品（含下架），可按分组过滤；按分组、新旧排列 */
     public List<AdminProductResponse> listProducts(Long groupId) {
@@ -80,6 +82,9 @@ public class AdminProductService {
         product.setNameEn(normalize(request.getNameEn()));
         product.setDescriptionZh(normalize(request.getDescriptionZh()));
         product.setDescriptionEn(normalize(request.getDescriptionEn()));
+        // 详情是富文本，不能按普通文本 trim 了事：脏 HTML 必须在入库前被白名单剥干净
+        product.setDetailZh(htmlSanitizer.sanitize(request.getDetailZh()));
+        product.setDetailEn(htmlSanitizer.sanitize(request.getDetailEn()));
         product.setBadgeZh(normalize(request.getBadgeZh()));
         product.setBadgeEn(normalize(request.getBadgeEn()));
         product.setAccent(request.getAccent());

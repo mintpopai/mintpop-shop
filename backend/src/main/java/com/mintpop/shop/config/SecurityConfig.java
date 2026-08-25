@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -51,6 +52,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 白名单式：/api 下默认需登录，公开接口显式放行——新增接口忘登记时默认安全
                         .requestMatchers("/api/groups").permitAll()
+                        // 商品详情页游客可看（只下发上架商品）
+                        .requestMatchers(HttpMethod.GET, "/api/products/*").permitAll()
                         // Stripe webhook：无登录态，安全性由请求体验签保证
                         .requestMatchers("/api/v1/payment/webhook/stripe").permitAll()
                         .requestMatchers("/api/**").authenticated()

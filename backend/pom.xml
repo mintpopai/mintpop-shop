@@ -21,6 +21,7 @@
         <java.version>21</java.version>
         <mybatis-plus.version>3.5.17</mybatis-plus.version>
         <jjwt.version>0.13.0</jjwt.version>
+        <jsoup.version>1.21.1</jsoup.version>
     </properties>
 
     <dependencies>
@@ -79,6 +80,12 @@
             <artifactId>jjwt-jackson</artifactId>
             <version>${jjwt.version}</version>
             <scope>runtime</scope>
+        </dependency>
+        <!-- 富文本详情入库前的 XSS 净化（白名单剥离脚本/事件属性/危险协议） -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>${jsoup.version}</version>
         </dependency>
         <!-- Stripe 支付网关 SDK -->
         <dependency>

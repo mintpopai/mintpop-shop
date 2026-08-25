@@ -8,12 +8,14 @@ import com.mintpop.shop.mapper.ProductGroupMapper;
 import com.mintpop.shop.mapper.ProductMapper;
 import com.mintpop.shop.request.AdminProductUpsertRequest;
 import com.mintpop.shop.response.AdminProductResponse;
+import com.mintpop.shop.util.HtmlSanitizer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,12 +32,15 @@ class AdminProductServiceTest {
     private ProductMapper productMapper;
     @Mock
     private ProductGroupMapper productGroupMapper;
+    // 净化是本服务对外承诺的一部分，用真实实现而非 mock，测的才是「脏 HTML 进不了库」
+    @Spy
+    private HtmlSanitizer htmlSanitizer = new HtmlSanitizer();
     @InjectMocks
     private AdminProductService adminProductService;
 
     private AdminProductUpsertRequest request(long groupId) {
         return new AdminProductUpsertRequest(groupId, " 薄荷猫手办 ", "Mint Cat", null, "",
-                "旗舰", " ", "MINT", 5900L, "  ", true);
+                null, "", "旗舰", " ", "MINT", 5900L, "  ", true);
     }
 
     @Test
@@ -79,6 +84,21 @@ class AdminProductServiceTest {
                 .isInstanceOf(BizException.class)
                 .extracting(e -> ((BizException) e).getBizCode())
                 .isEqualTo(BizCodeEnum.PRODUCT_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("新增：详情富文本入库前净化，脚本进不了库")
+    void createSanitizesDetailHtml() {
+        when(productGroupMapper.selectById(1L)).thenReturn(new ProductGroup());
+        AdminProductUpsertRequest request = request(1L);
+        request.setDetailZh("<p>正文</p><script>alert(1)</script>");
+
+        adminProductService.createProduct(request);
+
+        ArgumentCaptor<Product> captor = ArgumentCaptor.forClass(Product.class);
+        verify(productMapper).insert(captor.capture());
+        assertThat(captor.getValue().getDetailZh()).isEqualTo("<p>正文</p>");
+        assertThat(captor.getValue().getDetailEn()).isNull();
     }
 
     @Test
