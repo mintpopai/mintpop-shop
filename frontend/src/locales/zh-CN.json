@@ -114,6 +114,6 @@
   "productDetail": {
     "back": "返回商城",
     "detailTitle": "商品详情",
-    "noDetail": "商家还没有填写详细介绍。"
+    "checkoutNote": "购买会生成一笔待支付订单，需要在收银台完成支付。"
   }
 }

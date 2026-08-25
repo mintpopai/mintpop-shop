@@ -114,6 +114,6 @@
   "productDetail": {
     "back": "Back to shop",
     "detailTitle": "Product details",
-    "noDetail": "The seller has not added a detailed description yet."
+    "checkoutNote": "Buying creates a pending order. Complete payment at checkout."
   }
 }

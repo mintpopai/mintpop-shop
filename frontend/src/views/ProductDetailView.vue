@@ -21,7 +21,15 @@ const loading = ref(true)
 const loadError = ref('')
 const buying = ref(false)
 
-const accent = computed(() => accentColors(product.value?.accent ?? 'MINT'))
+/** 主题色以 CSS 变量下发，样式表里统一引用，省得每个用色的节点各挂一份内联 style */
+const accentVars = computed(() => {
+  const accent = accentColors(product.value?.accent ?? 'MINT')
+  return {
+    '--accent-from': accent.from,
+    '--accent-to': accent.to,
+    '--accent-ink': accent.ink,
+  }
+})
 
 /**
  * 详情 HTML 在渲染前再过一遍 DOMPurify。
@@ -77,45 +85,52 @@ async function buy() {
     <template v-else-if="product">
       <RouterLink class="back" to="/">← {{ $t('productDetail.back') }}</RouterLink>
 
-      <section class="hero">
-        <div
-          class="media"
-          :style="{ background: `linear-gradient(135deg, ${accent.from}, ${accent.to})` }"
-        >
-          <span v-if="product.badge" class="badge">{{ product.badge }}</span>
+      <div class="layout" :style="accentVars">
+        <figure class="media">
           <img v-if="product.imageUrl" class="photo" :src="product.imageUrl" :alt="product.name" />
-          <span v-else class="placeholder" :style="{ color: accent.ink }" aria-hidden="true">
-            {{ product.name.charAt(0) }}
-          </span>
-        </div>
+          <span v-else class="placeholder" aria-hidden="true">{{ product.name.charAt(0) }}</span>
+        </figure>
 
-        <div class="info">
-          <h2 class="name">{{ product.name }}</h2>
-          <p v-if="product.description" class="summary">{{ product.description }}</p>
-          <p class="price">{{ formatPrice(product.priceCents) }}</p>
-          <button class="buy-btn" type="button" :disabled="buying" @click="buy">
-            {{ buying ? $t('product.buying') : $t('product.buy') }}
-          </button>
-        </div>
-      </section>
+        <!-- 货签：主题色带 + 吊牌孔，与左侧商品图同色，把两栏缝成一件东西 -->
+        <aside class="tag">
+          <div class="tag-band">
+            <span class="punch" aria-hidden="true"></span>
+            <span v-if="product.badge" class="badge">{{ product.badge }}</span>
+          </div>
 
-      <section class="detail">
-        <h3 class="detail-title">{{ $t('productDetail.detailTitle') }}</h3>
-        <!-- v-html 的内容经后端白名单净化 + 前端 DOMPurify 二次净化，见上方 safeDetail -->
-        <div v-if="safeDetail" class="rich-content" v-html="safeDetail"></div>
-        <p v-else class="detail-fallback">
-          {{ product.description || $t('productDetail.noDetail') }}
-        </p>
-      </section>
+          <div class="tag-body">
+            <div class="tag-head">
+              <h2 class="name">{{ product.name }}</h2>
+              <p v-if="product.description" class="summary">{{ product.description }}</p>
+            </div>
+
+            <p class="price-row">
+              <span class="price">{{ formatPrice(product.priceCents) }}</span>
+              <span class="currency">USD</span>
+            </p>
+
+            <button class="buy-btn" type="button" :disabled="buying" @click="buy">
+              {{ buying ? $t('product.buying') : $t('product.buy') }}
+            </button>
+            <p class="checkout-note">{{ $t('productDetail.checkoutNote') }}</p>
+          </div>
+        </aside>
+
+        <section v-if="safeDetail" class="detail">
+          <h3 class="detail-title">{{ $t('productDetail.detailTitle') }}</h3>
+          <!-- v-html 的内容经后端白名单净化 + 前端 DOMPurify 二次净化，见上方 safeDetail -->
+          <div class="rich-content" v-html="safeDetail"></div>
+        </section>
+      </div>
     </template>
   </main>
 </template>
 
 <style scoped>
 .page {
-  max-width: 1000px;
+  max-width: 1120px;
   margin: 0 auto;
-  padding: 24px 32px 64px;
+  padding: 24px 32px 72px;
 }
 
 .hint {
@@ -124,7 +139,7 @@ async function buy() {
 }
 
 .hint.error {
-  color: var(--color-danger, #d04a68);
+  color: #b91c1c;
 }
 
 .back {
@@ -139,34 +154,52 @@ async function buy() {
   color: var(--color-ink);
 }
 
-.hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: 32px;
-  align-items: start;
+.back:focus-visible {
+  outline: 2px solid var(--color-brand-deep);
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 
+/* 上排是商品图与货签，详情整条横跨两栏——详情比货签长得多，让它独占一行才不会在右下留空 */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.28fr) minmax(0, 1fr);
+  grid-template-areas:
+    'media tag'
+    'detail detail';
+  gap: 28px 36px;
+}
+
+/* —— 商品图 ——
+   align-self: start 是为了守住 aspect-ratio：这一行万一被货签撑高，
+   商品图也不该被拉伸变形 */
 .media {
+  grid-area: media;
+  align-self: start;
   position: relative;
-  aspect-ratio: 16 / 10;
-  border-radius: 20px;
+  aspect-ratio: 4 / 3;
+  border-radius: 24px;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: linear-gradient(135deg, var(--accent-from), var(--accent-to));
+  animation: rise 0.4s ease both;
 }
 
-.badge {
+/* 与商品卡同一张点阵纹理，详情页放大一档 */
+.media::after {
+  content: '';
   position: absolute;
-  top: 16px;
-  left: 16px;
-  padding: 5px 12px;
-  border-radius: var(--radius-pill);
-  background: var(--color-bg);
-  color: var(--color-ink);
-  font-size: 12px;
-  font-weight: 500;
-  box-shadow: 0 2px 8px rgba(11, 11, 12, 0.08);
+  inset: 0 0 0 55%;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.5) 1.5px, transparent 1.5px);
+  background-size: 18px 18px;
+  mask-image: linear-gradient(to right, transparent, #000 60%);
+  pointer-events: none;
+}
+
+.media:has(.photo)::after {
+  content: none;
 }
 
 .photo {
@@ -175,47 +208,129 @@ async function buy() {
   object-fit: cover;
 }
 
+/* 无图占位：白色大圆 + 主题色商品首字，与商品卡同一套语言 */
 .placeholder {
-  width: 132px;
-  height: 132px;
+  width: 172px;
+  height: 172px;
   border-radius: var(--radius-pill);
   background: var(--color-bg);
+  color: var(--accent-ink);
   font-family: 'Fredoka', 'Inter', sans-serif;
-  font-size: 52px;
+  font-size: 68px;
   font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 20px rgba(11, 11, 12, 0.08);
+  box-shadow: 0 12px 32px rgba(11, 11, 12, 0.1);
 }
 
-.info {
+/* —— 货签 —— */
+/* 货签拉满整行（行高来自商品图的比例），价格与购买按钮因此永远贴在同一位置，
+   不随描述长短上下浮动 */
+.tag {
+  grid-area: tag;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding-top: 8px;
+  background: var(--color-bg);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(11, 11, 12, 0.05);
+  animation: rise 0.4s ease 0.06s both;
 }
 
+.tag-band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 52px;
+  padding: 0 18px;
+  background: linear-gradient(120deg, var(--accent-from), var(--accent-to));
+}
+
+/* 吊牌孔：挖成页面底色，靠内阴影做出穿透感 */
+.punch {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-page);
+  box-shadow: inset 0 1px 2px rgba(11, 11, 12, 0.22);
+}
+
+.badge {
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg);
+  color: var(--accent-ink);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.tag-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 22px 24px 24px;
+}
+
+.tag-head {
+  margin-bottom: 24px;
+}
+
+/* 名称与短描述都封顶行数：商家填多长都不该把版面顶变形，完整说明归详情区 */
 .name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
   font-size: 28px;
-  font-weight: 700;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
 }
 
 .summary {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  margin-top: 10px;
   color: var(--color-ink-secondary);
-  font-size: 15px;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  /* 吸掉货签里的富余高度，把价格与按钮压到底部 */
+  margin-top: auto;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-border);
 }
 
 .price {
-  font-size: 32px;
-  font-weight: 700;
+  font-size: 34px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.currency {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-ink-secondary);
 }
 
 .buy-btn {
-  align-self: flex-start;
-  padding: 12px 32px;
+  width: 100%;
+  margin-top: 18px;
+  padding: 14px 24px;
   border: none;
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--color-brand);
   color: #ffffff;
   font-size: 15px;
@@ -238,27 +353,41 @@ async function buy() {
 .buy-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
-.detail {
-  margin-top: 48px;
-}
-
-.detail-title {
-  font-size: 18px;
-  font-weight: 700;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--color-line, rgba(11, 11, 12, 0.08));
-}
-
-.detail-fallback {
-  padding-top: 16px;
+.checkout-note {
+  margin-top: 12px;
   color: var(--color-ink-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* —— 详情 —— */
+.detail {
+  grid-area: detail;
+  background: var(--color-bg);
+  border-radius: 20px;
+  padding: 28px 32px 32px;
+  box-shadow: 0 2px 10px rgba(11, 11, 12, 0.05);
+}
+
+/* 「商品详情」是区块指示牌，不是内容标题：做成小字标签靠分隔线划界，
+   免得跟商家在富文本里写的 h1/h2 争层级 */
+.detail-title {
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-ink-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
 }
 
 /* 富文本区：内容由管理端配置，这里给它一套可预期的排版，避免继承出奇怪的间距 */
 .rich-content {
-  padding-top: 16px;
+  max-width: 76ch;
   line-height: 1.8;
   color: var(--color-ink);
   overflow-wrap: break-word;
@@ -267,21 +396,26 @@ async function buy() {
 .rich-content :deep(h1),
 .rich-content :deep(h2),
 .rich-content :deep(h3) {
-  margin: 28px 0 12px;
-  font-weight: 700;
+  margin: 24px 0 10px;
+  font-weight: 600;
   line-height: 1.4;
 }
 
+/* 富文本的标题一律比「商品详情」这个区块标题小一号，免得内容盖过它所属的区块 */
 .rich-content :deep(h1) {
-  font-size: 22px;
-}
-
-.rich-content :deep(h2) {
   font-size: 19px;
 }
 
+.rich-content :deep(h2) {
+  font-size: 17px;
+}
+
 .rich-content :deep(h3) {
-  font-size: 16px;
+  font-size: 15px;
+}
+
+.rich-content :deep(> :first-child) {
+  margin-top: 0;
 }
 
 .rich-content :deep(p) {
@@ -297,6 +431,11 @@ async function buy() {
 
 .rich-content :deep(li) {
   margin: 6px 0;
+}
+
+/* 富文本编辑器把每个列表项包成 <li><p>…</p></li>，p 的上下 margin 会把列表撑得老远 */
+.rich-content :deep(li > p) {
+  margin: 0;
 }
 
 .rich-content :deep(a) {
@@ -327,7 +466,34 @@ async function buy() {
 .rich-content :deep(hr) {
   margin: 24px 0;
   border: none;
-  border-top: 1px solid var(--color-line, rgba(11, 11, 12, 0.08));
+  border-top: 1px solid var(--color-border);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'media'
+      'tag'
+      'detail';
+
+    gap: 20px;
+  }
+
+  .tag {
+    position: static;
+  }
 }
 
 @media (max-width: 720px) {
@@ -335,9 +501,26 @@ async function buy() {
     padding: 16px 20px 48px;
   }
 
-  .hero {
-    grid-template-columns: 1fr;
-    gap: 20px;
+  .media {
+    aspect-ratio: 5 / 4;
+    border-radius: 20px;
+  }
+
+  .placeholder {
+    width: 132px;
+    height: 132px;
+    font-size: 52px;
+  }
+
+  .detail {
+    padding: 22px 20px 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .media,
+  .tag {
+    animation: none;
   }
 }
 </style>

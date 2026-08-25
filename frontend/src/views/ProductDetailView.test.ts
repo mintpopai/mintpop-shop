@@ -117,17 +117,19 @@ describe('富文本详情渲染', () => {
     expect(html).toContain('正文')
   })
 
-  it('未配置详情时回退展示短描述，不留空白页', async () => {
+  it('未配置详情时整块详情区不渲染，短描述不被拿来充数', async () => {
     const w = await mountView({ detail: null })
 
+    expect(w.find('.detail').exists()).toBe(false)
     expect(w.find('.rich-content').exists()).toBe(false)
-    expect(w.find('.detail-fallback').text()).toBe('官方正规渠道')
+    // 短描述只在货签上出现，不会因为详情为空又在下方重复一遍
+    expect(w.text().split('官方正规渠道').length - 1).toBe(1)
   })
 
-  it('详情与短描述都为空时给一句占位文案', async () => {
-    const w = await mountView({ detail: null, description: null })
+  it('配了详情时短描述仍只出现一次，两处不重复', async () => {
+    const w = await mountView()
 
-    expect(w.find('.detail-fallback').text()).toBe(t('productDetail.noDetail'))
+    expect(w.text().split('官方正规渠道').length - 1).toBe(1)
   })
 })
 
