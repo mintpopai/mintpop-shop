@@ -24,7 +24,7 @@ jobs:
       IMAGE: ghcr.io/${{ github.repository }}/frontend
     steps:
       - name: 检出代码
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: 设置 Buildx
         uses: docker/setup-buildx-action@v4
       - name: 登录 GHCR
@@ -62,27 +62,40 @@ jobs:
       contents: write
     steps:
       - name: 检出代码（全量历史，COMMIT 模式需要）
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
       # 变更日志的比较起点自己算，不用 action 的 tag_resolver.filter：那个 filter 不是「谓词」而是
       # 「转换器」——默认走 name.replace(pattern, "")，结果为空串即视为无值丢弃。于是 "frontend-v.+"
       # 完整匹配 tag 名时，本组件的 tag 反而被全部剔除，连当前 tag 都不在候选里，只能跨组件回退到
       # 别人的上一个 tag（曾导致 frontend-v0.2.0 与 backend-v0.2.0 比较、变更日志为空）。
-      - name: 解析上一版同前缀 tag
+      - name: 解析上一版同前缀稳定 tag
         id: prev
         env:
+          PREFIX: "frontend-"
           TAG: ${{ github.ref_name }}
         run: |
-          # git 版本序（禁 sort -V，macOS 不支持）取「同前缀、紧邻当前 tag 的下一个」
-          prev="$(git tag -l 'frontend-v*' --sort=-v:refname \
-            | awk -v cur="$TAG" 'f { print; exit } $0 == cur { f = 1 }')"
+          # shallow clone 下 describe 会静默失准，宁可中止也不产出一份错的变更日志
+          [ "$(git rev-parse --is-shallow-repository)" = "false" ] \
+            || { echo "::error::仓库是 shallow clone，checkout 需 fetch-depth: 0" >&2; exit 1; }
+          # 按提交拓扑回溯最近的同前缀稳定 tag：
+          #   --match   只认本组件、v 后跟数字的 tag        --exclude 排除预发布（如 v0.2.0-rc.1）
+          #   ${TAG}^ 从父提交起找，同 commit 上别的组件 tag 不会干扰
+          prev="$(git describe --tags --abbrev=0 \
+            --match "${PREFIX}v[0-9]*" --exclude "${PREFIX}v*-*" "${TAG}^" 2>/dev/null || true)"
           if [ -z "$prev" ]; then
-            # 首发（无上一版）：起点取初始提交，等价于「取全量历史」
-            prev="$(git rev-list --max-parents=0 HEAD | tail -1)"
-            echo "未找到上一版 frontend tag，按首发处理，起点取初始提交 ${prev}"
+            # 没找到时区分「真首发」与「异常」，绝不一律退成全量历史
+            others="$(git tag -l "${PREFIX}v[0-9]*" \
+              | grep -E "^${PREFIX}v[0-9]+\.[0-9]+\.[0-9]+$" | grep -vFx "${TAG}" || true)"
+            if [ -n "$others" ]; then
+              echo "::error::存在同前缀稳定 tag 却回溯不到上一版，疑似 tag 不在当前历史或未拉全" >&2
+              printf '%s\n' "$others" >&2
+              exit 1
+            fi
+            prev="$(git rev-list --max-parents=0 "${TAG}" | tail -1)"   # 真首发：起点取初始提交
+            echo "首发，起点取初始提交 ${prev}" >&2
           fi
-          echo "起点 ${prev} → 终点 ${TAG}"
+          echo "起点 ${prev} → 终点 ${TAG}" >&2
           echo "from=$prev" >> "$GITHUB_OUTPUT"
       - name: 生成分类变更日志
         id: changelog
