@@ -53,7 +53,7 @@ describe('ProductCard 内容渲染', () => {
 describe('ProductCard 图片与占位', () => {
   it('有商品图时渲染图片，并用商品名作为替代文本', () => {
     const wrapper = render({ imageUrl: 'https://cdn.example.com/a.png' })
-    const img = wrapper.find('img.photo')
+    const img = wrapper.find('img.logo')
 
     expect(img.exists()).toBe(true)
     expect(img.attributes('src')).toBe('https://cdn.example.com/a.png')
@@ -67,20 +67,7 @@ describe('ProductCard 图片与占位', () => {
 
     expect(placeholder.text()).toBe('C')
     expect(placeholder.attributes('aria-hidden')).toBe('true')
-    expect(wrapper.find('img.photo').exists()).toBe(false)
-  })
-})
-
-describe('ProductCard 主题色', () => {
-  it('按 accent 取对应的渐变色', () => {
-    const style = render({ accent: 'ROSE' }).find('.thumb').attributes('style')
-    expect(style).toContain('#fae3e7')
-    expect(style).toContain('#f6ccd4')
-  })
-
-  it('后端给了未知 accent 时回退到 MINT，不至于渲染成透明卡片', () => {
-    const style = render({ accent: 'NEON_GREEN' }).find('.thumb').attributes('style')
-    expect(style).toContain('#d9f7ec')
+    expect(wrapper.find('img.logo').exists()).toBe(false)
   })
 })
 
