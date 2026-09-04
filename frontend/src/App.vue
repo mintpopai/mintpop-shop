@@ -87,43 +87,51 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* 页头常驻顶部：半透明 + 背景模糊，滚动时内容从下方透过去 */
 .header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 16px 32px;
-  background: var(--color-bg);
+  background: rgba(255, 255, 255, 0.82);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--color-border);
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 32px;
 }
 
 .main-nav {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .nav-item {
-  padding: 8px 18px;
+  padding: 8px 16px;
   border-radius: var(--radius-pill);
   font-size: 14px;
-  color: var(--color-ink);
+  color: var(--color-ink-secondary);
   text-decoration: none;
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .nav-item:hover {
-  background: var(--color-bg-page);
+  background: var(--color-bg-cloud);
+  color: var(--color-ink);
 }
 
-/* 当前路由高亮为浅灰胶囊：两项均精确匹配；日后若加 /orders 子路由，需改用 router-link-active 并对 / 单独处理 */
+/* 当前路由高亮为 Cloud 胶囊：两项均精确匹配；日后若加 /orders 子路由，需改用 router-link-active 并对 / 单独处理 */
 .nav-item.router-link-exact-active {
-  background: var(--color-bg-page);
+  background: var(--color-bg-cloud);
+  color: var(--color-ink);
   font-weight: 600;
 }
 
@@ -135,12 +143,14 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 24px;
-  color: var(--color-brand-deep);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--color-ink);
 }
 
 .wordmark-img {
-  height: 28px;
+  height: 26px;
   width: auto;
   display: block;
 }
@@ -154,17 +164,17 @@ onMounted(() => {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
 .contact-link {
   font-size: 14px;
-  color: var(--color-ink);
+  color: var(--color-ink-secondary);
   text-decoration: none;
 }
 
 .contact-link:hover {
-  color: var(--color-brand-deep);
+  color: var(--color-brand-ink);
 }
 
 .lang-btn {
@@ -172,31 +182,34 @@ onMounted(() => {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
   background: transparent;
-  color: var(--color-ink);
+  color: var(--color-ink-secondary);
   font-size: 13px;
   font-family: inherit;
   cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
 }
 
 .lang-btn:hover {
   border-color: var(--color-brand);
-  color: var(--color-brand-deep);
+  color: var(--color-ink);
 }
 
+/* 薄荷填充上一律 ink 字：#17d1a7 配白字对比度不过 AA */
 .login-btn {
-  padding: 8px 20px;
+  padding: 9px 20px;
   border: none;
   border-radius: var(--radius-pill);
   background: var(--color-brand);
-  color: #ffffff;
+  color: var(--color-ink);
   font-size: 14px;
   font-family: inherit;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 0.15s ease;
 }
 
 .login-btn:hover {
-  background: var(--color-brand-deep);
+  background: var(--color-brand-bright);
 }
 
 .user-menu {
@@ -218,12 +231,12 @@ onMounted(() => {
 }
 
 .user-trigger:hover {
-  background: var(--color-bg-page);
+  background: var(--color-bg-cloud);
 }
 
 .avatar {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   object-fit: cover;
 }
@@ -233,7 +246,8 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   background: var(--color-brand);
-  color: #ffffff;
+  color: var(--color-ink);
+  font-size: 13px;
   font-weight: 600;
 }
 
@@ -244,9 +258,9 @@ onMounted(() => {
   min-width: 140px;
   padding: 6px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-card);
+  border-radius: var(--radius-button);
   background: #ffffff;
-  box-shadow: 0 8px 24px rgba(11, 11, 12, 0.12);
+  box-shadow: 0 1px 3px rgba(11, 11, 12, 0.06);
   display: flex;
   flex-direction: column;
   z-index: 20;
@@ -280,16 +294,17 @@ onMounted(() => {
   background: var(--color-ink);
   color: #ffffff;
   font-size: 14px;
-  box-shadow: 0 8px 24px rgba(11, 11, 12, 0.16);
-  z-index: 10;
+  box-shadow: 0 1px 3px rgba(11, 11, 12, 0.06);
+  z-index: 20;
 }
 
+/* 成功/失败用语义色，不用品牌绿：薄荷是强调色，不承担状态含义 */
 .toast.success {
-  background: var(--color-brand-deep);
+  background: #17b26a;
 }
 
 .toast.error {
-  background: #b91c1c;
+  background: var(--color-danger);
 }
 
 .toast-enter-active,
