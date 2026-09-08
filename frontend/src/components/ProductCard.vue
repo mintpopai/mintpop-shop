@@ -1,13 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
-import { accentColors } from '../accent'
 import { formatPrice, type Product } from '../api'
 
-const props = defineProps<{ product: Product; buying: boolean }>()
+defineProps<{ product: Product; buying: boolean }>()
 const emit = defineEmits<{ buy: [product: Product] }>()
-
-const accent = computed(() => accentColors(props.product.accent))
 </script>
 
 <template>
@@ -19,13 +15,11 @@ const accent = computed(() => accentColors(props.product.accent))
       :to="`/products/${product.id}`"
       :aria-label="$t('product.viewDetail', { name: product.name })"
     />
-    <div
-      class="thumb"
-      :style="{ background: `linear-gradient(135deg, ${accent.from}, ${accent.to})` }"
-    >
+    <div class="thumb">
+      <div class="thumb-glow" aria-hidden="true"></div>
       <span v-if="product.badge" class="badge">{{ product.badge }}</span>
-      <img v-if="product.imageUrl" class="photo" :src="product.imageUrl" :alt="product.name" />
-      <span v-else class="placeholder" :style="{ color: accent.ink }" aria-hidden="true">
+      <img v-if="product.imageUrl" class="logo" :src="product.imageUrl" :alt="product.name" />
+      <span v-else class="placeholder" aria-hidden="true">
         {{ product.name.charAt(0) }}
       </span>
     </div>
@@ -67,15 +61,16 @@ const accent = computed(() => accentColors(props.product.accent))
   display: flex;
   flex-direction: column;
   background: var(--color-bg);
-  border-radius: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
   overflow: hidden;
-  box-shadow: 0 2px 10px rgba(11, 11, 12, 0.05);
-  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  box-shadow: 0 1px 3px rgba(11, 11, 12, 0.06);
+  transition: transform 0.15s ease, border-color 0.15s ease;
 }
 
 .card:hover {
-  box-shadow: 0 10px 28px rgba(11, 11, 12, 0.1);
   transform: translateY(-2px);
+  border-color: var(--color-brand);
 }
 
 .card-link {
@@ -86,83 +81,84 @@ const accent = computed(() => accentColors(props.product.accent))
 }
 
 .card-link:focus-visible {
-  outline: 2px solid var(--color-brand-deep);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(23, 209, 167, 0.28);
 }
 
-/* 图形区：accent 渐变（内联 style）+ 点阵纹理 + 角标 */
+/* 图形区：Cloud 底 + 一颗模糊薄荷光球，中间放商品 logo */
 .thumb {
   position: relative;
+  overflow: hidden;
   aspect-ratio: 16 / 10;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: var(--color-bg-cloud);
+  border-bottom: 1px solid var(--color-border);
 }
 
-.thumb::after {
-  content: '';
+.thumb-glow {
   position: absolute;
-  inset: 0 0 0 55%;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.5) 1.5px, transparent 1.5px);
-  background-size: 14px 14px;
-  mask-image: linear-gradient(to right, transparent, #000 60%);
+  width: 320px;
+  height: 320px;
+  left: 50%;
+  top: 50%;
+  margin: -160px 0 0 -160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(31, 227, 173, 0.26), rgba(23, 209, 167, 0) 68%);
+  filter: blur(22px);
   pointer-events: none;
-}
-
-/* 有真实商品图时不叠点阵纹理 */
-.thumb:has(.photo)::after {
-  content: none;
 }
 
 .badge {
   position: absolute;
-  top: 16px;
-  left: 16px;
-  padding: 5px 12px;
+  top: 14px;
+  left: 14px;
+  padding: 4px 10px;
   border-radius: var(--radius-pill);
   background: var(--color-bg);
   color: var(--color-ink);
   font-size: 12px;
   font-weight: 500;
-  box-shadow: 0 2px 8px rgba(11, 11, 12, 0.08);
+  box-shadow: 0 1px 3px rgba(11, 11, 12, 0.08);
+  /* 角标压在整卡链接之下也不该吃掉点击 */
+  pointer-events: none;
 }
 
-.photo {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+/* 商品图是品牌 logo 不是照片：等比放进方形框，不裁切不拉伸 */
+.logo {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  object-fit: contain;
+  border-radius: 16px;
 }
 
-/* 无图占位：白色大圆 + accent 色商品首字 */
+/* 无 logo 时回落商品首字，不画灰框 */
 .placeholder {
-  width: 108px;
-  height: 108px;
-  border-radius: var(--radius-pill);
-  background: var(--color-bg);
+  position: relative;
   font-family: 'Fredoka', 'Inter', sans-serif;
   font-size: 40px;
   font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8px 20px rgba(11, 11, 12, 0.08);
+  color: var(--color-ink-secondary);
 }
 
 .body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   padding: 20px;
   flex: 1;
 }
 
 .name {
-  font-size: 17px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .desc {
   font-size: 13px;
+  line-height: 1.6;
   color: var(--color-ink-secondary);
   flex: 1;
 }
@@ -171,12 +167,14 @@ const accent = computed(() => accentColors(props.product.accent))
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 8px;
+  margin-top: 16px;
 }
 
 .price {
-  font-size: 20px;
-  font-weight: 700;
+  font-family: 'Fredoka', 'Inter', sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .buy-btn {
@@ -186,17 +184,16 @@ const accent = computed(() => accentColors(props.product.accent))
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 10px 20px;
+  padding: 9px 18px;
   border: none;
-  border-radius: 12px;
+  border-radius: var(--radius-button);
   background: var(--color-brand);
-  color: #ffffff;
+  color: var(--color-ink);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   font-family: inherit;
   cursor: pointer;
   transition: background 0.15s ease;
-  box-shadow: 0 6px 16px rgba(23, 209, 167, 0.35);
 }
 
 .buy-icon {
@@ -205,12 +202,12 @@ const accent = computed(() => accentColors(props.product.accent))
 }
 
 .buy-btn:hover:not(:disabled) {
-  background: var(--color-brand-deep);
+  background: var(--color-brand-bright);
 }
 
 .buy-btn:focus-visible {
-  outline: 2px solid var(--color-brand-deep);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(23, 209, 167, 0.28);
 }
 
 .buy-btn:disabled {

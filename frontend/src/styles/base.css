@@ -2,14 +2,19 @@
    与 admin/src/styles/base.css 同源：两个前端项目各存一份，改动需两边同步。 */
 :root {
   --color-brand: #17d1a7;
+  --color-brand-bright: #1fe3ad;
   --color-brand-deep: #0fb389;
+  /* 浅底上的薄荷链接色：#17d1a7 在白底对比度不足 AA，文字用这一档 */
+  --color-brand-ink: #087a5c;
   --color-ink: #0b0b0c;
   --color-ink-secondary: #6b7280;
   --color-bg: #ffffff;
   --color-bg-cloud: #f4f8f6;
-  --color-bg-page: #f2f4f4;
+  --color-bg-page: #f4f8f6;
   --color-border: #e5e7eb;
+  --color-danger: #e5484d;
   --radius-card: 8px;
+  --radius-panel: 14px;
   --radius-button: 6px;
   --radius-pill: 999px;
 }
