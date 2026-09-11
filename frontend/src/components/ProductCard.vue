@@ -137,7 +137,8 @@ const emit = defineEmits<{ buy: [product: Product] }>()
 /* 无 logo 时回落商品首字，不画灰框 */
 .placeholder {
   position: relative;
-  font-family: 'Fredoka', 'Inter', sans-serif;
+  font-family: 'Fredoka', 'Space Grotesk', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif;
   font-size: 40px;
   font-weight: 600;
   color: var(--color-ink-secondary);
@@ -171,7 +172,8 @@ const emit = defineEmits<{ buy: [product: Product] }>()
 }
 
 .price {
-  font-family: 'Fredoka', 'Inter', sans-serif;
+  font-family: 'Fredoka', 'Space Grotesk', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif;
   font-size: 22px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;

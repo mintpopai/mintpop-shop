@@ -166,7 +166,8 @@ async function buy(product: Product) {
 }
 
 .hero-title {
-  font-family: 'Fredoka', 'Inter', sans-serif;
+  font-family: 'Fredoka', 'Space Grotesk', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif;
   font-size: 48px;
   line-height: 1.2;
   font-weight: 600;

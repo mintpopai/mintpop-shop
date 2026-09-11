@@ -195,7 +195,8 @@ async function buy() {
 
 .placeholder {
   position: relative;
-  font-family: 'Fredoka', 'Inter', sans-serif;
+  font-family: 'Fredoka', 'Space Grotesk', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif;
   font-size: 68px;
   font-weight: 600;
   color: var(--color-ink-secondary);
@@ -266,7 +267,8 @@ async function buy() {
 }
 
 .price {
-  font-family: 'Fredoka', 'Inter', sans-serif;
+  font-family: 'Fredoka', 'Space Grotesk', 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', sans-serif;
   font-size: 34px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
