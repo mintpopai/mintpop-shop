@@ -4,7 +4,6 @@ import '@fontsource/space-grotesk/400.css'
 import '@fontsource/space-grotesk/500.css'
 import '@fontsource/space-grotesk/600.css'
 import '@fontsource/space-grotesk/700.css'
-import '@fontsource/fredoka/600.css'
 // 等宽只用于「系统生成的事实」（订单号 / 金额 / 时间戳 / ID），排版即信息，见 layout.css
 import '@fontsource/ibm-plex-mono/400.css'
 import '@fontsource/ibm-plex-mono/500.css'

@@ -18,7 +18,21 @@
 
     <main class="gate-main">
       <div class="gate-box">
-        <p class="gate-brand"><span class="wordmark">MintPop</span> 管理后台</p>
+        <p class="gate-brand">
+          <img
+            class="gate-icon"
+            src="https://standards.mintpop.ai/assets/products/shop/shop-app-cloud.png"
+            alt=""
+          />
+          <span class="gate-brand-text">
+            <img
+              class="gate-wordmark"
+              src="https://standards.mintpop.ai/assets/brand/wordmark/mintpop-wordmark-dark.png"
+              alt="MintPop"
+            />
+            管理后台
+          </span>
+        </p>
         <slot />
       </div>
     </main>

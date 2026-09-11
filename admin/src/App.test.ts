@@ -61,6 +61,13 @@ describe('未登录', () => {
     expect(w.find('.admin-rail').exists()).toBe(false)
   })
 
+  it('品牌行展示 shop 产品图标与 wordmark 图片', async () => {
+    const w = await render(null)
+
+    expect(w.find('.gate-icon').attributes('src')).toContain('products/shop/shop-app-cloud.png')
+    expect(w.find('.gate-wordmark').attributes('src')).toContain('brand/wordmark/mintpop-wordmark-dark.png')
+  })
+
   it('点登录跳后端登录入口', async () => {
     const w = await render(null)
 
