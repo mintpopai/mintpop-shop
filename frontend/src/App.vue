@@ -6,7 +6,8 @@ import { locale, setLocale, t } from './i18n'
 
 const menuOpen = ref(false)
 
-/** 联系方式页在官网（mintpop.ai），按当前语言指向对应路径 */
+/** 官网（mintpop.ai）首页与联系方式页，按当前语言指向对应路径 */
+const siteUrl = locale === 'zh-CN' ? 'https://mintpop.ai/zh/' : 'https://mintpop.ai/'
 const contactUrl = locale === 'zh-CN' ? 'https://mintpop.ai/zh/contact/' : 'https://mintpop.ai/contact/'
 
 /** 游客的中英互切（切了立即刷新生效）；登录用户的语言偏好统一在设置页里改 */
@@ -32,6 +33,11 @@ onMounted(() => {
       <RouterLink to="/" class="wordmark-link">
         <h1 class="wordmark">
           <img
+            class="wordmark-icon"
+            src="https://standards.mintpop.ai/assets/products/shop/shop-app-cloud.png"
+            alt=""
+          />
+          <img
             class="wordmark-img"
             src="https://standards.mintpop.ai/assets/brand/wordmark/mintpop-wordmark-dark.png"
             alt="MintPop"
@@ -46,6 +52,8 @@ onMounted(() => {
     </div>
 
     <nav class="auth-area">
+      <!-- 回官网：商城是 mintpop.ai 的子站，给用户一条回主站的路 -->
+      <a class="site-link" :href="siteUrl">mintpop.ai</a>
       <a class="contact-link" :href="contactUrl" target="_blank" rel="noopener">
         {{ $t('app.contact') }}
       </a>
@@ -149,6 +157,14 @@ onMounted(() => {
   color: var(--color-ink);
 }
 
+/* shop 产品图标，与浏览器标签页同一张 */
+.wordmark-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: block;
+}
+
 .wordmark-img {
   height: 26px;
   width: auto;
@@ -167,12 +183,14 @@ onMounted(() => {
   gap: 16px;
 }
 
+.site-link,
 .contact-link {
   font-size: 14px;
   color: var(--color-ink-secondary);
   text-decoration: none;
 }
 
+.site-link:hover,
 .contact-link:hover {
   color: var(--color-brand-ink);
 }
