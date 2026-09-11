@@ -155,9 +155,19 @@ const emit = defineEmits<{ buy: [product: Product] }>()
 .name {
   font-size: 16px;
   font-weight: 600;
+  /* 超长名称单行省略，不撑高卡片 */
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .desc {
+  /* 描述固定占四行：多则截断、少则留白，让所有卡片等高、价格行对齐 */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+  min-height: calc(1.6em * 4);
   font-size: 13px;
   line-height: 1.6;
   color: var(--color-ink-secondary);
