@@ -10,7 +10,8 @@
   },
   "common": {
     "loading": "Loading…",
-    "loadFailed": "Failed to load, please try again later"
+    "loadFailed": "Failed to load, please try again later",
+    "close": "Close"
   },
   "shop": {
     "groupNav": "Product groups",
@@ -76,7 +77,11 @@
     "qrExpired": "QR code expired",
     "regenerateQr": "Get a new QR code",
     "cancelOrder": "Cancel order",
-    "cancelConfirm": "Cancel this order?",
+    "cancelConfirmTitle": "Cancel order",
+    "cancelConfirm": "Once cancelled, order {orderNo} can no longer be paid. Place a new order if you still want it.",
+    "cancelConfirmKeep": "Keep order",
+    "cancelConfirmAction": "Cancel order",
+    "cancelling": "Cancelling…",
     "cancelled": "Order cancelled",
     "notPayable": "This order cannot be paid right now",
     "viewOrders": "View my orders",

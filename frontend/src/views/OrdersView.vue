@@ -5,6 +5,7 @@ import { gotoLogin } from '../auth'
 import { formatDateTime } from '../datetime'
 import { t } from '../i18n'
 import { showToast } from '../toast'
+import ConfirmDialog from '../components/ConfirmDialog.vue'
 
 const orders = ref<OrderItem[]>([])
 const loading = ref(true)
@@ -67,20 +68,28 @@ function hasDetail(order: OrderItem): boolean {
   return order.status === 'PAID' || order.status === 'COMPLETED'
 }
 
-async function onCancel(order: OrderItem) {
-  if (!window.confirm(t('payment.cancelConfirm'))) {
+/** 待确认取消的订单；非空即打开确认弹窗（自绘弹窗替代 window.confirm，文案与按钮都能本地化） */
+const cancelling = ref<OrderItem | null>(null)
+const cancelBusy = ref(false)
+
+async function onCancel() {
+  const order = cancelling.value
+  if (!order || cancelBusy.value) {
     return
   }
+  cancelBusy.value = true
   try {
     await cancelOrder(order.orderNo)
+    cancelling.value = null
     showToast('success', t('payment.cancelled'))
     orders.value = await fetchMyOrders()
     resetFilterIfStale()
   } catch (e) {
     showToast('error', e instanceof Error ? e.message : t('api.requestFailed'))
+  } finally {
+    cancelBusy.value = false
   }
 }
-
 </script>
 
 <template>
@@ -133,7 +142,7 @@ async function onCancel(order: OrderItem) {
             </span>
             <div v-if="isPayable(order) || hasDetail(order)" class="order-actions">
               <template v-if="isPayable(order)">
-                <button type="button" class="cancel-link" @click="onCancel(order)">
+                <button type="button" class="cancel-link" @click="cancelling = order">
                   {{ $t('orders.cancel') }}
                 </button>
                 <RouterLink :to="`/pay/${order.orderNo}`" class="pay-link">
@@ -148,6 +157,18 @@ async function onCancel(order: OrderItem) {
         </li>
       </ul>
     </template>
+
+    <ConfirmDialog
+      v-if="cancelling"
+      :title="$t('payment.cancelConfirmTitle')"
+      :text="$t('payment.cancelConfirm', { orderNo: cancelling.orderNo })"
+      :confirm-label="$t('payment.cancelConfirmAction')"
+      :cancel-label="$t('payment.cancelConfirmKeep')"
+      :busy="cancelBusy"
+      :busy-label="$t('payment.cancelling')"
+      @confirm="onCancel"
+      @close="cancelling = null"
+    />
   </main>
 </template>
 

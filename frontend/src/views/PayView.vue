@@ -22,6 +22,7 @@ import {
 import { gotoLogin } from '../auth'
 import { locale, t } from '../i18n'
 import { showToast } from '../toast'
+import ConfirmDialog from '../components/ConfirmDialog.vue'
 
 /** 二维码有效期（秒）：Stripe 未在 next_action 中下发过期时间，按微信码常见时效取 15 分钟 */
 const QR_TTL_SECONDS = 15 * 60
@@ -42,6 +43,10 @@ const polling = ref(false)
 // 订单级支付时限（区别于二维码有效期）
 const orderSecondsLeft = ref(0)
 const orderExpired = ref(false)
+
+/** 取消确认弹窗是否打开：自绘弹窗替代 window.confirm，文案与按钮都能本地化 */
+const cancelDialogOpen = ref(false)
+const cancelBusy = ref(false)
 
 // 二维码状态
 const qrFor = ref<StripeSubMethod | null>(null)
@@ -137,13 +142,14 @@ async function onOrderDeadline() {
   showExpiredState()
 }
 
-/** 切到订单过期态：停掉所有计时器与轮询，收起二维码 */
+/** 切到订单过期态：停掉所有计时器与轮询，收起二维码；取消确认弹窗若还开着也一并收掉——单子已经没了，没什么可取消 */
 function showExpiredState() {
   clearInterval(orderTimer)
   clearInterval(qrTimer)
   clearInterval(pollTimer)
   polling.value = false
   qrFor.value = null
+  cancelDialogOpen.value = false
   orderExpired.value = true
 }
 
@@ -288,15 +294,19 @@ function goResult() {
 }
 
 async function onCancel() {
-  if (!window.confirm(t('payment.cancelConfirm'))) {
+  if (cancelBusy.value) {
     return
   }
+  cancelBusy.value = true
   try {
     await cancelOrder(orderNo)
+    cancelDialogOpen.value = false
     showToast('success', t('payment.cancelled'))
     router.push('/orders')
   } catch (e) {
     showToast('error', e instanceof Error ? e.message : t('api.requestFailed'))
+  } finally {
+    cancelBusy.value = false
   }
 }
 </script>
@@ -422,7 +432,7 @@ async function onCancel() {
                   : $t('payment.confirmPay')
             }}
           </button>
-          <button type="button" class="cancel-btn" @click="onCancel">
+          <button type="button" class="cancel-btn" @click="cancelDialogOpen = true">
             {{ $t('payment.cancelOrder') }}
           </button>
         </div>
@@ -436,6 +446,18 @@ async function onCancel() {
         </div>
       </section>
     </template>
+
+    <ConfirmDialog
+      v-if="cancelDialogOpen"
+      :title="$t('payment.cancelConfirmTitle')"
+      :text="$t('payment.cancelConfirm', { orderNo })"
+      :confirm-label="$t('payment.cancelConfirmAction')"
+      :cancel-label="$t('payment.cancelConfirmKeep')"
+      :busy="cancelBusy"
+      :busy-label="$t('payment.cancelling')"
+      @confirm="onCancel"
+      @close="cancelDialogOpen = false"
+    />
   </main>
 </template>
 

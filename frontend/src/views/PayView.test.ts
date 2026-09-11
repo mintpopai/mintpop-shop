@@ -78,11 +78,19 @@ function fakeCardElements(paymentElement = { mount: vi.fn() }) {
   } as unknown as ReturnType<typeof createCardElements>
 }
 
-/** happy-dom 不实现 window.confirm，用可控替身顶上 */
-function stubConfirm(answer: boolean) {
-  const confirmMock = vi.fn().mockReturnValue(answer)
-  vi.stubGlobal('confirm', confirmMock)
-  return confirmMock
+/** 取消确认弹窗 Teleport 到 body，不在 wrapper 根下，直接从 document 取 */
+function cancelDialog(): HTMLElement | null {
+  return document.querySelector('.dialog')
+}
+
+/** 点弹窗里的按钮（主按钮 .btn-danger / 次按钮 .btn-ghost） */
+async function clickDialog(selector: string) {
+  const button = cancelDialog()?.querySelector<HTMLElement>(selector)
+  if (!button) {
+    throw new Error(`取消确认弹窗里没有 ${selector}`)
+  }
+  button.click()
+  await flushPromises()
 }
 
 /** 按给定的后端响应挂载收银台，返回挂载完成（首屏请求已结算）的 wrapper */
@@ -128,6 +136,7 @@ beforeEach(() => {
 afterEach(() => {
   wrapper?.unmount()
   wrapper = null
+  document.body.innerHTML = ''
   vi.useRealTimers()
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
@@ -536,38 +545,69 @@ describe('支付结果轮询', () => {
 })
 
 describe('取消订单', () => {
-  it('用户在确认框里点取消时不发请求', async () => {
+  it('点「取消订单」先弹自绘确认框（不是 window.confirm），说清是哪一单，且不发请求', async () => {
     const w = await mountPayView()
-    stubConfirm(false)
+    const confirmSpy = vi.fn()
+    vi.stubGlobal('confirm', confirmSpy)
 
     await w.find('.cancel-btn').trigger('click')
     await flushPromises()
 
+    expect(confirmSpy).not.toHaveBeenCalled()
+    expect(cancelDialog()?.getAttribute('aria-label')).toBe(t('payment.cancelConfirmTitle'))
+    expect(cancelDialog()?.textContent).toContain(ORDER_NO)
+    expect(cancelOrderMock).not.toHaveBeenCalled()
+  })
+
+  it('在确认框里选「再想想」：关掉弹窗，不发请求', async () => {
+    const w = await mountPayView()
+    await w.find('.cancel-btn').trigger('click')
+    await flushPromises()
+
+    await clickDialog('.btn-ghost')
+
+    expect(cancelDialog()).toBeNull()
     expect(cancelOrderMock).not.toHaveBeenCalled()
   })
 
   it('确认后取消订单，提示成功并回订单列表', async () => {
     const w = await mountPayView()
-    stubConfirm(true)
     cancelOrderMock.mockResolvedValue(null)
-
     await w.find('.cancel-btn').trigger('click')
     await flushPromises()
 
+    await clickDialog('.btn-danger')
+
     expect(cancelOrderMock).toHaveBeenCalledWith(ORDER_NO)
+    expect(cancelDialog()).toBeNull()
     expect(toast.value).toEqual({ type: 'success', text: t('payment.cancelled') })
     expect(push).toHaveBeenCalledWith('/orders')
   })
 
-  it('取消失败时提示后端给的原因，且不跳走', async () => {
-    const w = await mountPayView()
-    stubConfirm(true)
-    cancelOrderMock.mockRejectedValue(new Error('该订单当前不可取消'))
+  it('弹窗开着时订单到期：切到过期态并收掉弹窗，单子已经没了没什么可取消', async () => {
+    const w = await mountPayView({ intent: { expireRemainingSeconds: 5 } })
+    verifyOrderMock.mockResolvedValue({ orderNo: ORDER_NO, status: 'EXPIRED' })
+    await w.find('.cancel-btn').trigger('click')
+    await flushPromises()
+    expect(cancelDialog()).not.toBeNull()
 
+    await vi.advanceTimersByTimeAsync(5000)
+    await flushPromises()
+
+    expect(cancelDialog()).toBeNull()
+    expect(w.find('.hint.error').text()).toContain(t('payment.orderExpired'))
+  })
+
+  it('取消失败时提示后端给的原因，弹窗留着、不跳走', async () => {
+    const w = await mountPayView()
+    cancelOrderMock.mockRejectedValue(new Error('该订单当前不可取消'))
     await w.find('.cancel-btn').trigger('click')
     await flushPromises()
 
+    await clickDialog('.btn-danger')
+
     expect(toast.value).toEqual({ type: 'error', text: '该订单当前不可取消' })
+    expect(cancelDialog()).not.toBeNull()
     expect(push).not.toHaveBeenCalled()
   })
 })

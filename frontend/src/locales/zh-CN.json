@@ -10,7 +10,8 @@
   },
   "common": {
     "loading": "加载中……",
-    "loadFailed": "加载失败，请稍后重试"
+    "loadFailed": "加载失败，请稍后重试",
+    "close": "关闭"
   },
   "shop": {
     "groupNav": "商品分组",
@@ -76,7 +77,11 @@
     "qrExpired": "二维码已过期",
     "regenerateQr": "重新获取二维码",
     "cancelOrder": "取消订单",
-    "cancelConfirm": "确定取消该订单吗？",
+    "cancelConfirmTitle": "取消订单",
+    "cancelConfirm": "订单 {orderNo} 取消后将无法再支付，如需购买请重新下单。",
+    "cancelConfirmKeep": "再想想",
+    "cancelConfirmAction": "确认取消",
+    "cancelling": "取消中…",
     "cancelled": "订单已取消",
     "notPayable": "该订单当前不可支付",
     "viewOrders": "查看我的订单",

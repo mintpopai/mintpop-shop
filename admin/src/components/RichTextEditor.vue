@@ -1,10 +1,11 @@
 <script setup lang="ts">
 // 商品详情的富文本编辑器：TipTap（ProseMirror 内核），对外就是一个 v-model 绑 HTML 字符串的输入框。
 // 产出的 HTML 后端还会用白名单再净化一遍，这里不负责安全，只负责好用。
-import { onBeforeUnmount, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { EditorContent, useEditor } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
+import Modal from './Modal.vue'
 
 const props = defineProps<{
   id: string
@@ -62,26 +63,73 @@ interface Tool {
   danger?: boolean
 }
 
-/** 链接与图片要问一句地址，其余都是无参命令 */
-function promptSetLink() {
-  const previous = editor.value?.getAttributes('link').href ?? ''
-  const href = window.prompt('链接地址（留空则取消链接）', previous)
-  if (href === null) {
+/**
+ * 链接与图片要问一句地址，其余都是无参命令。
+ * 问地址用自绘弹窗而不是 window.prompt：那是操作系统画的框，样式不归这套设计管，
+ * 也没法把「留空即移除链接」这种规则做成按钮文案。弹窗开着时编辑器失焦，
+ * 但选区仍留在编辑器状态里，确认时 chain().focus() 会把它找回来再下命令。
+ */
+type UrlDialogKind = 'link' | 'image'
+
+interface UrlDialog {
+  kind: UrlDialogKind
+  value: string
+  /** 打开时选区上是否已有链接：决定「留空」按钮写成「移除链接」还是禁用 */
+  hadLink: boolean
+}
+
+const urlDialog = ref<UrlDialog | null>(null)
+const urlInput = ref<HTMLInputElement | null>(null)
+
+const URL_DIALOG_TEXT: Record<UrlDialogKind, { title: string; label: string; placeholder: string }> = {
+  link: { title: '设置链接', label: '链接地址', placeholder: 'https://…' },
+  image: { title: '插入图片', label: '图片地址', placeholder: 'https://…' },
+}
+
+const urlDialogText = computed(() => (urlDialog.value ? URL_DIALOG_TEXT[urlDialog.value.kind] : null))
+
+/** 主按钮直接写动作：有内容就是「设置链接 / 插入图片」，链接留空则是「移除链接」 */
+const urlDialogAction = computed(() => {
+  const dialog = urlDialog.value
+  if (!dialog) {
+    return { label: '', disabled: true }
+  }
+  const empty = dialog.value.trim() === ''
+  if (dialog.kind === 'image') {
+    return { label: '插入图片', disabled: empty }
+  }
+  return empty ? { label: '移除链接', disabled: !dialog.hadLink } : { label: '设置链接', disabled: false }
+})
+
+async function openUrlDialog(kind: UrlDialogKind) {
+  const previous = kind === 'link' ? (editor.value?.getAttributes('link').href as string | undefined) ?? '' : ''
+  urlDialog.value = { kind, value: previous, hadLink: previous !== '' }
+  // Modal 默认把焦点放在关闭按钮上；这个弹窗就一个输入框，直接落进去让人开手就能打
+  await nextTick()
+  urlInput.value?.focus()
+  urlInput.value?.select()
+}
+
+function closeUrlDialog() {
+  urlDialog.value = null
+}
+
+function submitUrlDialog() {
+  const dialog = urlDialog.value
+  if (!dialog || urlDialogAction.value.disabled) {
     return
   }
-  if (href.trim() === '') {
+  const url = dialog.value.trim()
+  urlDialog.value = null
+  if (dialog.kind === 'image') {
+    editor.value?.chain().focus().setImage({ src: url }).run()
+    return
+  }
+  if (url === '') {
     editor.value?.chain().focus().unsetLink().run()
     return
   }
-  editor.value?.chain().focus().extendMarkRange('link').setLink({ href: href.trim() }).run()
-}
-
-function promptInsertImage() {
-  const src = window.prompt('图片地址（https://…）', '')
-  if (src === null || src.trim() === '') {
-    return
-  }
-  editor.value?.chain().focus().setImage({ src: src.trim() }).run()
+  editor.value?.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
 }
 
 /** 按职责分组：行内格式 / 段落 / 块级 / 插入 / 历史 / 清空，组间画一条竖线 */
@@ -121,13 +169,13 @@ const toolGroups: Tool[][] = [
     {
       title: '链接',
       paths: ['M10.5 13.5a4.5 4.5 0 0 0 6.6.4l2.4-2.4a4.5 4.5 0 0 0-6.4-6.4l-1.4 1.4', 'M13.5 10.5a4.5 4.5 0 0 0-6.6-.4l-2.4 2.4a4.5 4.5 0 0 0 6.4 6.4l1.4-1.4'],
-      run: promptSetLink,
+      run: () => void openUrlDialog('link'),
       active: () => !!editor.value?.isActive('link'),
     },
     {
       title: '图片',
       paths: ['M4 5.5h16v13H4z', 'M4 15l4.5-4.5L14 16', 'M15.5 9h.01'],
-      run: promptInsertImage,
+      run: () => void openUrlDialog('image'),
     },
   ],
   [
@@ -181,6 +229,30 @@ const toolGroups: Tool[][] = [
         在这里写商品详情：卖点、材质尺寸、发货说明……
       </p>
     </div>
+
+    <!-- 问地址的弹窗：Teleport 到 body，叠在商品编辑弹窗之上；回车即确认 -->
+    <Modal v-if="urlDialog && urlDialogText" :title="urlDialogText.title" @close="closeUrlDialog">
+      <div class="admin-field">
+        <label for="rte-url">{{ urlDialogText.label }}</label>
+        <input
+          id="rte-url"
+          ref="urlInput"
+          v-model="urlDialog.value"
+          class="admin-input url-input"
+          type="url"
+          :placeholder="urlDialogText.placeholder"
+          autocomplete="off"
+          @keydown.enter.prevent="submitUrlDialog"
+        />
+        <p v-if="urlDialog.kind === 'link'" class="url-hint">留空并确认即移除当前链接。</p>
+      </div>
+      <template #footer>
+        <button type="button" class="admin-btn-ghost" @click="closeUrlDialog">取消</button>
+        <button type="button" class="admin-btn" :disabled="urlDialogAction.disabled" @click="submitUrlDialog">
+          {{ urlDialogAction.label }}
+        </button>
+      </template>
+    </Modal>
   </div>
 </template>
 
@@ -322,6 +394,15 @@ const toolGroups: Tool[][] = [
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+}
+
+.url-input {
+  width: 100%;
+}
+
+.url-hint {
+  font-size: 12px;
+  color: var(--color-ink-secondary);
 }
 
 .editor-empty {

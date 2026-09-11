@@ -1,7 +1,7 @@
 // ProseMirror 依赖 Range/Selection 等 DOM 细节，happy-dom 支撑不住，这个组件的用例跑 jsdom
 // @vitest-environment jsdom
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import RichTextEditor from './RichTextEditor.vue'
 
 let wrapper: VueWrapper | null = null
@@ -127,5 +127,120 @@ describe('空内容', () => {
     await clickTool(w, '清空内容')
 
     expect(lastEmitted(w)).toBe('')
+  })
+})
+
+describe('链接与图片：问地址走自绘弹窗，不用 window.prompt', () => {
+  /** 弹窗 Teleport 到 body，不在 wrapper 根下 */
+  function dialog(): HTMLElement | null {
+    return document.querySelector('.dialog')
+  }
+
+  function urlInput(): HTMLInputElement {
+    return document.querySelector('#rte-url') as HTMLInputElement
+  }
+
+  async function typeUrl(value: string) {
+    const input = urlInput()
+    input.value = value
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    await flushPromises()
+  }
+
+  async function clickPrimary() {
+    ;(dialog()?.querySelector('.admin-btn') as HTMLElement).click()
+    await flushPromises()
+  }
+
+  it('点「链接」打开弹窗而不是 window.prompt，焦点直接落在输入框', async () => {
+    const w = await render('<p>看这里</p>')
+    const promptSpy = vi.fn()
+    vi.stubGlobal('prompt', promptSpy)
+    await selectAll(w)
+
+    await clickTool(w, '链接')
+
+    expect(promptSpy).not.toHaveBeenCalled()
+    expect(dialog()?.getAttribute('aria-label')).toBe('设置链接')
+    expect(document.activeElement).toBe(urlInput())
+    vi.unstubAllGlobals()
+  })
+
+  it('填地址后确认：选中文字套上 <a>，弹窗关闭', async () => {
+    const w = await render('<p>看这里</p>')
+    await selectAll(w)
+    await clickTool(w, '链接')
+
+    await typeUrl(' https://mintpop.ai ')
+    await clickPrimary()
+
+    expect(lastEmitted(w)).toContain('<a')
+    expect(lastEmitted(w)).toContain('href="https://mintpop.ai"')
+    expect(dialog()).toBeNull()
+  })
+
+  it('输入框里按回车等同于确认', async () => {
+    const w = await render('<p>看这里</p>')
+    await selectAll(w)
+    await clickTool(w, '链接')
+
+    await typeUrl('https://mintpop.ai')
+    urlInput().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    await flushPromises()
+
+    expect(lastEmitted(w)).toContain('href="https://mintpop.ai"')
+    expect(dialog()).toBeNull()
+  })
+
+  it('已有链接时弹窗回填原地址，留空确认即移除链接', async () => {
+    const w = await render('<p><a href="https://old.example">看这里</a></p>')
+    await selectAll(w)
+    await clickTool(w, '链接')
+
+    expect(urlInput().value).toBe('https://old.example')
+    expect(dialog()?.querySelector('.admin-btn')?.textContent?.trim()).toBe('设置链接')
+
+    await typeUrl('')
+    expect(dialog()?.querySelector('.admin-btn')?.textContent?.trim()).toBe('移除链接')
+    await clickPrimary()
+
+    expect(lastEmitted(w)).not.toContain('<a')
+    expect(lastEmitted(w)).toContain('看这里')
+  })
+
+  it('本来没有链接时留空的主按钮禁用：没东西可移除', async () => {
+    const w = await render('<p>看这里</p>')
+    await selectAll(w)
+    await clickTool(w, '链接')
+
+    expect((dialog()?.querySelector('.admin-btn') as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('取消关掉弹窗，文档不动', async () => {
+    const w = await render('<p>看这里</p>')
+    await selectAll(w)
+    await clickTool(w, '链接')
+
+    await typeUrl('https://mintpop.ai')
+    ;(dialog()?.querySelector('.admin-btn-ghost') as HTMLElement).click()
+    await flushPromises()
+
+    expect(dialog()).toBeNull()
+    expect(w.emitted('update:modelValue') ?? []).toHaveLength(0)
+  })
+
+  it('插入图片：地址为空时主按钮禁用，填了地址确认后文档里出现 <img>', async () => {
+    const w = await render('<p>看这里</p>')
+    await clickTool(w, '图片')
+
+    expect(dialog()?.getAttribute('aria-label')).toBe('插入图片')
+    expect((dialog()?.querySelector('.admin-btn') as HTMLButtonElement).disabled).toBe(true)
+
+    await typeUrl('https://cdn.example/a.png')
+    await clickPrimary()
+
+    expect(lastEmitted(w)).toContain('<img')
+    expect(lastEmitted(w)).toContain('src="https://cdn.example/a.png"')
+    expect(dialog()).toBeNull()
   })
 })
