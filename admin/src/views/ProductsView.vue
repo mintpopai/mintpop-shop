@@ -24,6 +24,10 @@ const ACCENTS: Record<string, string> = {
   ROSE: '#d04a68',
 }
 
+/** 商品名 / 描述长度上限，与后端 AdminProductService.NAME_MAX_LENGTH / DESCRIPTION_MAX_LENGTH 一致 */
+const NAME_MAX = 40
+const DESCRIPTION_MAX = 100
+
 const products = ref<AdminProduct[]>([])
 const groups = ref<AdminGroup[]>([])
 const loading = ref(true)
@@ -161,6 +165,19 @@ async function onSave() {
   }
   if (!form.value.groupId) {
     showToast('error', '请选择商品所在的分组')
+    return
+  }
+  // maxlength 只管键入，编辑历史数据时值可能已超长；超了把面板翻到那个语种再提示
+  const tooLong: Array<{ lang: 'ZH' | 'EN'; value: string; max: number; label: string }> = [
+    { lang: 'ZH', value: form.value.nameZh, max: NAME_MAX, label: '中文名称' },
+    { lang: 'EN', value: form.value.nameEn, max: NAME_MAX, label: '英文名称' },
+    { lang: 'ZH', value: form.value.descriptionZh, max: DESCRIPTION_MAX, label: '中文描述' },
+    { lang: 'EN', value: form.value.descriptionEn, max: DESCRIPTION_MAX, label: '英文描述' },
+  ]
+  const over = tooLong.find((f) => f.value.length > f.max)
+  if (over) {
+    lang.value = over.lang
+    showToast('error', `${over.label}最多 ${over.max} 字，请精简`)
     return
   }
   if (!Number.isFinite(priceCents) || priceCents < 1) {
@@ -330,14 +347,35 @@ async function onToggleSale(product: AdminProduct) {
         <!-- 两套字段都常驻、只切显示：v-if 会把没在看的那一份连同草稿一起销毁 -->
         <div v-show="lang === 'ZH'" class="lang-panel">
           <div class="admin-field">
-            <label for="p-name-zh">名称 <span class="required">必填</span></label>
-            <input id="p-name-zh" v-model="form.nameZh" class="admin-input" required />
+            <label for="p-name-zh">
+              名称 <span class="required">必填</span>
+              <span class="char-count" :class="{ over: form.nameZh.length > NAME_MAX }">
+                {{ form.nameZh.length }} / {{ NAME_MAX }}
+              </span>
+            </label>
+            <input
+              id="p-name-zh"
+              v-model="form.nameZh"
+              class="admin-input"
+              :maxlength="NAME_MAX"
+              required
+            />
           </div>
           <div class="admin-form-row">
             <div class="admin-field">
-              <label for="p-desc-zh">描述</label>
-              <textarea id="p-desc-zh" v-model="form.descriptionZh" class="admin-textarea"></textarea>
-              <p class="field-note">商品卡上名称下面的那行小字。</p>
+              <label for="p-desc-zh">
+                描述
+                <span class="char-count" :class="{ over: form.descriptionZh.length > DESCRIPTION_MAX }">
+                {{ form.descriptionZh.length }} / {{ DESCRIPTION_MAX }}
+              </span>
+              </label>
+              <textarea
+                id="p-desc-zh"
+                v-model="form.descriptionZh"
+                class="admin-textarea"
+                :maxlength="DESCRIPTION_MAX"
+              ></textarea>
+              <p class="field-note">商品卡上名称下面的几行小字，长内容请写进商品详情。</p>
             </div>
             <div class="admin-field">
               <label for="p-badge-zh">角标</label>
@@ -353,24 +391,36 @@ async function onToggleSale(product: AdminProduct) {
 
         <div v-show="lang === 'EN'" class="lang-panel">
           <div class="admin-field">
-            <label for="p-name-en">名称</label>
+            <label for="p-name-en">
+              名称
+              <span class="char-count" :class="{ over: form.nameEn.length > NAME_MAX }">
+                {{ form.nameEn.length }} / {{ NAME_MAX }}
+              </span>
+            </label>
             <input
               id="p-name-en"
               v-model="form.nameEn"
               class="admin-input"
+              :maxlength="NAME_MAX"
               :placeholder="form.nameZh"
             />
           </div>
           <div class="admin-form-row">
             <div class="admin-field">
-              <label for="p-desc-en">描述</label>
+              <label for="p-desc-en">
+                描述
+                <span class="char-count" :class="{ over: form.descriptionEn.length > DESCRIPTION_MAX }">
+                {{ form.descriptionEn.length }} / {{ DESCRIPTION_MAX }}
+              </span>
+              </label>
               <textarea
                 id="p-desc-en"
                 v-model="form.descriptionEn"
                 class="admin-textarea"
+                :maxlength="DESCRIPTION_MAX"
                 :placeholder="form.descriptionZh"
               ></textarea>
-              <p class="field-note">商品卡上名称下面的那行小字。</p>
+              <p class="field-note">商品卡上名称下面的几行小字，长内容请写进商品详情。</p>
             </div>
             <div class="admin-field">
               <label for="p-badge-en">角标</label>
@@ -600,6 +650,20 @@ async function onToggleSale(product: AdminProduct) {
   font-size: 12px;
   line-height: 1.6;
   color: var(--color-ink-secondary);
+}
+
+/* 字数计数靠右贴在标签行尾，用等宽数字避免数字跳动时抖 */
+.char-count {
+  float: right;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink-secondary);
+}
+
+/* 编辑历史数据时可能一打开就超限（maxlength 不裁已有值），计数标红提醒 */
+.char-count.over {
+  color: var(--counter-danger);
+  font-weight: 600;
 }
 
 /* 并排两列里控件高矮不一（多行的描述 vs 单行的角标），说明文字统一沉到行底对齐，

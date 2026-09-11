@@ -22,6 +22,18 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminProductService {
 
+    /**
+     * 商品名长度上限（字符数）。列表卡片与详情页都按行截断展示，40 字在各处都能完整放下；
+     * 远小于列宽，纯产品约束。管理端表单同值，改这里要同步。
+     */
+    public static final int NAME_MAX_LENGTH = 40;
+
+    /**
+     * 商品描述长度上限（字符数）。描述只是列表卡片四行与详情页顶部的一句话卖点，
+     * 长内容走富文本详情字段；100 字在常见卡片宽度下恰好四行。管理端表单同值，改这里要同步。
+     */
+    public static final int DESCRIPTION_MAX_LENGTH = 100;
+
     private final ProductMapper productMapper;
     private final ProductGroupMapper productGroupMapper;
     private final HtmlSanitizer htmlSanitizer;

@@ -234,10 +234,6 @@ async function buy() {
 
 /* 名称与短描述都封顶行数：商家填多长都不该把版面顶变形，完整说明归详情区 */
 .name {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
   font-size: 28px;
   font-weight: 600;
   line-height: 1.3;
@@ -246,10 +242,7 @@ async function buy() {
 }
 
 .summary {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  overflow: hidden;
+  /* 详情页是看完整描述的地方（列表卡片会截断），描述已有 100 字上限，这里不再截断 */
   margin-top: 12px;
   color: var(--color-ink-secondary);
   font-size: 14px;

@@ -1,5 +1,6 @@
 package com.mintpop.shop.request;
 
+import com.mintpop.shop.service.AdminProductService;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -23,15 +24,19 @@ public class AdminProductUpsertRequest {
 
     /** 商品名（中文，必填兜底语言） */
     @NotBlank(message = "{biz.validation.name-zh-required}")
+    @Size(max = AdminProductService.NAME_MAX_LENGTH, message = "{biz.validation.name-too-long}")
     private String nameZh;
 
     /** 商品名（英文），空回退中文 */
+    @Size(max = AdminProductService.NAME_MAX_LENGTH, message = "{biz.validation.name-too-long}")
     private String nameEn;
 
     /** 商品描述（中文） */
+    @Size(max = AdminProductService.DESCRIPTION_MAX_LENGTH, message = "{biz.validation.description-too-long}")
     private String descriptionZh;
 
     /** 商品描述（英文），空回退中文 */
+    @Size(max = AdminProductService.DESCRIPTION_MAX_LENGTH, message = "{biz.validation.description-too-long}")
     private String descriptionEn;
 
     /** 商品详情富文本HTML（中文），后端入库前净化；上限防撑爆 MEDIUMTEXT */
