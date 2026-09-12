@@ -1,12 +1,26 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { currentUser, gotoLogin, gotoLogout } from './auth'
 import { showToast, toast } from './toast'
 import { locale, setLocale, t } from './i18n'
 
 const menuOpen = ref(false)
+const userMenu = ref<HTMLElement | null>(null)
 const route = useRoute()
+
+/** 点到菜单外面就收起：下拉不是弹窗，不该逼人再点一次头像才能关 */
+function onDocumentPointerDown(event: PointerEvent) {
+  if (menuOpen.value && !userMenu.value?.contains(event.target as Node)) {
+    menuOpen.value = false
+  }
+}
+
+function onDocumentKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    menuOpen.value = false
+  }
+}
 
 /** 主导航高亮按路径前缀判定：商品详情归「商店」，订单详情归「我的订单」（设计稿：详情页顶栏「商店」仍高亮） */
 const shopActive = computed(() => route.path === '/' || route.path.startsWith('/products'))
@@ -21,6 +35,8 @@ function toggleLocale() {
 }
 
 onMounted(() => {
+  document.addEventListener('pointerdown', onDocumentPointerDown)
+  document.addEventListener('keydown', onDocumentKeydown)
   // OIDC 握手失败会回跳 ?login_error=1：提示后清掉参数
   const params = new URLSearchParams(window.location.search)
   if (params.get('login_error')) {
@@ -29,6 +45,11 @@ onMounted(() => {
     const query = params.toString()
     history.replaceState(null, '', window.location.pathname + (query ? `?${query}` : ''))
   }
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', onDocumentPointerDown)
+  document.removeEventListener('keydown', onDocumentKeydown)
 })
 </script>
 
@@ -62,8 +83,15 @@ onMounted(() => {
       <button v-if="!currentUser" type="button" class="login-btn" @click="gotoLogin">
         {{ $t('app.login') }}
       </button>
-      <div v-else class="user-menu">
-        <button type="button" class="user-trigger" @click="menuOpen = !menuOpen">
+      <div v-else ref="userMenu" class="user-menu">
+        <button
+          type="button"
+          class="user-trigger"
+          :class="{ open: menuOpen }"
+          aria-haspopup="menu"
+          :aria-expanded="menuOpen"
+          @click="menuOpen = !menuOpen"
+        >
           <img
             v-if="currentUser.avatarUrl"
             class="avatar"
@@ -74,11 +102,32 @@ onMounted(() => {
             {{ (currentUser.nickname ?? currentUser.email).slice(0, 1) }}
           </span>
           <span class="nickname">{{ currentUser.nickname ?? currentUser.email }}</span>
+          <svg class="chevron" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6l4 4 4-4" /></svg>
         </button>
-        <div v-if="menuOpen" class="menu" @click="menuOpen = false">
-          <RouterLink to="/settings" class="menu-item">{{ $t('app.settings') }}</RouterLink>
-          <button type="button" class="menu-item" @click="gotoLogout">{{ $t('app.logout') }}</button>
-        </div>
+        <Transition name="menu">
+          <div v-if="menuOpen" class="menu" role="menu" @click="menuOpen = false">
+            <!-- 身份区：让人确认「现在登着的是谁」，昵称缺省时只显一行邮箱，不重复 -->
+            <div class="menu-identity">
+              <img v-if="currentUser.avatarUrl" class="avatar avatar-lg" :src="currentUser.avatarUrl" alt="" />
+              <span v-else class="avatar avatar-lg avatar-fallback">
+                {{ (currentUser.nickname ?? currentUser.email).slice(0, 1) }}
+              </span>
+              <div class="identity-text">
+                <span class="identity-name">{{ currentUser.nickname ?? currentUser.email }}</span>
+                <span v-if="currentUser.nickname" class="identity-email">{{ currentUser.email }}</span>
+              </div>
+            </div>
+            <div class="menu-divider" />
+            <RouterLink to="/settings" class="menu-item" role="menuitem">
+              <svg class="menu-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" /></svg>
+              {{ $t('app.settings') }}
+            </RouterLink>
+            <button type="button" class="menu-item menu-item--logout" role="menuitem" @click="gotoLogout">
+              <svg class="menu-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></svg>
+              {{ $t('app.logout') }}
+            </button>
+          </div>
+        </Transition>
       </div>
     </nav>
   </header>
@@ -226,7 +275,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 12px 4px 4px;
+  padding: 4px 10px 4px 4px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
   background: var(--color-bg);
@@ -234,10 +283,22 @@ onMounted(() => {
   font-size: 14px;
   color: var(--color-ink);
   cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
-.user-trigger:hover {
+.user-trigger:hover,
+.user-trigger.open {
   background: var(--color-bg-cloud);
+  border-color: #d5dbd8;
+}
+
+.chevron {
+  color: var(--color-ink-secondary);
+  transition: transform 0.2s ease;
+}
+
+.user-trigger.open .chevron {
+  transform: rotate(180deg);
 }
 
 .avatar {
@@ -257,26 +318,88 @@ onMounted(() => {
   font-weight: 600;
 }
 
+/* 下拉面板：圆角与商品卡同级、双层柔和投影，从触发按钮右上角「长出来」而不是硬切出现 */
 .menu {
   position: absolute;
   right: 0;
   top: calc(100% + 8px);
-  min-width: 140px;
+  min-width: 224px;
   padding: 6px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-button);
+  border-radius: var(--radius-panel);
   background: #ffffff;
-  box-shadow: 0 1px 3px rgba(11, 11, 12, 0.06);
+  box-shadow:
+    0 12px 32px rgba(11, 11, 12, 0.1),
+    0 2px 6px rgba(11, 11, 12, 0.05);
   display: flex;
   flex-direction: column;
   z-index: 20;
+  transform-origin: top right;
+}
+
+.menu-enter-active,
+.menu-leave-active {
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.menu-enter-from,
+.menu-leave-to {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.97);
+}
+
+.menu-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 10px;
+}
+
+.avatar-lg {
+  width: 36px;
+  height: 36px;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.identity-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.identity-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.identity-email {
+  font-size: 12px;
+  color: var(--color-ink-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.menu-divider {
+  height: 1px;
+  margin: 0 6px 6px;
+  background: var(--color-border);
 }
 
 .menu-item {
-  display: block;
-  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   background: transparent;
   color: var(--color-ink);
   font-size: 14px;
@@ -284,10 +407,31 @@ onMounted(() => {
   text-align: left;
   text-decoration: none;
   cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.menu-icon {
+  color: var(--color-ink-secondary);
+  flex-shrink: 0;
+  transition: color 0.12s ease;
 }
 
 .menu-item:hover {
-  background: var(--color-bg);
+  background: var(--color-bg-cloud);
+}
+
+.menu-item:hover .menu-icon {
+  color: var(--color-ink);
+}
+
+/* 退出是离开动作：悬停时用危险色提示，但平时不刺眼 */
+.menu-item--logout:hover {
+  background: #fef2f2;
+  color: var(--color-danger);
+}
+
+.menu-item--logout:hover .menu-icon {
+  color: var(--color-danger);
 }
 
 .toast {
