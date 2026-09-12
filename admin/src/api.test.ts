@@ -37,6 +37,11 @@ describe('request 统一封装', () => {
     await expect(request('/api/admin/x')).rejects.toBeInstanceOf(UnauthorizedError)
   })
 
+  it('HTTP 413 时给出可读的体积超限文案，而不是网络异常', async () => {
+    fetchMock.mockResolvedValue(new Response('', { status: 413 }))
+    await expect(request('/api/admin/x')).rejects.toThrow('文件太大，超出服务器允许的上传上限')
+  })
+
   it('业务码非 0 时抛出后端给的 msg', async () => {
     fetchMock.mockResolvedValue(bizError(310002, '分组下还有商品，不能删除'))
     await expect(request('/api/admin/x')).rejects.toThrow('分组下还有商品，不能删除')

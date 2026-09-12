@@ -48,6 +48,10 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (res.status === 401) {
     throw new UnauthorizedError()
   }
+  // 反代（nginx/OpenResty）的 client_max_body_size 拦下超大请求体：不到 Spring，也没有业务码
+  if (res.status === 413) {
+    throw new Error('文件太大，超出服务器允许的上传上限')
+  }
   let body: ApiResponse<T>
   try {
     body = (await res.json()) as ApiResponse<T>

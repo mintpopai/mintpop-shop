@@ -57,11 +57,12 @@ mise run run-admin        # 终端 3：启动管理端（5174，/api 代理到 8
 管理端商品表单的「商品图」与详情富文本的「插入图片」都可以直接选本地文件上传，图片存到 Cloudflare R2、通过绑定在桶上的自定义域名对外访问；手填图片地址的老路径仍然可用。
 
 - **命名约定**：每个子产品一个桶，桶 `mintpop-<产品>-assets`、域名 `<产品>-assets.mintpop.ai`。本店：桶 `mintpop-shop-assets`，域名 `shop-assets.mintpop.ai`。域名保持一级子域——Cloudflare 免费的 Universal SSL 只覆盖 `*.mintpop.ai`，两级子域要买 Advanced Certificate Manager。
-- **R2 侧三步**：① R2 → 建桶 `mintpop-shop-assets`；② 桶设置 → 自定义域 → 绑 `shop-assets.mintpop.ai`（Cloudflare 自动加 DNS）；③ R2 → Manage API Tokens → 建一个**只限该桶**「Object Read & Write」的 Token，拿到 Access Key ID / Secret Access Key。
+- **R2 侧三步**：① R2 → 建桶 `mintpop-shop-assets`；② 桶设置 → 自定义域 → 绑 `shop-assets.mintpop.ai`（Cloudflare 自动加 DNS）；③ R2 → Manage API Tokens → 建一个**只限该桶**「Object Read & Write」的 Token，拿到 Access Key ID / Secret Access Key。建议顺手在 Cloudflare 上给 `shop-assets.mintpop.ai` 加一条 Transform Rule 设置响应头 `X-Content-Type-Options: nosniff`，作为纵深防御（写入时已强制 Content-Type，此项非必需）。
 - **后端配置**：写在 jar 外 `backend/config/application.yml` 的 `storage.r2` 段（见 `application.example.yml`），不进仓库。**整段可选**：五项（账户 ID、Access Key ID、Secret Access Key、桶名、公开域名）齐全才启用，否则上传按钮报「图片存储未配置」，其余功能不受影响。
-- **限制**：单文件 5 MB；只收 JPEG / PNG / WebP / GIF，类型按文件头判定，不信任扩展名。对象键 `products/年/月/<uuid>.<扩展名>`，带一年期不可变缓存头。
+- **限制**：单文件 5 MB；只收 JPEG / PNG / WebP / GIF，类型按文件头判定，不信任扩展名。对象键 `products/年/月/<uuid>.<扩展名>`，带一年期不可变缓存头。上限一共钉在四处——管理端 `ImageUploadButton` 的本地预检、后端 `ImageUploadService.MAX_BYTES`、`application.yml` 的 multipart 上限、以及**两层反代（宿主 OpenResty 与管理端容器 nginx）的 `client_max_body_size 6m`**——改上限要四处同改，反代不放开会在到达 Spring 之前就 413。
 - **不需要配 R2 CORS**：上传由后端中转，浏览器不直连 R2。
 - **不清理旧对象**：换图、删商品都不删 R2 上的文件（富文本里的图也可能引用它）；需要时在 R2 控制台手动清。
+- **上线冒烟**：填好 `storage.r2` 后在管理端上传一张 **2–3 MB** 的图（小图会让反代体积限制隐身），确认 `shop-assets.mintpop.ai` 上能打开、响应头带 `Cache-Control: public, max-age=31536000, immutable` 与正确的 `Content-Type`；再传一张 **5.5 MB** 的图，应得到「图片不能超过 5 MB」而不是「网络异常」或「系统繁忙」。
 
 ## 常用命令
 
@@ -172,6 +173,7 @@ server {
 
 server {
     server_name admin.mintpop.ai;
+    client_max_body_size 6m;    # 管理端图片上传需要
     location / {
         proxy_pass http://127.0.0.1:8082;
         proxy_set_header Host $host;
