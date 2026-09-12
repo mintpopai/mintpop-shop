@@ -1,6 +1,7 @@
 {
   "app": {
     "login": "登录",
+    "website": "官网",
     "contact": "联系方式",
     "myOrders": "我的订单",
     "logout": "退出登录",

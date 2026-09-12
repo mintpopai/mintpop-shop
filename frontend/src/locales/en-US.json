@@ -1,6 +1,7 @@
 {
   "app": {
     "login": "Sign in",
+    "website": "Website",
     "contact": "Contact",
     "myOrders": "My Orders",
     "logout": "Sign out",

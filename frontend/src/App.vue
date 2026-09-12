@@ -26,7 +26,8 @@ function onDocumentKeydown(event: KeyboardEvent) {
 const shopActive = computed(() => route.path === '/' || route.path.startsWith('/products'))
 const ordersActive = computed(() => route.path.startsWith('/orders'))
 
-/** 官网联系方式页，按当前语言指向对应路径 */
+/** 官网首页与联系方式页，按当前语言指向对应路径 */
+const siteUrl = locale === 'zh-CN' ? 'https://mintpop.ai/zh/' : 'https://mintpop.ai/'
 const contactUrl = locale === 'zh-CN' ? 'https://mintpop.ai/zh/contact/' : 'https://mintpop.ai/contact/'
 
 /** 游客的中英互切（切了立即刷新生效）；登录用户的语言偏好统一在设置页里改 */
@@ -73,7 +74,10 @@ onBeforeUnmount(() => {
     </div>
 
     <nav class="auth-area">
-      <a class="contact-link" :href="contactUrl" target="_blank" rel="noopener">
+      <a class="site-link" :href="siteUrl" target="_blank" rel="noopener">
+        {{ $t('app.website') }}
+      </a>
+      <a class="site-link" :href="contactUrl" target="_blank" rel="noopener">
         {{ $t('app.contact') }}
       </a>
       <!-- 语言按钮只给游客：登录用户改语言走设置页（点保存才生效） -->
@@ -222,13 +226,14 @@ onBeforeUnmount(() => {
   gap: 16px;
 }
 
-.contact-link {
+/* 官网 / 联系方式：外链到 mintpop.ai，弱化为次级文字 */
+.site-link {
   font-size: 14px;
   color: var(--color-ink-secondary);
   text-decoration: none;
 }
 
-.contact-link:hover {
+.site-link:hover {
   color: var(--color-brand-ink);
 }
 
