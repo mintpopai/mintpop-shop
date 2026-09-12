@@ -52,6 +52,17 @@ mise run run-admin        # 终端 3：启动管理端（5174，/api 代理到 8
 - **邮件配置**：SMTP 参数写在 jar 外 `backend/config/application.yml`（见 `application.example.yml` 的 `spring.mail` 与 `app.mail` 两段），不进仓库。**整段可选，但要配就得两段一起配齐**——`spring.mail.host`（SMTP 连接）与 `app.mail.from`（发信地址）少任一个都视为未配置，发货照常成功，只是发货记录里邮件状态记为「发送失败：邮件服务未配置」，管理员可在配好后重新发货补发。
 - **邮件失败不回滚发货**：发货已落库即生效，管理端会明确提示「已发货，但邮件发送失败：…」。
 
+## 商品图片存储（Cloudflare R2）
+
+管理端商品表单的「商品图」与详情富文本的「插入图片」都可以直接选本地文件上传，图片存到 Cloudflare R2、通过绑定在桶上的自定义域名对外访问；手填图片地址的老路径仍然可用。
+
+- **命名约定**：每个子产品一个桶，桶 `mintpop-<产品>-assets`、域名 `<产品>-assets.mintpop.ai`。本店：桶 `mintpop-shop-assets`，域名 `shop-assets.mintpop.ai`。域名保持一级子域——Cloudflare 免费的 Universal SSL 只覆盖 `*.mintpop.ai`，两级子域要买 Advanced Certificate Manager。
+- **R2 侧三步**：① R2 → 建桶 `mintpop-shop-assets`；② 桶设置 → 自定义域 → 绑 `shop-assets.mintpop.ai`（Cloudflare 自动加 DNS）；③ R2 → Manage API Tokens → 建一个**只限该桶**「Object Read & Write」的 Token，拿到 Access Key ID / Secret Access Key。
+- **后端配置**：写在 jar 外 `backend/config/application.yml` 的 `storage.r2` 段（见 `application.example.yml`），不进仓库。**整段可选**：五项（账户 ID、Access Key ID、Secret Access Key、桶名、公开域名）齐全才启用，否则上传按钮报「图片存储未配置」，其余功能不受影响。
+- **限制**：单文件 5 MB；只收 JPEG / PNG / WebP / GIF，类型按文件头判定，不信任扩展名。对象键 `products/年/月/<uuid>.<扩展名>`，带一年期不可变缓存头。
+- **不需要配 R2 CORS**：上传由后端中转，浏览器不直连 R2。
+- **不清理旧对象**：换图、删商品都不删 R2 上的文件（富文本里的图也可能引用它）；需要时在 R2 控制台手动清。
+
 ## 常用命令
 
 | 命令 | 说明 |
