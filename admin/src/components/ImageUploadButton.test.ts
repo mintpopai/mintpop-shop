@@ -43,6 +43,7 @@ describe('ImageUploadButton', () => {
     expect(wrapper?.find('input[type="file"]').attributes('accept')).toBe(
       'image/jpeg,image/png,image/webp,image/gif',
     )
+    expect(wrapper?.find('input[type="file"]').attributes('tabindex')).toBe('-1')
   })
 
   it('点按钮等于点隐藏的文件框', async () => {

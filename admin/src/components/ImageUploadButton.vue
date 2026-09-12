@@ -33,13 +33,17 @@ async function onChange(event: Event) {
     return
   }
   uploading.value = true
+  let url: string
   try {
-    emit('uploaded', await uploadAdminImage(file))
+    url = await uploadAdminImage(file)
   } catch (err) {
     showToast('error', err instanceof Error ? err.message : '图片上传失败')
+    return
   } finally {
     uploading.value = false
   }
+  // 移出 try：父组件的 uploaded 监听器若自己抛错，不该被当成「上传失败」再弹一次 toast
+  emit('uploaded', url)
 }
 </script>
 
@@ -48,7 +52,15 @@ async function onChange(event: Event) {
     <button type="button" class="admin-btn-ghost" :disabled="uploading" @click="pick">
       {{ uploading ? '上传中…' : label }}
     </button>
-    <input ref="input" class="upload-input" type="file" :accept="ACCEPT" @change="onChange" />
+    <!-- tabindex=-1：display:none 的元素本就不可聚焦，但 Modal 的 FOCUSABLE 选择器仍会把它算进 Tab 循环，显式排除 -->
+    <input
+      ref="input"
+      class="upload-input"
+      type="file"
+      tabindex="-1"
+      :accept="ACCEPT"
+      @change="onChange"
+    />
   </span>
 </template>
 
