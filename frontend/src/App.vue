@@ -1,13 +1,18 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { currentUser, gotoLogin, gotoLogout } from './auth'
 import { showToast, toast } from './toast'
 import { locale, setLocale, t } from './i18n'
 
 const menuOpen = ref(false)
+const route = useRoute()
 
-/** 官网（mintpop.ai）首页与联系方式页，按当前语言指向对应路径 */
-const siteUrl = locale === 'zh-CN' ? 'https://mintpop.ai/zh/' : 'https://mintpop.ai/'
+/** 主导航高亮按路径前缀判定：商品详情归「商店」，订单详情归「我的订单」（设计稿：详情页顶栏「商店」仍高亮） */
+const shopActive = computed(() => route.path === '/' || route.path.startsWith('/products'))
+const ordersActive = computed(() => route.path.startsWith('/orders'))
+
+/** 官网联系方式页，按当前语言指向对应路径 */
 const contactUrl = locale === 'zh-CN' ? 'https://mintpop.ai/zh/contact/' : 'https://mintpop.ai/contact/'
 
 /** 游客的中英互切（切了立即刷新生效）；登录用户的语言偏好统一在设置页里改 */
@@ -33,11 +38,6 @@ onMounted(() => {
       <RouterLink to="/" class="wordmark-link">
         <h1 class="wordmark">
           <img
-            class="wordmark-icon"
-            src="https://standards.mintpop.ai/assets/products/shop/shop-app-cloud.png"
-            alt=""
-          />
-          <img
             class="wordmark-img"
             src="https://standards.mintpop.ai/assets/brand/wordmark/mintpop-wordmark-dark.png"
             alt="MintPop"
@@ -46,14 +46,12 @@ onMounted(() => {
         </h1>
       </RouterLink>
       <nav class="main-nav">
-        <RouterLink to="/" class="nav-item">{{ $t('app.shop') }}</RouterLink>
-        <RouterLink to="/orders" class="nav-item">{{ $t('app.myOrders') }}</RouterLink>
+        <RouterLink to="/" class="nav-item" :class="{ active: shopActive }">{{ $t('app.shop') }}</RouterLink>
+        <RouterLink to="/orders" class="nav-item" :class="{ active: ordersActive }">{{ $t('app.myOrders') }}</RouterLink>
       </nav>
     </div>
 
     <nav class="auth-area">
-      <!-- 回官网：商城是 mintpop.ai 的子站，给用户一条回主站的路 -->
-      <a class="site-link" :href="siteUrl">mintpop.ai</a>
       <a class="contact-link" :href="contactUrl" target="_blank" rel="noopener">
         {{ $t('app.contact') }}
       </a>
@@ -136,8 +134,8 @@ onMounted(() => {
   color: var(--color-ink);
 }
 
-/* 当前路由高亮为 Cloud 胶囊：两项均精确匹配；日后若加 /orders 子路由，需改用 router-link-active 并对 / 单独处理 */
-.nav-item.router-link-exact-active {
+/* 当前板块高亮为 Cloud 胶囊（板块归属见 shopActive / ordersActive） */
+.nav-item.active {
   background: var(--color-bg-cloud);
   color: var(--color-ink);
   font-weight: 600;
@@ -155,14 +153,6 @@ onMounted(() => {
   font-weight: 600;
   letter-spacing: -0.015em;
   color: var(--color-ink);
-}
-
-/* shop 产品图标，与浏览器标签页同一张 */
-.wordmark-icon {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  display: block;
 }
 
 .wordmark-img {
@@ -183,14 +173,12 @@ onMounted(() => {
   gap: 16px;
 }
 
-.site-link,
 .contact-link {
   font-size: 14px;
   color: var(--color-ink-secondary);
   text-decoration: none;
 }
 
-.site-link:hover,
 .contact-link:hover {
   color: var(--color-brand-ink);
 }

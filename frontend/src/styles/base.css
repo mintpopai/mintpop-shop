@@ -10,7 +10,8 @@
   --color-ink-secondary: #6b7280;
   --color-bg: #ffffff;
   --color-bg-cloud: #f4f8f6;
-  --color-bg-page: #f4f8f6;
+  /* 页面底色按设计稿取白：Hero 与商品图形区用 Cloud 灰，靠边框与阴影区分卡片 */
+  --color-bg-page: #ffffff;
   --color-border: #e5e7eb;
   --color-danger: #e5484d;
   --radius-card: 8px;
