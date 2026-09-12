@@ -4,6 +4,9 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import RichTextEditor from './RichTextEditor.vue'
 
+// 弹窗里的上传按钮会导入上传 API；这里只关心「上传成功后编辑器怎么用 URL」，把 API 顶掉
+vi.mock('../api-admin', () => ({ uploadAdminImage: vi.fn() }))
+
 let wrapper: VueWrapper | null = null
 
 /** useEditor 在挂载后才建好实例，等一拍再断言 */
@@ -244,5 +247,26 @@ describe('链接与图片：问地址走自绘弹窗，不用 window.prompt', ()
     expect(lastEmitted(w)).toContain('<img')
     expect(lastEmitted(w)).toContain('src="https://cdn.example/a.png"')
     expect(dialog()).toBeNull()
+  })
+
+  it('插入图片弹窗里有本地上传；上传成功后直接插入 <img> 并关窗', async () => {
+    const w = await render('<p>看这里</p>')
+    await clickTool(w, '图片')
+
+    const uploader = w.findComponent({ name: 'ImageUploadButton' })
+    expect(uploader.exists()).toBe(true)
+    uploader.vm.$emit('uploaded', 'https://shop-assets.mintpop.ai/products/2026/09/a.png')
+    await flushPromises()
+
+    expect(lastEmitted(w)).toContain('src="https://shop-assets.mintpop.ai/products/2026/09/a.png"')
+    expect(dialog()).toBeNull()
+  })
+
+  it('设置链接的弹窗里没有上传按钮', async () => {
+    const w = await render('<p>看这里</p>')
+    await selectAll(w)
+    await clickTool(w, '链接')
+
+    expect(w.findComponent({ name: 'ImageUploadButton' }).exists()).toBe(false)
   })
 })

@@ -6,6 +6,7 @@ import { EditorContent, useEditor } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import Modal from './Modal.vue'
+import ImageUploadButton from './ImageUploadButton.vue'
 
 const props = defineProps<{
   id: string
@@ -27,7 +28,7 @@ const editor = useEditor({
       // 外链固定新标签页打开，rel 交给 TipTap 默认的 noopener noreferrer nofollow
       link: { HTMLAttributes: { target: '_blank' } },
     }),
-    // 详情里的配图仍是填 URL（与商品主图一致），本项目没有图床，不开 base64 内联
+    // 详情里的配图可填 URL 也可本地上传到 R2（见插入图片弹窗），不开 base64 内联
     Image,
   ],
   editorProps: { attributes: { class: 'editor-surface', id: props.id } },
@@ -138,6 +139,12 @@ function submitUrlDialog() {
     return
   }
   editor.value?.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
+}
+
+/** 本地上传成功：关弹窗、把公开 URL 插进当前选区 */
+function insertUploadedImage(url: string) {
+  urlDialog.value = null
+  editor.value?.chain().focus().setImage({ src: url }).run()
 }
 
 /** 按职责分组：行内格式 / 段落 / 块级 / 插入 / 历史 / 清空，组间画一条竖线 */
@@ -308,6 +315,10 @@ const toolGroups: Tool[][] = [
           @keydown.enter.prevent="submitUrlDialog"
         />
         <p v-if="urlDialog.kind === 'link'" class="url-hint">留空并确认即移除当前链接。</p>
+        <div v-if="urlDialog.kind === 'image'" class="upload-row">
+          <span class="url-hint">或者</span>
+          <ImageUploadButton label="从本地上传" @uploaded="insertUploadedImage" />
+        </div>
       </div>
       <template #footer>
         <button type="button" class="admin-btn-ghost" @click="closeUrlDialog">取消</button>
@@ -468,6 +479,12 @@ const toolGroups: Tool[][] = [
 
 .url-input {
   width: 100%;
+}
+
+.upload-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .url-hint {
