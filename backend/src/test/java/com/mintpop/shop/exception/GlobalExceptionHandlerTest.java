@@ -52,6 +52,16 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("multipart 超限异常转为「图片过大」，不落到系统错误")
+    void maxUploadSizeMappedToImageTooLarge() {
+        LocaleContextHolder.setLocale(Locale.SIMPLIFIED_CHINESE);
+        ApiResponse<Void> resp = handler.handleMaxUploadSize(
+                new org.springframework.web.multipart.MaxUploadSizeExceededException(5L * 1024 * 1024));
+        assertThat(resp.getCode()).isEqualTo(210007);
+        assertThat(resp.getMsg()).isEqualTo("图片不能超过 5 MB");
+    }
+
+    @Test
     @DisplayName("成功工厂方法 code 为 0")
     void successFactoryReturnsZeroCode() {
         ApiResponse<String> resp = ApiResponse.success("data");

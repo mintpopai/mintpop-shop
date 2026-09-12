@@ -19,6 +19,10 @@ public enum BizCodeEnum {
     PRODUCT_NOT_FOUND(210002, "biz.product-not-found"),
     GROUP_NOT_FOUND(210003, "biz.group-not-found"),
     GROUP_NOT_EMPTY(210004, "biz.group-not-empty"),
+    IMAGE_STORAGE_NOT_CONFIGURED(210005, "biz.image-storage-not-configured"),
+    IMAGE_TYPE_UNSUPPORTED(210006, "biz.image-type-unsupported"),
+    IMAGE_TOO_LARGE(210007, "biz.image-too-large"),
+    IMAGE_STORAGE_ERROR(210008, "biz.image-storage-error"),
 
     USER_NOT_FOUND(310001, "biz.user-not-found"),
 

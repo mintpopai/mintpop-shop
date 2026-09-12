@@ -9,6 +9,7 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.stream.Collectors;
 
@@ -36,6 +37,12 @@ public class GlobalExceptionHandler {
         String msg = messageSource.getMessage("biz.param-invalid.detail",
                 new Object[]{detail}, LocaleContextHolder.getLocale());
         return new ApiResponse<>(BizCodeEnum.PARAM_INVALID.getCode(), null, msg);
+    }
+
+    /** multipart 超过 spring.servlet.multipart 上限：在进 controller 之前就被 Spring 拦下，转成图片过大 */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ApiResponse<Void> handleMaxUploadSize(MaxUploadSizeExceededException e) {
+        return ApiResponse.fail(BizCodeEnum.IMAGE_TOO_LARGE, resolve(BizCodeEnum.IMAGE_TOO_LARGE));
     }
 
     @ExceptionHandler(Exception.class)
