@@ -10,6 +10,11 @@ spring:
     basename: messages
     # 关闭系统语言回退：未支持语言一律落到中文兜底 bundle，不受服务器系统语言影响
     fallback-to-system-locale: false
+  servlet:
+    multipart:
+      # 商品图片上传上限：单文件 5MB（与 ImageUploadService.MAX_BYTES、管理端本地预检一致），整个请求 6MB
+      max-file-size: 5MB
+      max-request-size: 6MB
 
 server:
   port: 8080

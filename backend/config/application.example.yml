@@ -78,3 +78,14 @@ notify:
   feishu:
     webhook-url: 填机器人webhook地址（https://open.feishu.cn/open-apis/bot/v2/hook/ 开头）
     secret: 填签名校验密钥
+
+# —— 商品图片存储（Cloudflare R2）——整段可选：不配则管理端上传图片报「图片存储未配置」，手填图片地址不受影响 ——
+# 获取方式：Cloudflare 控制台 → R2 → 建桶 mintpop-shop-assets → 桶设置里绑自定义域 shop-assets.mintpop.ai
+#          → R2 → Manage API Tokens → 建一个只限该桶「Object Read & Write」权限的 Token
+storage:
+  r2:
+    account-id: 填Cloudflare账户ID（R2 概览页右侧可见）
+    access-key-id: 填API Token生成的Access Key ID
+    secret-access-key: 填API Token生成的Secret Access Key
+    bucket: mintpop-shop-assets
+    public-base-url: https://shop-assets.mintpop.ai

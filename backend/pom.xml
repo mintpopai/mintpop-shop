@@ -22,7 +22,21 @@
         <mybatis-plus.version>3.5.17</mybatis-plus.version>
         <jjwt.version>0.13.0</jjwt.version>
         <jsoup.version>1.21.1</jsoup.version>
+        <aws-sdk.version>2.46.7</aws-sdk.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- AWS SDK v2 bom：R2 是 S3 兼容存储，用官方 S3 客户端接入 -->
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>${aws-sdk.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>
@@ -92,6 +106,17 @@
             <groupId>com.stripe</groupId>
             <artifactId>stripe-java</artifactId>
             <version>33.1.0</version>
+        </dependency>
+        <!-- Cloudflare R2 对象存储（S3 兼容）。只用同步客户端，排除给异步客户端用的 netty -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>software.amazon.awssdk</groupId>
+                    <artifactId>netty-nio-client</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <!-- Spring Boot 4 起 Flyway 自动装配拆分进独立 starter，仅有 flyway-core 在 classpath
              不会触发 FlywayAutoConfiguration，必须显式引入本 starter -->
