@@ -18,6 +18,7 @@ vi.mock('../api-admin', () => ({
   createAdminProduct: vi.fn(),
   updateAdminProduct: vi.fn(),
   setAdminProductOnSale: vi.fn(),
+  uploadAdminImage: vi.fn(),
 }))
 
 const fetchGroupsMock = vi.mocked(fetchAdminGroups)
@@ -344,6 +345,45 @@ describe('新增商品', () => {
 
     expect(toast.value).toEqual({ type: 'error', text: '同名商品已存在' })
     expect($('.dialog')).not.toBeNull()
+  })
+})
+
+describe('商品图上传', () => {
+  it('上传成功后地址自动回填，预览随之出现', async () => {
+    await render()
+    await openCreate()
+
+    const uploader = wrapper!.findComponent({ name: 'ImageUploadButton' })
+    expect(uploader.exists()).toBe(true)
+    uploader.vm.$emit('uploaded', 'https://shop-assets.mintpop.ai/products/2026/09/a.png')
+    await flushPromises()
+
+    expect(($('#p-image') as HTMLInputElement).value).toBe(
+      'https://shop-assets.mintpop.ai/products/2026/09/a.png',
+    )
+    expect($('.image-preview img')?.getAttribute('src')).toBe(
+      'https://shop-assets.mintpop.ai/products/2026/09/a.png',
+    )
+  })
+
+  it('保存时上传得到的地址随表单提交', async () => {
+    createMock.mockResolvedValue(product({ id: 9 }))
+    await render()
+    await openCreate()
+    await type('#p-name-zh', '会员月卡')
+    await type('#p-price', '19.99')
+    wrapper!
+      .findComponent({ name: 'ImageUploadButton' })
+      .vm.$emit('uploaded', 'https://shop-assets.mintpop.ai/products/2026/09/a.png')
+    await flushPromises()
+
+    await save()
+
+    expect(createMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        imageUrl: 'https://shop-assets.mintpop.ai/products/2026/09/a.png',
+      }),
+    )
   })
 })
 

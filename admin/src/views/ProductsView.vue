@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import ImageUploadButton from '../components/ImageUploadButton.vue'
 import Modal from '../components/Modal.vue'
 import RichTextEditor from '../components/RichTextEditor.vue'
 import Select from '../components/Select.vue'
@@ -543,13 +544,17 @@ async function onToggleSale(product: AdminProduct) {
 
         <div class="admin-field">
           <label for="p-image">商品图</label>
-          <input
-            id="p-image"
-            v-model="form.imageUrl"
-            class="admin-input"
-            type="url"
-            placeholder="https://…"
-          />
+          <!-- 手填地址与本地上传两条路都留着：上传成功直接回填地址，预览随 watch 刷新 -->
+          <div class="image-row">
+            <input
+              id="p-image"
+              v-model="form.imageUrl"
+              class="admin-input"
+              type="url"
+              placeholder="https://…"
+            />
+            <ImageUploadButton @uploaded="form.imageUrl = $event" />
+          </div>
           <!-- 预览位铺一层主题色：商城的商品卡就是这个底色，在这儿先看一眼配得上配不上 -->
           <div class="image-preview">
             <img
@@ -559,7 +564,7 @@ async function onToggleSale(product: AdminProduct) {
               @error="imageError = true"
             />
             <p v-else class="image-note">
-              {{ imageError ? '这个地址取不到图片。' : '填了地址就能在这里看到效果。' }}
+              {{ imageError ? '这个地址取不到图片。' : '填了地址或上传图片就能在这里看到效果。' }}
             </p>
           </div>
         </div>
@@ -873,6 +878,17 @@ async function onToggleSale(product: AdminProduct) {
 
 .segment.active::before {
   opacity: 1;
+}
+
+.image-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.image-row .admin-input {
+  flex: 1;
+  min-width: 0;
 }
 
 .image-preview {
