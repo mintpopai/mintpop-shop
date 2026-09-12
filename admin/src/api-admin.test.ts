@@ -13,6 +13,7 @@ import {
   shipAdminOrder,
   updateAdminGroup,
   updateAdminProduct,
+  uploadAdminImage,
   type AdminProductUpsert,
 } from './api-admin'
 import { request } from './api'
@@ -193,5 +194,24 @@ describe('发货接口', () => {
   it('重新发货把原因一并提交', async () => {
     await shipAdminOrder('MP001', { content: 'CDKEY-5678', reason: '上次发错卡密' })
     expect(lastBody()).toEqual({ content: 'CDKEY-5678', reason: '上次发错卡密' })
+  })
+})
+
+describe('uploadAdminImage', () => {
+  it('以 multipart 的 file 字段 POST 到上传接口，返回公开 URL', async () => {
+    requestMock.mockResolvedValue({
+      url: 'https://shop-assets.mintpop.ai/products/2026/09/a.png',
+    } as never)
+    const file = new File(['x'], 'a.png', { type: 'image/png' })
+
+    await expect(uploadAdminImage(file)).resolves.toBe(
+      'https://shop-assets.mintpop.ai/products/2026/09/a.png',
+    )
+
+    const [path, init] = lastCall()
+    expect(path).toBe('/api/admin/uploads/images')
+    expect(init?.method).toBe('POST')
+    expect(init?.body).toBeInstanceOf(FormData)
+    expect((init?.body as FormData).get('file')).toBe(file)
   })
 })

@@ -80,6 +80,17 @@ describe('request 统一封装', () => {
     expect(init.method).toBe('DELETE')
     expect(init.body).toBe('{"a":1}')
   })
+
+  it('请求体是 FormData 时不设 Content-Type，让浏览器自己填 multipart 边界', async () => {
+    fetchMock.mockResolvedValue(ok({ url: 'https://x/a.png' }))
+    const form = new FormData()
+    form.append('file', new File(['x'], 'a.png', { type: 'image/png' }))
+    await request('/api/admin/uploads/images', { method: 'POST', body: form })
+
+    const headers = lastCall()[1].headers as Record<string, string>
+    expect(headers['Content-Type']).toBeUndefined()
+    expect(headers['Accept-Language']).toBe('zh-CN')
+  })
 })
 
 describe('fetchMe', () => {

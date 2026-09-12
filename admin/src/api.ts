@@ -28,12 +28,14 @@ export class UnauthorizedError extends Error {
  * 与页面写死的中文文案保持一致。
  */
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  // multipart 上传：Content-Type 必须由浏览器带上 boundary 自己填，手写 application/json 会让后端解析不了
+  const isFormData = init?.body instanceof FormData
   let res: Response
   try {
     res = await fetch(path, {
       ...init,
       headers: {
-        'Content-Type': 'application/json',
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         'Accept-Language': 'zh-CN',
         ...init?.headers,
       },

@@ -214,3 +214,19 @@ export function shipAdminOrder(
     body: JSON.stringify(body),
   })
 }
+
+/** 上传结果（镜像后端 ImageUploadResponse） */
+interface ImageUploadResult {
+  url: string
+}
+
+/** 上传图片到 R2，返回公开 URL；商品主图与富文本插图共用（≤5MB，JPEG/PNG/WebP/GIF） */
+export async function uploadAdminImage(file: File): Promise<string> {
+  const form = new FormData()
+  form.append('file', file)
+  const result = await request<ImageUploadResult>('/api/admin/uploads/images', {
+    method: 'POST',
+    body: form,
+  })
+  return result.url
+}
