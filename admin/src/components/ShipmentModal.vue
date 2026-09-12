@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import Modal from './Modal.vue'
-import {
-  fetchAdminShipments,
-  shipAdminOrder,
-  type AdminShipmentItem,
-} from '../api-admin'
+import { fetchAdminShipments, shipAdminOrder, type AdminShipmentItem } from '../api-admin'
 import { formatDateTime } from '../datetime'
 import { showToast } from '../toast'
 

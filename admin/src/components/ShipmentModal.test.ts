@@ -199,7 +199,11 @@ describe('提交校验', () => {
 
   it('刚好 2000 字放行', async () => {
     await render([])
-    shipMock.mockResolvedValue({ shippedAt: '2026-08-01T13:45:00Z', emailStatus: 'SENT', emailError: null })
+    shipMock.mockResolvedValue({
+      shippedAt: '2026-08-01T13:45:00Z',
+      emailStatus: 'SENT',
+      emailError: null,
+    })
     await type(document.querySelector('textarea') as HTMLElement, 'x'.repeat(2000))
 
     await submit()
@@ -231,7 +235,11 @@ describe('提交校验', () => {
 describe('提交发货', () => {
   it('首次发货只提交内容，且首尾空白被裁掉', async () => {
     await render([])
-    shipMock.mockResolvedValue({ shippedAt: '2026-08-01T13:45:00Z', emailStatus: 'SENT', emailError: null })
+    shipMock.mockResolvedValue({
+      shippedAt: '2026-08-01T13:45:00Z',
+      emailStatus: 'SENT',
+      emailError: null,
+    })
     await type(document.querySelector('textarea') as HTMLElement, '  CDKEY-1234  ')
 
     await submit()
@@ -241,7 +249,11 @@ describe('提交发货', () => {
 
   it('重新发货把裁剪后的原因一并提交', async () => {
     await render([shipment()])
-    shipMock.mockResolvedValue({ shippedAt: '2026-08-01T13:45:00Z', emailStatus: 'SENT', emailError: null })
+    shipMock.mockResolvedValue({
+      shippedAt: '2026-08-01T13:45:00Z',
+      emailStatus: 'SENT',
+      emailError: null,
+    })
     await type(document.querySelector('textarea') as HTMLElement, 'CDKEY-5678')
     await type(document.querySelector('input.admin-input') as HTMLElement, '  上次发错卡密  ')
 
@@ -255,7 +267,11 @@ describe('提交发货', () => {
 
   it('发货成功且邮件已发出时提示成功，并通知父组件刷新后关闭', async () => {
     const w = await render([])
-    shipMock.mockResolvedValue({ shippedAt: '2026-08-01T13:45:00Z', emailStatus: 'SENT', emailError: null })
+    shipMock.mockResolvedValue({
+      shippedAt: '2026-08-01T13:45:00Z',
+      emailStatus: 'SENT',
+      emailError: null,
+    })
     await type(document.querySelector('textarea') as HTMLElement, 'CDKEY-1234')
 
     await submit()

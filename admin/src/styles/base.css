@@ -22,9 +22,17 @@
 
 body {
   /* 西文在前（Space Grotesk 自托管），中文走系统回退在后，不自托管中文 webfont */
-  font-family: "Space Grotesk", "PingFang SC", "Hiragino Sans GB",
-    "Microsoft YaHei", "Noto Sans CJK SC", -apple-system, BlinkMacSystemFont,
-    "Segoe UI", Arial, sans-serif;
+  font-family:
+    'Space Grotesk',
+    'PingFang SC',
+    'Hiragino Sans GB',
+    'Microsoft YaHei',
+    'Noto Sans CJK SC',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Arial,
+    sans-serif;
   color: var(--color-ink);
   background: var(--color-bg-page);
   -webkit-font-smoothing: antialiased;

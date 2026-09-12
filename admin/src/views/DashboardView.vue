@@ -44,7 +44,9 @@ const bars = computed(() => {
 const nowLeft = computed(() => utcDayProgress(openedAt.value) * 100)
 
 /** 后端的今日笔数才是权威值；纸带只取自最近订单，条数对不上时要说明 */
-const hiddenCount = computed(() => Math.max(0, (dashboard.value?.todayOrderCount ?? 0) - bars.value.length))
+const hiddenCount = computed(() =>
+  Math.max(0, (dashboard.value?.todayOrderCount ?? 0) - bars.value.length),
+)
 
 const tapeLabel = computed(() =>
   dashboard.value
@@ -97,7 +99,11 @@ const tapeLabel = computed(() =>
             :key="bar.order.orderNo"
             class="tape-bar"
             :data-state="bar.order.status"
-            :style="{ left: `${bar.left}%`, height: `${bar.height}%`, animationDelay: `${bar.delay}ms` }"
+            :style="{
+              left: `${bar.left}%`,
+              height: `${bar.height}%`,
+              animationDelay: `${bar.delay}ms`,
+            }"
           >
             <span class="tape-tip">
               <span class="fact">{{ formatUtcTime(bar.order.createdAt) }}</span>

@@ -39,7 +39,7 @@ const activeIndex = ref(0)
 const panelStyle = ref<Record<string, string>>({})
 
 /** 面板 id 要稳定且唯一：aria-controls / aria-activedescendant 都指向它 */
-const uid = `sel-${++instanceCount}`
+const uid = `sel-${nextInstanceId()}`
 const selected = computed(() => props.options.find((o) => o.value === props.modelValue))
 const optionId = (i: number) => `${uid}-opt-${i}`
 
@@ -57,7 +57,9 @@ function place() {
     left: `${rect.left}px`,
     minWidth: `${rect.width}px`,
     maxHeight: `${Math.min(280, up ? above : below)}px`,
-    ...(up ? { bottom: `${window.innerHeight - rect.top + gap}px` } : { top: `${rect.bottom + gap}px` }),
+    ...(up
+      ? { bottom: `${window.innerHeight - rect.top + gap}px` }
+      : { top: `${rect.bottom + gap}px` }),
   }
 }
 
@@ -159,8 +161,14 @@ function onKeydown(event: KeyboardEvent) {
 </script>
 
 <script lang="ts">
-/** 每个实例一个稳定 id，供 aria-controls / aria-activedescendant 引用 */
+/**
+ * 每个实例一个稳定且全局唯一的 id，供 aria-controls / aria-activedescendant 引用。
+ * 不用 Vue 的 useId()：它只在同一个应用实例内唯一，多个根实例（如测试里分别 mount）会撞号。
+ */
 let instanceCount = 0
+function nextInstanceId(): number {
+  return ++instanceCount
+}
 </script>
 
 <template>
@@ -205,7 +213,9 @@ let instanceCount = 0
           @mousemove="activeIndex = index"
         >
           <!-- 选中项同时给勾号和底色，不靠颜色单独传达 -->
-          <span class="sel-check" aria-hidden="true">{{ option.value === modelValue ? '✓' : '' }}</span>
+          <span class="sel-check" aria-hidden="true">{{
+            option.value === modelValue ? '✓' : ''
+          }}</span>
           <span v-if="option.dot" class="accent-dot" :style="{ background: option.dot }"></span>
           <span class="sel-option-label" :class="{ fact: mono }">{{ option.label }}</span>
         </li>

@@ -116,9 +116,7 @@ describe('今日纸带', () => {
   })
 
   it('本地已跨日但 UTC 未跨日的订单仍算今天', async () => {
-    await render(
-      dashboard({ recentOrders: [order({ createdAt: '2026-08-01T23:30:00Z' })] }),
-    )
+    await render(dashboard({ recentOrders: [order({ createdAt: '2026-08-01T23:30:00Z' })] }))
 
     expect(bars()).toHaveLength(1)
   })
@@ -174,7 +172,10 @@ describe('今日纸带', () => {
 
   it('今天没有订单时给出空态，不画柱子', async () => {
     const w = await render(
-      dashboard({ todayOrderCount: 0, recentOrders: [order({ createdAt: '2026-07-31T10:00:00Z' })] }),
+      dashboard({
+        todayOrderCount: 0,
+        recentOrders: [order({ createdAt: '2026-07-31T10:00:00Z' })],
+      }),
     )
 
     expect(bars()).toHaveLength(0)
@@ -234,7 +235,9 @@ describe('画不全时的说明', () => {
 
 describe('最近订单表', () => {
   it('时间列按 UTC 展示，与纸带同一把尺子', async () => {
-    const w = await render(dashboard({ recentOrders: [order({ createdAt: '2026-08-01T06:30:00Z' })] }))
+    const w = await render(
+      dashboard({ recentOrders: [order({ createdAt: '2026-08-01T06:30:00Z' })] }),
+    )
 
     expect(w.find('tbody tr').text()).toContain('2026-08-01 06:30')
   })

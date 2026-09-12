@@ -115,7 +115,9 @@ async function onDelete() {
   <p v-else-if="loadError" class="admin-hint error">{{ loadError }}</p>
 
   <div v-else class="admin-card">
-    <p v-if="groups.length === 0" class="admin-hint">还没有分组。商品必须归到某个分组下，先建一个。</p>
+    <p v-if="groups.length === 0" class="admin-hint">
+      还没有分组。商品必须归到某个分组下，先建一个。
+    </p>
     <table v-else class="admin-table">
       <thead>
         <tr>
@@ -151,7 +153,11 @@ async function onDelete() {
     </table>
   </div>
 
-  <Modal v-if="modalOpen" :title="editingId === null ? '新增分组' : '编辑分组'" @close="modalOpen = false">
+  <Modal
+    v-if="modalOpen"
+    :title="editingId === null ? '新增分组' : '编辑分组'"
+    @close="modalOpen = false"
+  >
     <form class="admin-form" @submit.prevent="onSave">
       <div class="admin-form-row">
         <div class="admin-field">
@@ -165,7 +171,13 @@ async function onDelete() {
       </div>
       <div class="admin-field">
         <label for="group-sort">排序号（小的在前）</label>
-        <input id="group-sort" v-model.number="form.sortOrder" class="admin-input" type="number" required />
+        <input
+          id="group-sort"
+          v-model.number="form.sortOrder"
+          class="admin-input"
+          type="number"
+          required
+        />
       </div>
     </form>
     <template #footer>
@@ -179,7 +191,9 @@ async function onDelete() {
   <!-- 删除确认：说清删的是哪一个、以及删掉之后会怎样，按钮直接写动作而不是「确定」 -->
   <Modal v-if="deleting" title="删除分组" @close="deleting = null">
     <p class="confirm-text">
-      分组「{{ deleting.nameZh }}」将从商城下架，这个操作无法撤销。组里现在没有商品，删除不影响任何商品。
+      分组「{{
+        deleting.nameZh
+      }}」将从商城下架，这个操作无法撤销。组里现在没有商品，删除不影响任何商品。
     </p>
     <template #footer>
       <button type="button" class="admin-btn-ghost" @click="deleting = null">取消</button>

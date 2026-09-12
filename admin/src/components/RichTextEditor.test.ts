@@ -28,7 +28,9 @@ async function clickTool(w: VueWrapper, title: string) {
 
 /** 选中全部内容：行内格式类命令需要有选区才会改动文档 */
 async function selectAll(w: VueWrapper) {
-  ;(w.vm as unknown as { editor: { commands: { selectAll: () => void } } }).editor.commands.selectAll()
+  ;(
+    w.vm as unknown as { editor: { commands: { selectAll: () => void } } }
+  ).editor.commands.selectAll()
   await flushPromises()
 }
 

@@ -51,7 +51,9 @@ function gotoPage(next: number) {
 
   <template v-else>
     <div class="admin-card">
-      <p v-if="records.length === 0" class="admin-hint">还没有用户。有人在商城登录后会出现在这里。</p>
+      <p v-if="records.length === 0" class="admin-hint">
+        还没有用户。有人在商城登录后会出现在这里。
+      </p>
       <table v-else class="admin-table">
         <thead>
           <tr>
@@ -88,7 +90,12 @@ function gotoPage(next: number) {
     </div>
 
     <div class="admin-pager">
-      <button type="button" class="admin-btn-ghost" :disabled="page <= 1" @click="gotoPage(page - 1)">
+      <button
+        type="button"
+        class="admin-btn-ghost"
+        :disabled="page <= 1"
+        @click="gotoPage(page - 1)"
+      >
         上一页
       </button>
       <span class="info">

@@ -91,8 +91,8 @@ function shipAction(status: string): '发货' | '重新发货' | null {
   <header class="page-head">
     <h2 class="page-title">订单</h2>
     <p class="page-facts">
-      {{ activeStatus === 'ALL' ? '全部' : scopeLabel }}共 <span class="fact">{{ total }}</span> 笔<template
-        v-if="keyword"
+      {{ activeStatus === 'ALL' ? '全部' : scopeLabel }}共
+      <span class="fact">{{ total }}</span> 笔<template v-if="keyword"
         >，订单号含「{{ keyword }}」</template
       >
     </p>
@@ -131,7 +131,11 @@ function shipAction(status: string): '发货' | '重新发货' | null {
   <template v-else>
     <div class="admin-card">
       <p v-if="records.length === 0" class="admin-hint">
-        {{ keyword || activeStatus !== 'ALL' ? '没有符合条件的订单，换个状态或搜索词试试。' : '还没有订单。' }}
+        {{
+          keyword || activeStatus !== 'ALL'
+            ? '没有符合条件的订单，换个状态或搜索词试试。'
+            : '还没有订单。'
+        }}
       </p>
       <table v-else class="admin-table sticky-actions">
         <thead>
@@ -178,7 +182,12 @@ function shipAction(status: string): '发货' | '重新发货' | null {
     </div>
 
     <div class="admin-pager">
-      <button type="button" class="admin-btn-ghost" :disabled="page <= 1" @click="gotoPage(page - 1)">
+      <button
+        type="button"
+        class="admin-btn-ghost"
+        :disabled="page <= 1"
+        @click="gotoPage(page - 1)"
+      >
         上一页
       </button>
       <span class="info">

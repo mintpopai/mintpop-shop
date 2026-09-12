@@ -25,7 +25,14 @@ const deleteMock = vi.mocked(deleteAdminGroup)
 let wrapper: VueWrapper | null = null
 
 function group(overrides: Partial<AdminGroup> = {}): AdminGroup {
-  return { id: 10, nameZh: '订阅', nameEn: 'Subscription', sortOrder: 10, productCount: 0, ...overrides }
+  return {
+    id: 10,
+    nameZh: '订阅',
+    nameEn: 'Subscription',
+    sortOrder: 10,
+    productCount: 0,
+    ...overrides,
+  }
 }
 
 async function render(groups: AdminGroup[] = [group()]) {

@@ -113,12 +113,18 @@ export function fetchAdminProducts(groupId?: number): Promise<AdminProduct[]> {
 
 /** 新增商品 */
 export function createAdminProduct(body: AdminProductUpsert): Promise<AdminProduct> {
-  return request<AdminProduct>('/api/admin/products', { method: 'POST', body: JSON.stringify(body) })
+  return request<AdminProduct>('/api/admin/products', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
 }
 
 /** 编辑商品 */
 export function updateAdminProduct(id: number, body: AdminProductUpsert): Promise<AdminProduct> {
-  return request<AdminProduct>(`/api/admin/products/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+  return request<AdminProduct>(`/api/admin/products/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  })
 }
 
 /** 商品上/下架 */
@@ -141,7 +147,10 @@ export function createAdminGroup(body: AdminGroupUpsert): Promise<AdminGroup> {
 
 /** 编辑分组 */
 export function updateAdminGroup(id: number, body: AdminGroupUpsert): Promise<AdminGroup> {
-  return request<AdminGroup>(`/api/admin/groups/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+  return request<AdminGroup>(`/api/admin/groups/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  })
 }
 
 /** 删除分组（仅空组） */

@@ -32,7 +32,7 @@
      画成线达不到非文字图形的门槛；压暗后仍是薄荷家族，焦点态才像自家的东西 */
   --counter-focus: #0a9b73;
 
-  --font-fact: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-fact: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --rail-width: 208px;
 }
 
@@ -119,7 +119,9 @@ body {
   font-size: 14px;
   color: var(--color-ink-secondary);
   text-decoration: none;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .rail-link:hover {
@@ -556,7 +558,9 @@ body {
   font-size: 13px;
   line-height: 18px;
   cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .admin-chip[data-state]::before {

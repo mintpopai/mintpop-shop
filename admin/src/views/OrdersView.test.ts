@@ -82,7 +82,9 @@ describe('列表加载', () => {
   })
 
   it('未支付订单的支付方式与支付时间显示占位符，不渲染 null', async () => {
-    const w = await render(page([order({ status: 'PENDING', paymentProvider: null, paidAt: null })]))
+    const w = await render(
+      page([order({ status: 'PENDING', paymentProvider: null, paidAt: null })]),
+    )
 
     expect(w.find('tbody tr').text()).toContain('—')
   })

@@ -65,7 +65,9 @@ describe('未登录', () => {
     const w = await render(null)
 
     expect(w.find('.gate-icon').attributes('src')).toContain('products/shop/shop-app-cloud.png')
-    expect(w.find('.gate-wordmark').attributes('src')).toContain('brand/wordmark/mintpop-wordmark-dark.png')
+    expect(w.find('.gate-wordmark').attributes('src')).toContain(
+      'brand/wordmark/mintpop-wordmark-dark.png',
+    )
   })
 
   it('点登录跳后端登录入口', async () => {

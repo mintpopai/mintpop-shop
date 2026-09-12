@@ -30,7 +30,10 @@ beforeEach(() => {
 
 /** 取本次 request 调用的 (path, init) */
 function lastCall(): [string, RequestInit | undefined] {
-  return requestMock.mock.calls[requestMock.mock.calls.length - 1] as [string, RequestInit | undefined]
+  return requestMock.mock.calls[requestMock.mock.calls.length - 1] as [
+    string,
+    RequestInit | undefined,
+  ]
 }
 
 /** 取本次调用请求体解析后的对象 */

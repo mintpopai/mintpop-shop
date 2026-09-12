@@ -81,12 +81,17 @@ interface UrlDialog {
 const urlDialog = ref<UrlDialog | null>(null)
 const urlInput = ref<HTMLInputElement | null>(null)
 
-const URL_DIALOG_TEXT: Record<UrlDialogKind, { title: string; label: string; placeholder: string }> = {
+const URL_DIALOG_TEXT: Record<
+  UrlDialogKind,
+  { title: string; label: string; placeholder: string }
+> = {
   link: { title: '设置链接', label: '链接地址', placeholder: 'https://…' },
   image: { title: '插入图片', label: '图片地址', placeholder: 'https://…' },
 }
 
-const urlDialogText = computed(() => (urlDialog.value ? URL_DIALOG_TEXT[urlDialog.value.kind] : null))
+const urlDialogText = computed(() =>
+  urlDialog.value ? URL_DIALOG_TEXT[urlDialog.value.kind] : null,
+)
 
 /** 主按钮直接写动作：有内容就是「设置链接 / 插入图片」，链接留空则是「移除链接」 */
 const urlDialogAction = computed(() => {
@@ -98,11 +103,14 @@ const urlDialogAction = computed(() => {
   if (dialog.kind === 'image') {
     return { label: '插入图片', disabled: empty }
   }
-  return empty ? { label: '移除链接', disabled: !dialog.hadLink } : { label: '设置链接', disabled: false }
+  return empty
+    ? { label: '移除链接', disabled: !dialog.hadLink }
+    : { label: '设置链接', disabled: false }
 })
 
 async function openUrlDialog(kind: UrlDialogKind) {
-  const previous = kind === 'link' ? (editor.value?.getAttributes('link').href as string | undefined) ?? '' : ''
+  const previous =
+    kind === 'link' ? ((editor.value?.getAttributes('link').href as string | undefined) ?? '') : ''
   urlDialog.value = { kind, value: previous, hadLink: previous !== '' }
   // Modal 默认把焦点放在关闭按钮上；这个弹窗就一个输入框，直接落进去让人开手就能打
   await nextTick()
@@ -135,14 +143,44 @@ function submitUrlDialog() {
 /** 按职责分组：行内格式 / 段落 / 块级 / 插入 / 历史 / 清空，组间画一条竖线 */
 const toolGroups: Tool[][] = [
   [
-    { title: '加粗', label: 'B', run: () => editor.value?.chain().focus().toggleBold().run(), active: () => !!editor.value?.isActive('bold') },
-    { title: '斜体', label: 'I', run: () => editor.value?.chain().focus().toggleItalic().run(), active: () => !!editor.value?.isActive('italic') },
-    { title: '下划线', label: 'U', run: () => editor.value?.chain().focus().toggleUnderline().run(), active: () => !!editor.value?.isActive('underline') },
-    { title: '删除线', label: 'S', run: () => editor.value?.chain().focus().toggleStrike().run(), active: () => !!editor.value?.isActive('strike') },
+    {
+      title: '加粗',
+      label: 'B',
+      run: () => editor.value?.chain().focus().toggleBold().run(),
+      active: () => !!editor.value?.isActive('bold'),
+    },
+    {
+      title: '斜体',
+      label: 'I',
+      run: () => editor.value?.chain().focus().toggleItalic().run(),
+      active: () => !!editor.value?.isActive('italic'),
+    },
+    {
+      title: '下划线',
+      label: 'U',
+      run: () => editor.value?.chain().focus().toggleUnderline().run(),
+      active: () => !!editor.value?.isActive('underline'),
+    },
+    {
+      title: '删除线',
+      label: 'S',
+      run: () => editor.value?.chain().focus().toggleStrike().run(),
+      active: () => !!editor.value?.isActive('strike'),
+    },
   ],
   [
-    { title: '二级标题', label: 'H2', run: () => editor.value?.chain().focus().toggleHeading({ level: 2 }).run(), active: () => !!editor.value?.isActive('heading', { level: 2 }) },
-    { title: '三级标题', label: 'H3', run: () => editor.value?.chain().focus().toggleHeading({ level: 3 }).run(), active: () => !!editor.value?.isActive('heading', { level: 3 }) },
+    {
+      title: '二级标题',
+      label: 'H2',
+      run: () => editor.value?.chain().focus().toggleHeading({ level: 2 }).run(),
+      active: () => !!editor.value?.isActive('heading', { level: 2 }),
+    },
+    {
+      title: '三级标题',
+      label: 'H3',
+      run: () => editor.value?.chain().focus().toggleHeading({ level: 3 }).run(),
+      active: () => !!editor.value?.isActive('heading', { level: 3 }),
+    },
   ],
   [
     {
@@ -153,22 +191,39 @@ const toolGroups: Tool[][] = [
     },
     {
       title: '有序列表',
-      paths: ['M10 6h11', 'M10 12h11', 'M10 18h11', 'M3.4 4.8h1.4V9', 'M3.2 9h2.6', 'M3.2 15a1.3 1.3 0 1 1 2.3 1L3.2 19.2h2.6'],
+      paths: [
+        'M10 6h11',
+        'M10 12h11',
+        'M10 18h11',
+        'M3.4 4.8h1.4V9',
+        'M3.2 9h2.6',
+        'M3.2 15a1.3 1.3 0 1 1 2.3 1L3.2 19.2h2.6',
+      ],
       run: () => editor.value?.chain().focus().toggleOrderedList().run(),
       active: () => !!editor.value?.isActive('orderedList'),
     },
     {
       title: '引用',
-      paths: ['M10 7H6a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2c0 2-1 3.2-2.8 3.8', 'M20 7h-4a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2c0 2-1 3.2-2.8 3.8'],
+      paths: [
+        'M10 7H6a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2c0 2-1 3.2-2.8 3.8',
+        'M20 7h-4a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h2c0 2-1 3.2-2.8 3.8',
+      ],
       run: () => editor.value?.chain().focus().toggleBlockquote().run(),
       active: () => !!editor.value?.isActive('blockquote'),
     },
-    { title: '分隔线', paths: ['M4 12h16'], run: () => editor.value?.chain().focus().setHorizontalRule().run() },
+    {
+      title: '分隔线',
+      paths: ['M4 12h16'],
+      run: () => editor.value?.chain().focus().setHorizontalRule().run(),
+    },
   ],
   [
     {
       title: '链接',
-      paths: ['M10.5 13.5a4.5 4.5 0 0 0 6.6.4l2.4-2.4a4.5 4.5 0 0 0-6.4-6.4l-1.4 1.4', 'M13.5 10.5a4.5 4.5 0 0 0-6.6-.4l-2.4 2.4a4.5 4.5 0 0 0 6.4 6.4l1.4-1.4'],
+      paths: [
+        'M10.5 13.5a4.5 4.5 0 0 0 6.6.4l2.4-2.4a4.5 4.5 0 0 0-6.4-6.4l-1.4 1.4',
+        'M13.5 10.5a4.5 4.5 0 0 0-6.6-.4l-2.4 2.4a4.5 4.5 0 0 0 6.4 6.4l1.4-1.4',
+      ],
       run: () => void openUrlDialog('link'),
       active: () => !!editor.value?.isActive('link'),
     },
@@ -184,8 +239,16 @@ const toolGroups: Tool[][] = [
       paths: ['M4 6h10', 'M9.5 6 7 18', 'M14 12.5l6 6', 'M20 12.5l-6 6'],
       run: () => editor.value?.chain().focus().unsetAllMarks().clearNodes().run(),
     },
-    { title: '撤销', paths: ['M4.5 9.5h11a5 5 0 0 1 0 10h-6', 'M4.5 9.5 8.5 5.5', 'M4.5 9.5 8.5 13.5'], run: () => editor.value?.chain().focus().undo().run() },
-    { title: '重做', paths: ['M19.5 9.5h-11a5 5 0 0 0 0 10h6', 'M19.5 9.5 15.5 5.5', 'M19.5 9.5 15.5 13.5'], run: () => editor.value?.chain().focus().redo().run() },
+    {
+      title: '撤销',
+      paths: ['M4.5 9.5h11a5 5 0 0 1 0 10h-6', 'M4.5 9.5 8.5 5.5', 'M4.5 9.5 8.5 13.5'],
+      run: () => editor.value?.chain().focus().undo().run(),
+    },
+    {
+      title: '重做',
+      paths: ['M19.5 9.5h-11a5 5 0 0 0 0 10h6', 'M19.5 9.5 15.5 5.5', 'M19.5 9.5 15.5 13.5'],
+      run: () => editor.value?.chain().focus().redo().run(),
+    },
   ],
   [
     {
@@ -248,7 +311,12 @@ const toolGroups: Tool[][] = [
       </div>
       <template #footer>
         <button type="button" class="admin-btn-ghost" @click="closeUrlDialog">取消</button>
-        <button type="button" class="admin-btn" :disabled="urlDialogAction.disabled" @click="submitUrlDialog">
+        <button
+          type="button"
+          class="admin-btn"
+          :disabled="urlDialogAction.disabled"
+          @click="submitUrlDialog"
+        >
           {{ urlDialogAction.label }}
         </button>
       </template>
@@ -321,7 +389,9 @@ const toolGroups: Tool[][] = [
   font-family: inherit;
   font-size: 13px;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .tool:hover {

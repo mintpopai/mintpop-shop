@@ -16,6 +16,10 @@ jobs:
           install_args: node pnpm
       - name: 安装管理端依赖（按 lockfile 精确安装）
         run: mise run install-admin --frozen
+      - name: 管理端静态检查（ESLint）
+        run: mise run lint-admin
+      - name: 管理端格式检查（Prettier）
+        run: mise run format-admin --check
       - name: 运行管理端单元测试
         run: mise run test-admin
       - name: 类型检查并构建管理端

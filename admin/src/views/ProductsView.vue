@@ -248,7 +248,9 @@ async function onToggleSale(product: AdminProduct) {
 
   <div v-else class="admin-card">
     <p v-if="filteredProducts.length === 0" class="admin-hint">
-      {{ groupFilter === 0 ? '还没有商品。新增的商品会出现在商城首页。' : '这个分组下还没有商品。' }}
+      {{
+        groupFilter === 0 ? '还没有商品。新增的商品会出现在商城首页。' : '这个分组下还没有商品。'
+      }}
     </p>
     <table v-else class="admin-table">
       <thead>
@@ -278,7 +280,10 @@ async function onToggleSale(product: AdminProduct) {
           <td>{{ product.badgeZh ?? '—' }}</td>
           <td class="col-detail">{{ product.detailZh ? '✓' : '—' }}</td>
           <td class="fact">
-            <span class="accent-dot" :style="{ background: ACCENTS[product.accent] ?? ACCENTS.MINT }"></span
+            <span
+              class="accent-dot"
+              :style="{ background: ACCENTS[product.accent] ?? ACCENTS.MINT }"
+            ></span
             >{{ product.accent }}
           </td>
           <td>
@@ -288,7 +293,12 @@ async function onToggleSale(product: AdminProduct) {
           </td>
           <td class="actions">
             <button type="button" class="admin-link" @click="openEdit(product)">编辑</button>
-            <button type="button" class="admin-link" :class="{ danger: product.onSale }" @click="onToggleSale(product)">
+            <button
+              type="button"
+              class="admin-link"
+              :class="{ danger: product.onSale }"
+              @click="onToggleSale(product)"
+            >
               {{ product.onSale ? '下架' : '上架' }}
             </button>
           </td>
@@ -365,9 +375,12 @@ async function onToggleSale(product: AdminProduct) {
             <div class="admin-field">
               <label for="p-desc-zh">
                 描述
-                <span class="char-count" :class="{ over: form.descriptionZh.length > DESCRIPTION_MAX }">
-                {{ form.descriptionZh.length }} / {{ DESCRIPTION_MAX }}
-              </span>
+                <span
+                  class="char-count"
+                  :class="{ over: form.descriptionZh.length > DESCRIPTION_MAX }"
+                >
+                  {{ form.descriptionZh.length }} / {{ DESCRIPTION_MAX }}
+                </span>
               </label>
               <textarea
                 id="p-desc-zh"
@@ -409,9 +422,12 @@ async function onToggleSale(product: AdminProduct) {
             <div class="admin-field">
               <label for="p-desc-en">
                 描述
-                <span class="char-count" :class="{ over: form.descriptionEn.length > DESCRIPTION_MAX }">
-                {{ form.descriptionEn.length }} / {{ DESCRIPTION_MAX }}
-              </span>
+                <span
+                  class="char-count"
+                  :class="{ over: form.descriptionEn.length > DESCRIPTION_MAX }"
+                >
+                  {{ form.descriptionEn.length }} / {{ DESCRIPTION_MAX }}
+                </span>
               </label>
               <textarea
                 id="p-desc-en"
@@ -602,7 +618,9 @@ async function onToggleSale(product: AdminProduct) {
   font-size: 13px;
   line-height: 18px;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .lang-tab:hover {
@@ -732,7 +750,9 @@ async function onToggleSale(product: AdminProduct) {
   border-radius: 50%;
   background: var(--color-bg);
   cursor: pointer;
-  transition: border-color 0.15s ease, transform 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease;
 }
 
 .swatch:hover {
@@ -744,7 +764,9 @@ async function onToggleSale(product: AdminProduct) {
   height: 16px;
   border-radius: 50%;
   background: var(--swatch);
-  transition: width 0.15s ease, height 0.15s ease;
+  transition:
+    width 0.15s ease,
+    height 0.15s ease;
 }
 
 /* 选中态：外圈染成本色 + 内点长大，形状与颜色两重表达 */

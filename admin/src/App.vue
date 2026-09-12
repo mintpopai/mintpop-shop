@@ -10,7 +10,9 @@ import GateShell from './components/GateShell.vue'
 import './styles/layout.css'
 
 /** 头像兜底字母：优先昵称首字，其次邮箱首字 */
-const initial = computed(() => (currentUser.value?.nickname ?? currentUser.value?.email ?? '?').slice(0, 1))
+const initial = computed(() =>
+  (currentUser.value?.nickname ?? currentUser.value?.email ?? '?').slice(0, 1),
+)
 </script>
 
 <template>
@@ -57,7 +59,12 @@ const initial = computed(() => (currentUser.value?.nickname ?? currentUser.value
 
       <div class="rail-foot">
         <div class="rail-user">
-          <img v-if="currentUser.avatarUrl" class="rail-avatar" :src="currentUser.avatarUrl" alt="" />
+          <img
+            v-if="currentUser.avatarUrl"
+            class="rail-avatar"
+            :src="currentUser.avatarUrl"
+            alt=""
+          />
           <span v-else class="rail-avatar">{{ initial }}</span>
           <span class="rail-user-name">{{ currentUser.nickname ?? currentUser.email }}</span>
         </div>

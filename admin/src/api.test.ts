@@ -84,7 +84,9 @@ describe('request 统一封装', () => {
 
 describe('fetchMe', () => {
   it('走 GET /api/me', async () => {
-    fetchMock.mockResolvedValue(ok({ id: 1, email: 'a@b.c', nickname: null, avatarUrl: null, admin: true }))
+    fetchMock.mockResolvedValue(
+      ok({ id: 1, email: 'a@b.c', nickname: null, avatarUrl: null, admin: true }),
+    )
 
     await expect(fetchMe()).resolves.toMatchObject({ admin: true })
     expect(lastCall()[0]).toBe('/api/me')

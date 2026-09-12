@@ -79,7 +79,9 @@ describe('列表加载', () => {
   })
 
   it('连昵称也没有时头像退到邮箱首字，昵称列显示占位符', async () => {
-    const w = await render(page([user({ avatarUrl: null, nickname: null, email: 'zoe@example.com' })]))
+    const w = await render(
+      page([user({ avatarUrl: null, nickname: null, email: 'zoe@example.com' })]),
+    )
 
     expect(w.find('.avatar-fallback').text()).toBe('z')
     expect(w.find('.user-cell').text()).toContain('—')
