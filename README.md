@@ -87,6 +87,7 @@ mise run run-admin        # 终端 3：启动管理端（5174，/api 代理到 8
 | `PUT /api/me/locale` | 需登录 | 保存语言偏好（zh-CN/en-US） |
 | `POST /api/admin/orders/{orderNo}/shipments` | 需登录 + 管理员 | 发货/重新发货，返回邮件发送结果 |
 | `GET /api/admin/orders/{orderNo}/shipments` | 需登录 + 管理员 | 发货历史（时间倒序） |
+| `POST /api/admin/uploads/images` | 需登录 + 管理员 | 上传图片到 R2（multipart 字段 `file`，≤5MB，JPEG/PNG/WebP/GIF），返回公开 URL |
 
 登录采用 MintPop 统一账号中心（Logto，OIDC 授权码 + PKCE）：后端为机密客户端（BFF），登录后自签会话 JWT（只含内部 userid）写 HttpOnly Cookie，账号中心 token 不进浏览器；用户主键为本地 `shop_user.id`，与账号中心 `sub` 通过 `user_identity` 映射表关联。
 
