@@ -34,7 +34,9 @@ const availableStatuses = computed(() => {
 })
 
 const filteredOrders = computed(() =>
-  activeStatus.value === 'ALL' ? orders.value : orders.value.filter((o) => o.status === activeStatus.value),
+  activeStatus.value === 'ALL'
+    ? orders.value
+    : orders.value.filter((o) => o.status === activeStatus.value),
 )
 
 /** 重新拉取后，若当前筛选的状态已不存在（如取消了唯一的待支付单），退回「全部」 */
@@ -99,7 +101,8 @@ async function onCancel() {
     <p v-if="loading" class="hint">{{ $t('common.loading') }}</p>
     <p v-else-if="loadError" class="hint error">{{ loadError }}</p>
     <p v-else-if="orders.length === 0" class="hint">
-      {{ $t('orders.empty') }}<RouterLink to="/" class="link">{{ $t('orders.goShopping') }}</RouterLink>
+      {{ $t('orders.empty')
+      }}<RouterLink to="/" class="link">{{ $t('orders.goShopping') }}</RouterLink>
     </p>
 
     <template v-else>
@@ -131,14 +134,17 @@ async function onCancel() {
           <div class="order-main">
             <div class="name-row">
               <span class="product-name">{{ order.productName }}</span>
-              <span class="status-tag" :class="`status-tag--${order.status}`">{{ order.statusLabel }}</span>
+              <span class="status-tag" :class="`status-tag--${order.status}`">{{
+                order.statusLabel
+              }}</span>
             </div>
             <span class="order-no">{{ $t('orders.orderNo', { orderNo: order.orderNo }) }}</span>
           </div>
           <div class="order-side">
             <span class="amount">{{ formatPrice(order.amountCents) }}</span>
             <span class="meta">
-              {{ $t('orders.quantity', { n: order.quantity }) }} · {{ formatDateTime(order.createdAt) }}
+              {{ $t('orders.quantity', { n: order.quantity }) }} ·
+              {{ formatDateTime(order.createdAt) }}
             </span>
             <div v-if="isPayable(order) || hasDetail(order)" class="order-actions">
               <template v-if="isPayable(order)">
@@ -149,7 +155,11 @@ async function onCancel() {
                   {{ $t('orders.goPay') }}
                 </RouterLink>
               </template>
-              <RouterLink v-if="hasDetail(order)" :to="`/orders/${order.orderNo}`" class="detail-link">
+              <RouterLink
+                v-if="hasDetail(order)"
+                :to="`/orders/${order.orderNo}`"
+                class="detail-link"
+              >
                 {{ $t('orders.viewDetail') }}
               </RouterLink>
             </div>

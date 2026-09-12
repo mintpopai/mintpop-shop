@@ -131,9 +131,7 @@ describe('登录登出跳转', () => {
 
     gotoLogin()
 
-    expect(fake.href).toBe(
-      `/auth/login?redirect=${encodeURIComponent('/orders/MP001?from=email')}`,
-    )
+    expect(fake.href).toBe(`/auth/login?redirect=${encodeURIComponent('/orders/MP001?from=email')}`)
   })
 
   it('gotoLogin 不带 hash（后端回跳只认 path + query）', () => {

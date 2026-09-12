@@ -28,12 +28,7 @@ const emit = defineEmits<{ buy: [product: Product] }>()
       <p class="desc">{{ product.description ?? '' }}</p>
       <div class="footer">
         <span class="price">{{ formatPrice(product.priceCents) }}</span>
-        <button
-          class="buy-btn"
-          type="button"
-          :disabled="buying"
-          @click="emit('buy', product)"
-        >
+        <button class="buy-btn" type="button" :disabled="buying" @click="emit('buy', product)">
           <svg
             class="buy-icon"
             viewBox="0 0 24 24"
@@ -65,7 +60,9 @@ const emit = defineEmits<{ buy: [product: Product] }>()
   border-radius: var(--radius-panel);
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(11, 11, 12, 0.06);
-  transition: transform 0.15s ease, border-color 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .card:hover {
@@ -137,8 +134,8 @@ const emit = defineEmits<{ buy: [product: Product] }>()
 /* 无 logo 时回落商品首字，不画灰框 */
 .placeholder {
   position: relative;
-  font-family: 'Fredoka', 'Space Grotesk', 'PingFang SC', 'Hiragino Sans GB',
-    'Microsoft YaHei', sans-serif;
+  font-family:
+    'Fredoka', 'Space Grotesk', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
   font-size: 40px;
   font-weight: 600;
   color: var(--color-ink-secondary);
@@ -182,8 +179,8 @@ const emit = defineEmits<{ buy: [product: Product] }>()
 }
 
 .price {
-  font-family: 'Fredoka', 'Space Grotesk', 'PingFang SC', 'Hiragino Sans GB',
-    'Microsoft YaHei', sans-serif;
+  font-family:
+    'Fredoka', 'Space Grotesk', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
   font-size: 22px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;

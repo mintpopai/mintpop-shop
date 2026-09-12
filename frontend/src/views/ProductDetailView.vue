@@ -102,6 +102,7 @@ async function buy() {
         <section v-if="safeDetail" class="detail">
           <h3 class="detail-title">{{ $t('productDetail.detailTitle') }}</h3>
           <!-- v-html 的内容经后端白名单净化 + 前端 DOMPurify 二次净化，见上方 safeDetail -->
+          <!-- eslint-disable-next-line vue/no-v-html -->
           <div class="rich-content" v-html="safeDetail"></div>
         </section>
       </div>
@@ -195,8 +196,8 @@ async function buy() {
 
 .placeholder {
   position: relative;
-  font-family: 'Fredoka', 'Space Grotesk', 'PingFang SC', 'Hiragino Sans GB',
-    'Microsoft YaHei', sans-serif;
+  font-family:
+    'Fredoka', 'Space Grotesk', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
   font-size: 68px;
   font-weight: 600;
   color: var(--color-ink-secondary);
@@ -260,8 +261,8 @@ async function buy() {
 }
 
 .price {
-  font-family: 'Fredoka', 'Space Grotesk', 'PingFang SC', 'Hiragino Sans GB',
-    'Microsoft YaHei', sans-serif;
+  font-family:
+    'Fredoka', 'Space Grotesk', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
   font-size: 34px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;

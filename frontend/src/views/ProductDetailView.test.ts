@@ -108,7 +108,8 @@ describe('富文本详情渲染', () => {
 
   it('详情里的脚本与事件属性被净化掉，脏数据也炸不了页面', async () => {
     const w = await mountView({
-      detail: '<p>正文</p><script>window.__pwned = 1</script><img src="x" onerror="window.__pwned = 1">',
+      detail:
+        '<p>正文</p><script>window.__pwned = 1</script><img src="x" onerror="window.__pwned = 1">',
     })
     const html = w.find('.rich-content').html()
 

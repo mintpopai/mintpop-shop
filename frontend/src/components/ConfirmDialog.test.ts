@@ -36,7 +36,9 @@ describe('确认弹窗', () => {
     render()
 
     expect(document.querySelector('.dialog')?.getAttribute('aria-label')).toBe('取消订单')
-    expect(document.querySelector('.confirm-text')?.textContent).toBe('订单 MP1 取消后将无法再支付。')
+    expect(document.querySelector('.confirm-text')?.textContent).toBe(
+      '订单 MP1 取消后将无法再支付。',
+    )
     expect(button('.btn-ghost').textContent?.trim()).toBe('再想想')
     expect(button('.btn-danger').textContent?.trim()).toBe('确认取消')
   })

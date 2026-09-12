@@ -20,9 +20,7 @@ const loading = ref(true)
 const loadError = ref('')
 const buyingProductId = ref<number | null>(null)
 
-const activeGroup = computed(
-  () => groups.value.find((g) => g.id === activeGroupId.value) ?? null,
-)
+const activeGroup = computed(() => groups.value.find((g) => g.id === activeGroupId.value) ?? null)
 
 onMounted(async () => {
   try {
@@ -69,9 +67,7 @@ async function buy(product: Product) {
         <div class="hero-glow" aria-hidden="true"></div>
         <div class="hero-body">
           <span class="hero-badge">{{ $t('shop.heroBadge') }}</span>
-          <h2 class="hero-title">
-            {{ $t('shop.heroTitle1') }}<br />{{ $t('shop.heroTitle2') }}
-          </h2>
+          <h2 class="hero-title">{{ $t('shop.heroTitle1') }}<br />{{ $t('shop.heroTitle2') }}</h2>
           <p class="hero-desc">{{ $t('shop.heroDesc') }}</p>
         </div>
       </section>
@@ -166,8 +162,8 @@ async function buy(product: Product) {
 }
 
 .hero-title {
-  font-family: 'Fredoka', 'Space Grotesk', 'PingFang SC', 'Hiragino Sans GB',
-    'Microsoft YaHei', sans-serif;
+  font-family:
+    'Fredoka', 'Space Grotesk', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
   font-size: 48px;
   line-height: 1.2;
   font-weight: 600;
@@ -209,7 +205,10 @@ async function buy(product: Product) {
   font-size: 14px;
   font-family: inherit;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .pill:hover {

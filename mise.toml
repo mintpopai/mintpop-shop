@@ -94,6 +94,19 @@ description = "运行 后端单元测试"
 dir = "backend"
 run = "mvn test"
 
+[tasks.lint-frontend]
+description = "静态检查 前端（ESLint：@eslint/js + typescript-eslint + eslint-plugin-vue，警告也算失败）"
+dir = "frontend"
+run = "pnpm eslint . --max-warnings 0"
+
+[tasks.format-frontend]
+description = "格式化 前端（Prettier；--check 只校验不改写，CI 用）"
+usage = '''
+flag "--check" help="只检查格式是否符合、不改写文件（CI 用；不符合则失败）"
+'''
+dir = "frontend"
+run = "pnpm prettier ${usage_check:+--check} ${usage_check:---write} ."
+
 [tasks.test-frontend]
 description = "运行 前端单元测试（Vitest，跑完即退出）"
 dir = "frontend"

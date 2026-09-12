@@ -38,7 +38,9 @@ onMounted(async () => {
       <section class="card">
         <div class="head">
           <span class="product">{{ detail.productName }}</span>
-          <span class="status-tag" :class="`status-tag--${detail.status}`">{{ detail.statusLabel }}</span>
+          <span class="status-tag" :class="`status-tag--${detail.status}`">{{
+            detail.statusLabel
+          }}</span>
         </div>
         <dl class="facts">
           <div class="fact-row">
@@ -69,7 +71,9 @@ onMounted(async () => {
         <template v-if="detail.latestShipment">
           <pre class="shipment-content">{{ detail.latestShipment.content }}</pre>
           <p class="shipped-at">
-            {{ $t('orders.shippedAtLine', { time: formatDateTime(detail.latestShipment.shippedAt) }) }}
+            {{
+              $t('orders.shippedAtLine', { time: formatDateTime(detail.latestShipment.shippedAt) })
+            }}
           </p>
         </template>
         <p v-else class="hint">{{ $t('orders.notShipped') }}</p>

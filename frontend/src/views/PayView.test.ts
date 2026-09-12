@@ -11,7 +11,13 @@ import {
   type CheckoutInfo,
   type PaymentIntentInfo,
 } from '../api'
-import { confirmCardPayment, createCardElements, getStripe, startAlipay, startWechatPay } from '../stripe'
+import {
+  confirmCardPayment,
+  createCardElements,
+  getStripe,
+  startAlipay,
+  startWechatPay,
+} from '../stripe'
 import { gotoLogin } from '../auth'
 import { i18n, t } from '../i18n'
 import { toast } from '../toast'

@@ -40,7 +40,10 @@ function onKeydown(event: KeyboardEvent) {
   }
   const first = items[0]
   const last = items[items.length - 1]
-  if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog.value)) {
+  if (
+    event.shiftKey &&
+    (document.activeElement === first || document.activeElement === dialog.value)
+  ) {
     event.preventDefault()
     last.focus()
   } else if (!event.shiftKey && document.activeElement === last) {
@@ -66,7 +69,12 @@ function onKeydown(event: KeyboardEvent) {
       >
         <header class="head">
           <h3 class="head-title">{{ title }}</h3>
-          <button type="button" class="close" :aria-label="$t('common.close')" @click="emit('close')">
+          <button
+            type="button"
+            class="close"
+            :aria-label="$t('common.close')"
+            @click="emit('close')"
+          >
             ×
           </button>
         </header>

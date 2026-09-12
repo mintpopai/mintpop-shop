@@ -57,6 +57,8 @@ mise run run-admin        # 终端 3：启动管理端（5174，/api 代理到 8
 | 命令 | 说明 |
 |---|---|
 | `mise run run-backend` / `run-frontend` / `run-admin` | 启动后端 / 商城前端 / 管理端（管理端 5174，见「管理端」章节） |
+| `mise run lint-frontend` | 商城前端静态检查（ESLint，警告也算失败） |
+| `mise run format-frontend` | 商城前端 Prettier 格式化；`--check` 只校验不改写（CI 用） |
 | `mise run test-backend` / `test-frontend` / `test-admin` | 后端单元测试（JUnit）/ 商城前端、管理端单元测试（Vitest + happy-dom） |
 | `mise run build-backend` / `build-frontend` / `build-admin` | 构建后端 jar / 商城前端 / 管理端产物 |
 | `mise run image-backend` / `image-frontend` / `image-admin` | 本地构建后端 / 商城前端 / 管理端 Docker 镜像 |
@@ -115,7 +117,7 @@ mise run run-admin        # 终端 3：启动管理端（5174，/api 代理到 8
 
 ## CI/CD 与发版
 
-- **CI**：push main / PR 触发 `CI Backend` / `CI Frontend` / `CI Admin`（按目录过滤），复用 `Quality *` 质量门禁（后端 `mvn test`，两个前端各自类型检查+构建）。
+- **CI**：push main / PR 触发 `CI Backend` / `CI Frontend` / `CI Admin`（按目录过滤），复用 `Quality *` 质量门禁（后端 `mvn test`；商城前端 ESLint + Prettier 检查 + 单测 + 类型检查构建；管理端单测 + 类型检查构建）。
 - **发版**：`mise run release-backend [vX.Y.Z] ["更新说明"]`（frontend / admin 同理）。脚本校验通过后同步版本号文件、打 `<组件>-vX.Y.Z` tag 并推送；tag 触发 `Release *` workflow：质量门禁 → 构建镜像推 `ghcr.io/mintpopai/mintpop-shop/<组件>` → 创建 GitHub Release（tag 注释置顶 + 按类型过滤的变更日志）。缺省版本号取最新稳定 tag 的 patch+1；带说明时打 annotated tag。
 - **通知**：`Action Notify` 把各流水线结果推飞书私聊，需在仓库 Secrets 配 `FEISHU_APP_ID` / `FEISHU_APP_SECRET` / `FEISHU_RECEIVE_ID`。
 

@@ -6,9 +6,10 @@ import { formatDateTime } from './datetime'
  * 只有重置模块图并重新 import 才能观察到不同环境下的渲染结果。
  * 用 vi.stubEnv 而非直接写 process.env，免得为测试给项目引入 node 类型依赖。
  */
-async function importWith(options: { tz?: string; locale?: string }): Promise<
-  typeof import('./datetime')
-> {
+async function importWith(options: {
+  tz?: string
+  locale?: string
+}): Promise<typeof import('./datetime')> {
   if (options.tz) {
     vi.stubEnv('TZ', options.tz)
   }

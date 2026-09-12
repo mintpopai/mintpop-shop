@@ -28,7 +28,8 @@ const ordersActive = computed(() => route.path.startsWith('/orders'))
 
 /** 官网首页与联系方式页，按当前语言指向对应路径 */
 const siteUrl = locale === 'zh-CN' ? 'https://mintpop.ai/zh/' : 'https://mintpop.ai/'
-const contactUrl = locale === 'zh-CN' ? 'https://mintpop.ai/zh/contact/' : 'https://mintpop.ai/contact/'
+const contactUrl =
+  locale === 'zh-CN' ? 'https://mintpop.ai/zh/contact/' : 'https://mintpop.ai/contact/'
 
 /** 游客的中英互切（切了立即刷新生效）；登录用户的语言偏好统一在设置页里改 */
 function toggleLocale() {
@@ -68,8 +69,12 @@ onBeforeUnmount(() => {
         </h1>
       </RouterLink>
       <nav class="main-nav">
-        <RouterLink to="/" class="nav-item" :class="{ active: shopActive }">{{ $t('app.shop') }}</RouterLink>
-        <RouterLink to="/orders" class="nav-item" :class="{ active: ordersActive }">{{ $t('app.myOrders') }}</RouterLink>
+        <RouterLink to="/" class="nav-item" :class="{ active: shopActive }">{{
+          $t('app.shop')
+        }}</RouterLink>
+        <RouterLink to="/orders" class="nav-item" :class="{ active: ordersActive }">{{
+          $t('app.myOrders')
+        }}</RouterLink>
       </nav>
     </div>
 
@@ -96,38 +101,89 @@ onBeforeUnmount(() => {
           :aria-expanded="menuOpen"
           @click="menuOpen = !menuOpen"
         >
-          <img
-            v-if="currentUser.avatarUrl"
-            class="avatar"
-            :src="currentUser.avatarUrl"
-            alt=""
-          />
+          <img v-if="currentUser.avatarUrl" class="avatar" :src="currentUser.avatarUrl" alt="" />
           <span v-else class="avatar avatar-fallback">
             {{ (currentUser.nickname ?? currentUser.email).slice(0, 1) }}
           </span>
           <span class="nickname">{{ currentUser.nickname ?? currentUser.email }}</span>
-          <svg class="chevron" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6l4 4 4-4" /></svg>
+          <svg
+            class="chevron"
+            viewBox="0 0 16 16"
+            width="14"
+            height="14"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M4 6l4 4 4-4" />
+          </svg>
         </button>
         <Transition name="menu">
           <div v-if="menuOpen" class="menu" role="menu" @click="menuOpen = false">
             <!-- 身份区：让人确认「现在登着的是谁」，昵称缺省时只显一行邮箱，不重复 -->
             <div class="menu-identity">
-              <img v-if="currentUser.avatarUrl" class="avatar avatar-lg" :src="currentUser.avatarUrl" alt="" />
+              <img
+                v-if="currentUser.avatarUrl"
+                class="avatar avatar-lg"
+                :src="currentUser.avatarUrl"
+                alt=""
+              />
               <span v-else class="avatar avatar-lg avatar-fallback">
                 {{ (currentUser.nickname ?? currentUser.email).slice(0, 1) }}
               </span>
               <div class="identity-text">
                 <span class="identity-name">{{ currentUser.nickname ?? currentUser.email }}</span>
-                <span v-if="currentUser.nickname" class="identity-email">{{ currentUser.email }}</span>
+                <span v-if="currentUser.nickname" class="identity-email">{{
+                  currentUser.email
+                }}</span>
               </div>
             </div>
             <div class="menu-divider" />
             <RouterLink to="/settings" class="menu-item" role="menuitem">
-              <svg class="menu-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" /></svg>
+              <svg
+                class="menu-icon"
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="3" />
+                <path
+                  d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"
+                />
+              </svg>
               {{ $t('app.settings') }}
             </RouterLink>
-            <button type="button" class="menu-item menu-item--logout" role="menuitem" @click="gotoLogout">
-              <svg class="menu-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="M16 17l5-5-5-5" /><path d="M21 12H9" /></svg>
+            <button
+              type="button"
+              class="menu-item menu-item--logout"
+              role="menuitem"
+              @click="gotoLogout"
+            >
+              <svg
+                class="menu-icon"
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <path d="M16 17l5-5-5-5" />
+                <path d="M21 12H9" />
+              </svg>
               {{ $t('app.logout') }}
             </button>
           </div>
@@ -179,7 +235,9 @@ onBeforeUnmount(() => {
   font-size: 14px;
   color: var(--color-ink-secondary);
   text-decoration: none;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .nav-item:hover {
@@ -246,7 +304,9 @@ onBeforeUnmount(() => {
   font-size: 13px;
   font-family: inherit;
   cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .lang-btn:hover {
@@ -288,7 +348,9 @@ onBeforeUnmount(() => {
   font-size: 14px;
   color: var(--color-ink);
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .user-trigger:hover,
@@ -344,7 +406,9 @@ onBeforeUnmount(() => {
 
 .menu-enter-active,
 .menu-leave-active {
-  transition: opacity 0.16s ease, transform 0.16s ease;
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
 }
 
 .menu-enter-from,
@@ -412,7 +476,9 @@ onBeforeUnmount(() => {
   text-align: left;
   text-decoration: none;
   cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
 }
 
 .menu-icon {

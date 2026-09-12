@@ -9,7 +9,9 @@ import {
 } from './stripe'
 
 const loadStripeMock = vi.fn()
-vi.mock('@stripe/stripe-js', () => ({ loadStripe: (...args: unknown[]) => loadStripeMock(...args) }))
+vi.mock('@stripe/stripe-js', () => ({
+  loadStripe: (...args: unknown[]) => loadStripeMock(...args),
+}))
 
 /** 只实现被测路径用到的方法，其余按 Stripe 类型断言过去 */
 function fakeStripe(overrides: Partial<Stripe>): Stripe {
@@ -40,7 +42,9 @@ describe('getStripe', () => {
 describe('startWechatPay', () => {
   it('以 handleActions=false 确认，拿回二维码内容由页面本地渲染', async () => {
     const confirm = vi.fn().mockResolvedValue({
-      paymentIntent: { next_action: { wechat_pay_display_qr_code: { data: 'weixin://wxpay/xxx' } } },
+      paymentIntent: {
+        next_action: { wechat_pay_display_qr_code: { data: 'weixin://wxpay/xxx' } },
+      },
     })
     const stripe = fakeStripe({ confirmWechatPayPayment: confirm })
 

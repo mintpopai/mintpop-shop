@@ -11,9 +11,7 @@ let stripePromise: Promise<Stripe | null> | null = null
 /** 懒加载并缓存 Stripe 实例（publishable key 来自 checkout-info，非敏感） */
 export function getStripe(publishableKey: string): Promise<Stripe | null> {
   if (!stripePromise) {
-    stripePromise = import('@stripe/stripe-js').then(({ loadStripe }) =>
-      loadStripe(publishableKey),
-    )
+    stripePromise = import('@stripe/stripe-js').then(({ loadStripe }) => loadStripe(publishableKey))
   }
   return stripePromise
 }
@@ -30,9 +28,7 @@ export async function startWechatPay(stripe: Stripe, clientSecret: string): Prom
   }
   // 类型收窄：stripe-js 的 next_action 类型不含微信二维码字段，按文档结构断言
   const nextAction = result.paymentIntent?.next_action as
-    | { wechat_pay_display_qr_code?: { data?: string } }
-    | null
-    | undefined
+    { wechat_pay_display_qr_code?: { data?: string } } | null | undefined
   const qr = nextAction?.wechat_pay_display_qr_code?.data
   if (!qr) {
     throw new Error('missing wechat qr code')
@@ -66,9 +62,7 @@ export async function startAlipay(
     throw new Error(result.error.message)
   }
   const nextAction = result.paymentIntent?.next_action as
-    | { alipay_handle_redirect?: { url?: string } }
-    | null
-    | undefined
+    { alipay_handle_redirect?: { url?: string } } | null | undefined
   const qrUrl = nextAction?.alipay_handle_redirect?.url
   if (!qrUrl) {
     throw new Error('missing alipay redirect url')

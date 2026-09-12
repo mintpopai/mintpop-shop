@@ -236,7 +236,10 @@ async function confirm() {
       }
     }
   } catch (e) {
-    showToast('error', e instanceof Error ? (e.message ?? t('api.requestFailed')) : t('api.requestFailed'))
+    showToast(
+      'error',
+      e instanceof Error ? (e.message ?? t('api.requestFailed')) : t('api.requestFailed'),
+    )
   } finally {
     submitting.value = false
   }
@@ -373,11 +376,32 @@ async function onCancel() {
           >
             <!-- 图标：一律内联 SVG（含「支」字），不引外链图片 -->
             <span v-if="option.subMethod === 'wxpay'" class="icon icon-wxpay" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="#ffffff"><path d="M9.5 4C5.9 4 3 6.5 3 9.6c0 1.8 1 3.4 2.5 4.4l-.6 2 2.2-1.2c.6.2 1.3.3 2 .3h.3A5.3 5.3 0 0 1 9 13c0-2.9 2.8-5.2 6.2-5.2h.4C15 5.6 12.5 4 9.5 4Zm-2.2 2.9a.9.9 0 1 1 0 1.8.9.9 0 0 1 0-1.8Zm4.6 0a.9.9 0 1 1 0 1.8.9.9 0 0 1 0-1.8ZM15.2 9c-3 0-5.4 1.9-5.4 4.3 0 2.4 2.4 4.3 5.4 4.3.6 0 1.2-.1 1.7-.2l1.9 1-.5-1.7c1.4-.8 2.3-2 2.3-3.4C20.6 10.9 18.2 9 15.2 9Zm-1.9 2.4a.8.8 0 1 1 0 1.6.8.8 0 0 1 0-1.6Zm3.8 0a.8.8 0 1 1 0 1.6.8.8 0 0 1 0-1.6Z"/></svg>
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="#ffffff">
+                <path
+                  d="M9.5 4C5.9 4 3 6.5 3 9.6c0 1.8 1 3.4 2.5 4.4l-.6 2 2.2-1.2c.6.2 1.3.3 2 .3h.3A5.3 5.3 0 0 1 9 13c0-2.9 2.8-5.2 6.2-5.2h.4C15 5.6 12.5 4 9.5 4Zm-2.2 2.9a.9.9 0 1 1 0 1.8.9.9 0 0 1 0-1.8Zm4.6 0a.9.9 0 1 1 0 1.8.9.9 0 0 1 0-1.8ZM15.2 9c-3 0-5.4 1.9-5.4 4.3 0 2.4 2.4 4.3 5.4 4.3.6 0 1.2-.1 1.7-.2l1.9 1-.5-1.7c1.4-.8 2.3-2 2.3-3.4C20.6 10.9 18.2 9 15.2 9Zm-1.9 2.4a.8.8 0 1 1 0 1.6.8.8 0 0 1 0-1.6Zm3.8 0a.8.8 0 1 1 0 1.6.8.8 0 0 1 0-1.6Z"
+                />
+              </svg>
             </span>
-            <span v-else-if="option.subMethod === 'alipay'" class="icon icon-alipay" aria-hidden="true">支</span>
+            <span
+              v-else-if="option.subMethod === 'alipay'"
+              class="icon icon-alipay"
+              aria-hidden="true"
+              >支</span
+            >
             <span v-else class="icon icon-card" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 9.5h19"/><path d="M6 15h4"/></svg>
+              <svg
+                viewBox="0 0 24 24"
+                width="22"
+                height="22"
+                fill="none"
+                stroke="#ffffff"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <rect x="2.5" y="5" width="19" height="14" rx="2.5" />
+                <path d="M2.5 9.5h19" />
+                <path d="M6 15h4" />
+              </svg>
             </span>
             <span class="method-text">
               <span class="method-name">{{
@@ -388,7 +412,9 @@ async function onCancel() {
                     : $t('payment.methodCard')
               }}</span>
               <span class="method-desc">{{
-                option.subMethod === 'card' ? $t('payment.methodCardDesc') : $t('payment.methodScanDesc')
+                option.subMethod === 'card'
+                  ? $t('payment.methodCardDesc')
+                  : $t('payment.methodScanDesc')
               }}</span>
             </span>
             <span class="radio-dot" aria-hidden="true"></span>
@@ -439,7 +465,20 @@ async function onCancel() {
 
         <!-- 底部安全提示（盾牌 + 虚线分隔，不可省） -->
         <div class="security-note">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.4-3 8.3-7 9.5C8 19.3 5 15.4 5 11V6l7-3Z"/><path d="M9 11.5l2 2 4-4"/></svg>
+          <svg
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M12 3l7 3v5c0 4.4-3 8.3-7 9.5C8 19.3 5 15.4 5 11V6l7-3Z" />
+            <path d="M9 11.5l2 2 4-4" />
+          </svg>
           <i18n-t keypath="payment.securityNote" tag="span">
             <template #provider><b class="stripe-word">Stripe</b></template>
           </i18n-t>
@@ -579,7 +618,9 @@ async function onCancel() {
   font-family: inherit;
   text-align: left;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 
 .method-card:hover {
