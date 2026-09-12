@@ -1,8 +1,8 @@
 package com.mintpop.shop.config;
 
 import com.mintpop.shop.client.R2StorageClient;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -15,13 +15,13 @@ import software.amazon.awssdk.services.s3.S3Configuration;
 import java.net.URI;
 
 /**
- * R2 存储装配：storage.r2 五项齐全才建 S3Client 与 R2StorageClient，缺任一项整个类不生效、
- * 容器里没有这两个 bean，ImageUploadService 据此判定「图片存储未配置」。
+ * R2 存储装配：storage.r2 五项都非空白才装配，判据是 StorageProperties.isConfigured()，
+ * 缺任一项或任一项为空串整个类都不生效、容器里没有这两个 bean，ImageUploadService 据此判定
+ * 「图片存储未配置」。
  * 条件挂在类上而不是各 bean 上：@ConditionalOnBean 只在自动配置里可靠，用户配置类别用。
  */
 @Configuration
-@ConditionalOnProperty(prefix = "storage.r2",
-        name = {"account-id", "access-key-id", "secret-access-key", "bucket", "public-base-url"})
+@Conditional(StorageConfiguredCondition.class)
 public class StorageConfig {
 
     /**

@@ -51,7 +51,7 @@ public class ImageUploadService {
     public ImageUploadResponse upload(MultipartFile file) {
         R2StorageClient client = storage
                 .orElseThrow(() -> new BizException(BizCodeEnum.IMAGE_STORAGE_NOT_CONFIGURED));
-        if (file == null || file.isEmpty()) {
+        if (file.isEmpty()) {
             throw new BizException(BizCodeEnum.PARAM_INVALID);
         }
         // Spring multipart 上限先拦大头，这里是防御性二次检查（上限被调大或走了别的入口时仍成立）

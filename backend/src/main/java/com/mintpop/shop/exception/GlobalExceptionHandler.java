@@ -10,6 +10,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import java.util.stream.Collectors;
 
@@ -42,7 +43,14 @@ public class GlobalExceptionHandler {
     /** multipart 超过 spring.servlet.multipart 上限：在进 controller 之前就被 Spring 拦下，转成图片过大 */
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ApiResponse<Void> handleMaxUploadSize(MaxUploadSizeExceededException e) {
+        log.warn("上传体积超限", e);
         return ApiResponse.fail(BizCodeEnum.IMAGE_TOO_LARGE, resolve(BizCodeEnum.IMAGE_TOO_LARGE));
+    }
+
+    /** multipart 缺必填 part（如上传接口没带 file 字段）：属于参数错误，不应落到「系统繁忙」 */
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ApiResponse<Void> handleMissingPart(MissingServletRequestPartException e) {
+        return ApiResponse.fail(BizCodeEnum.PARAM_INVALID, resolve(BizCodeEnum.PARAM_INVALID));
     }
 
     @ExceptionHandler(Exception.class)

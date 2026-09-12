@@ -62,6 +62,15 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("缺 multipart 必填 part：参数错误，不落到系统繁忙")
+    void missingRequestPartMappedToParamInvalid() {
+        LocaleContextHolder.setLocale(Locale.SIMPLIFIED_CHINESE);
+        ApiResponse<Void> resp = handler.handleMissingPart(
+                new org.springframework.web.multipart.support.MissingServletRequestPartException("file"));
+        assertThat(resp.getCode()).isEqualTo(110002);
+    }
+
+    @Test
     @DisplayName("成功工厂方法 code 为 0")
     void successFactoryReturnsZeroCode() {
         ApiResponse<String> resp = ApiResponse.success("data");

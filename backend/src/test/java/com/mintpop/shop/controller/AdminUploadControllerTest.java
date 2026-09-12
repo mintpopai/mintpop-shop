@@ -62,4 +62,13 @@ class AdminUploadControllerTest {
                 .andExpect(jsonPath("$.code").value(210006))
                 .andExpect(jsonPath("$.msg").value("只支持 JPEG、PNG、WebP、GIF 图片"));
     }
+
+    @Test
+    @DisplayName("不带 file part：HTTP 200 + 参数错误业务码，不落到系统繁忙")
+    void missingFilePartMappedToParamInvalid() throws Exception {
+        mockMvc.perform(multipart("/api/admin/uploads/images")
+                        .header("Accept-Language", "zh-CN"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(110002));
+    }
 }
