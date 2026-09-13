@@ -38,6 +38,8 @@ function detail(overrides: Partial<ProductDetail> = {}): ProductDetail {
     imageUrl: null,
     badge: '旗舰',
     accent: 'MINT',
+    soldOut: false,
+    stockLeft: null,
     ...overrides,
   }
 }

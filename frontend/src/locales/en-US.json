@@ -52,7 +52,9 @@
   "product": {
     "buy": "Buy",
     "buying": "Ordering…",
-    "viewDetail": "View details of {name}"
+    "viewDetail": "View details of {name}",
+    "soldOut": "Sold out",
+    "stockLeft": "Only {n} left"
   },
   "payment": {
     "title": "Checkout",

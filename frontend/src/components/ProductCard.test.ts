@@ -13,6 +13,8 @@ function product(overrides: Partial<Product> = {}): Product {
     imageUrl: null,
     badge: null,
     accent: 'MINT',
+    soldOut: false,
+    stockLeft: null,
     ...overrides,
   }
 }
@@ -126,5 +128,38 @@ describe('ProductCard 进入详情页', () => {
 
     await wrapper.find('.buy-btn').trigger('click')
     expect(wrapper.emitted('buy')).toHaveLength(1)
+  })
+})
+
+describe('ProductCard 库存', () => {
+  it('售罄时购买按钮禁用并改成「售罄」，点击不抛购买事件', async () => {
+    const wrapper = render({ soldOut: true })
+    const button = wrapper.find('.buy-btn')
+
+    expect(button.attributes('disabled')).toBeDefined()
+    expect(button.text()).toContain(t('product.soldOut'))
+    await button.trigger('click')
+    expect(wrapper.emitted('buy')).toBeUndefined()
+  })
+
+  it('售罄时角标位显示「售罄」，原角标让位', () => {
+    const wrapper = render({ soldOut: true, badge: '热销' })
+
+    expect(wrapper.find('.badge-sold-out').text()).toBe(t('product.soldOut'))
+    expect(wrapper.text()).not.toContain('热销')
+  })
+
+  it('低库存时在价格旁提示剩余件数', () => {
+    const wrapper = render({ stockLeft: 3 })
+
+    expect(wrapper.find('.stock-left').text()).toBe(t('product.stockLeft', { n: 3 }))
+    expect(wrapper.find('.buy-btn').attributes('disabled')).toBeUndefined()
+  })
+
+  it('库存充足或不限时既无售罄也无剩余提示', () => {
+    const wrapper = render({ soldOut: false, stockLeft: null })
+
+    expect(wrapper.find('.badge-sold-out').exists()).toBe(false)
+    expect(wrapper.find('.stock-left').exists()).toBe(false)
   })
 })

@@ -40,6 +40,8 @@ function product(id: number, name: string): Product {
     imageUrl: null,
     badge: null,
     accent: 'MINT',
+    soldOut: false,
+    stockLeft: null,
   }
 }
 

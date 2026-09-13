@@ -18,6 +18,10 @@ export interface Product {
   badge: string | null
   /** 卡片主题色（MINT/VIOLET/SKY/AMBER/ROSE），未知值前端回退 MINT */
   accent: string
+  /** 是否售罄（限库存且余量 ≤ 0） */
+  soldOut: boolean
+  /** 低库存剩余数：仅 0 < 余量 ≤ 5 时有值，其余 null */
+  stockLeft: number | null
 }
 
 /** 商品详情（镜像后端 ProductDetailResponse，比列表多一段富文本详情） */

@@ -17,7 +17,9 @@ const emit = defineEmits<{ buy: [product: Product] }>()
     />
     <div class="thumb">
       <div class="thumb-glow" aria-hidden="true"></div>
-      <span v-if="product.badge" class="badge">{{ product.badge }}</span>
+      <!-- 售罄压过原角标：一张卡上只出现一个角标，「卖完了」比「热销」更要紧 -->
+      <span v-if="product.soldOut" class="badge badge-sold-out">{{ $t('product.soldOut') }}</span>
+      <span v-else-if="product.badge" class="badge">{{ product.badge }}</span>
       <img v-if="product.imageUrl" class="logo" :src="product.imageUrl" :alt="product.name" />
       <span v-else class="placeholder" aria-hidden="true">
         {{ product.name.charAt(0) }}
@@ -27,8 +29,18 @@ const emit = defineEmits<{ buy: [product: Product] }>()
       <h3 class="name">{{ product.name }}</h3>
       <p class="desc">{{ product.description ?? '' }}</p>
       <div class="footer">
-        <span class="price">{{ formatPrice(product.priceCents) }}</span>
-        <button class="buy-btn" type="button" :disabled="buying" @click="emit('buy', product)">
+        <div class="price-block">
+          <span class="price">{{ formatPrice(product.priceCents) }}</span>
+          <span v-if="product.stockLeft !== null" class="stock-left">
+            {{ $t('product.stockLeft', { n: product.stockLeft }) }}
+          </span>
+        </div>
+        <button
+          class="buy-btn"
+          type="button"
+          :disabled="buying || product.soldOut"
+          @click="emit('buy', product)"
+        >
           <svg
             class="buy-icon"
             viewBox="0 0 24 24"
@@ -43,7 +55,13 @@ const emit = defineEmits<{ buy: [product: Product] }>()
             <circle cx="20" cy="21" r="1" />
             <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
           </svg>
-          {{ buying ? $t('product.buying') : $t('product.buy') }}
+          {{
+            product.soldOut
+              ? $t('product.soldOut')
+              : buying
+                ? $t('product.buying')
+                : $t('product.buy')
+          }}
         </button>
       </div>
     </div>
@@ -122,6 +140,12 @@ const emit = defineEmits<{ buy: [product: Product] }>()
   pointer-events: none;
 }
 
+/* 售罄角标：灰底白字，与彩色促销角标拉开，一眼看出「不是在卖」 */
+.badge-sold-out {
+  background: var(--color-ink-secondary);
+  color: #fff;
+}
+
 /* 商品图是品牌 logo 不是照片：等比放进方形框，不裁切不拉伸 */
 .logo {
   position: relative;
@@ -176,6 +200,19 @@ const emit = defineEmits<{ buy: [product: Product] }>()
   align-items: center;
   justify-content: space-between;
   margin-top: 16px;
+}
+
+.price-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* 低库存提示：暖色小字贴在价格下，制造紧迫感但不抢购买按钮 */
+.stock-left {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-warning);
 }
 
 .price {
