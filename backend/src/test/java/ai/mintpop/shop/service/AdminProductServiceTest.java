@@ -158,16 +158,24 @@ class AdminProductServiceTest {
     }
 
     @Test
-    @DisplayName("上下架：改状态并回传最新值")
+    @DisplayName("上下架：只写 on_sale 一列，不把读到的旧库存整实体写回")
     void setOnSaleUpdatesFlag() {
         Product product = new Product();
         product.setId(3L);
         product.setOnSale(true);
+        product.setStock(5);
+        product.setNameZh("薄荷猫手办");
         when(productMapper.selectById(3L)).thenReturn(product);
 
         AdminProductResponse response = adminProductService.setOnSale(3L, false);
 
+        ArgumentCaptor<Product> captor = ArgumentCaptor.forClass(Product.class);
+        verify(productMapper).updateById(captor.capture());
+        Product patch = captor.getValue();
+        assertThat(patch.getId()).isEqualTo(3L);
+        assertThat(patch.getOnSale()).isFalse();
+        assertThat(patch.getStock()).isNull();
+        assertThat(patch.getNameZh()).isNull();
         assertThat(response.getOnSale()).isFalse();
-        verify(productMapper).updateById(product);
     }
 }

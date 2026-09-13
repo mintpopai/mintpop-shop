@@ -70,14 +70,17 @@ public class AdminProductService {
         return AdminProductResponse.of(product);
     }
 
-    /** 上/下架 */
+    /** 上/下架：只写 on_sale 一列。不能整实体写回——stock 是 ALWAYS 策略，会把读到的旧库存覆盖掉买家刚预占的结果 */
     public AdminProductResponse setOnSale(Long id, boolean onSale) {
         Product product = productMapper.selectById(id);
         if (product == null) {
             throw new BizException(BizCodeEnum.PRODUCT_NOT_FOUND);
         }
+        Product patch = new Product();
+        patch.setId(id);
+        patch.setOnSale(onSale);
+        productMapper.updateById(patch);
         product.setOnSale(onSale);
-        productMapper.updateById(product);
         return AdminProductResponse.of(product);
     }
 
