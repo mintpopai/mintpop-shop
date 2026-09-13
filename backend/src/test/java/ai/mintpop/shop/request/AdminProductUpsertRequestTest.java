@@ -78,4 +78,25 @@ class AdminProductUpsertRequestTest {
 
         assertThat(validator.validate(req)).isEmpty();
     }
+
+    @Test
+    @DisplayName("库存留空（不限）或为 0（售罄）都合法")
+    void allowsNullAndZeroStock() {
+        AdminProductUpsertRequest nullStock = validRequest();
+        nullStock.setStock(null);
+        AdminProductUpsertRequest zeroStock = validRequest();
+        zeroStock.setStock(0);
+
+        assertThat(validator.validate(nullStock)).isEmpty();
+        assertThat(validator.validate(zeroStock)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("库存为负被拒")
+    void rejectsNegativeStock() {
+        AdminProductUpsertRequest req = validRequest();
+        req.setStock(-1);
+
+        assertThat(violatedProperties(req)).containsExactly("stock");
+    }
 }

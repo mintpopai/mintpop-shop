@@ -40,7 +40,7 @@ class AdminProductServiceTest {
 
     private AdminProductUpsertRequest request(long groupId) {
         return new AdminProductUpsertRequest(groupId, " 薄荷猫手办 ", "Mint Cat", null, "",
-                null, "", "旗舰", " ", "MINT", 5900L, "  ", true);
+                null, "", "旗舰", " ", "MINT", 5900L, "  ", true, null);
     }
 
     @Test
@@ -73,6 +73,7 @@ class AdminProductServiceTest {
         assertThat(saved.getImageUrl()).isNull();
         assertThat(saved.getPriceCents()).isEqualTo(5900L);
         assertThat(saved.getOnSale()).isTrue();
+        assertThat(saved.getStock()).isNull();
     }
 
     @Test
@@ -91,6 +92,43 @@ class AdminProductServiceTest {
         ArgumentCaptor<Product> captor = ArgumentCaptor.forClass(Product.class);
         verify(productMapper).updateById(captor.capture());
         assertThat(captor.getValue().getNameEn()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("编辑：库存数原样落库，响应回传")
+    void updateWritesStock() {
+        Product existing = new Product();
+        existing.setId(7L);
+        existing.setStock(null);
+        when(productMapper.selectById(7L)).thenReturn(existing);
+        when(productGroupMapper.selectById(1L)).thenReturn(new ProductGroup());
+        AdminProductUpsertRequest request = request(1L);
+        request.setStock(12);
+
+        AdminProductResponse response = adminProductService.updateProduct(7L, request);
+
+        ArgumentCaptor<Product> captor = ArgumentCaptor.forClass(Product.class);
+        verify(productMapper).updateById(captor.capture());
+        assertThat(captor.getValue().getStock()).isEqualTo(12);
+        assertThat(response.getStock()).isEqualTo(12);
+    }
+
+    @Test
+    @DisplayName("编辑：库存清空落成 null（改回不限库存）")
+    void updateClearsStockToUnlimited() {
+        Product existing = new Product();
+        existing.setId(7L);
+        existing.setStock(3);
+        when(productMapper.selectById(7L)).thenReturn(existing);
+        when(productGroupMapper.selectById(1L)).thenReturn(new ProductGroup());
+        AdminProductUpsertRequest request = request(1L);
+        request.setStock(null);
+
+        adminProductService.updateProduct(7L, request);
+
+        ArgumentCaptor<Product> captor = ArgumentCaptor.forClass(Product.class);
+        verify(productMapper).updateById(captor.capture());
+        assertThat(captor.getValue().getStock()).isNull();
     }
 
     @Test

@@ -40,10 +40,13 @@ public class AdminProductResponse {
     /** 是否上架 */
     private Boolean onSale;
 
+    /** 库存数量：null=不限；≤0 售罄（负数为入账竞态补扣所致） */
+    private Integer stock;
+
     public static AdminProductResponse of(Product p) {
         return new AdminProductResponse(p.getId(), p.getGroupId(), p.getNameZh(), p.getNameEn(),
                 p.getDescriptionZh(), p.getDescriptionEn(), p.getDetailZh(), p.getDetailEn(),
                 p.getBadgeZh(), p.getBadgeEn(),
-                p.getAccent(), p.getPriceCents(), p.getImageUrl(), p.getOnSale());
+                p.getAccent(), p.getPriceCents(), p.getImageUrl(), p.getOnSale(), p.getStock());
     }
 }

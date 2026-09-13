@@ -69,4 +69,8 @@ public class AdminProductUpsertRequest {
     /** 是否上架 */
     @NotNull(message = "{biz.validation.on-sale-required}")
     private Boolean onSale;
+
+    /** 库存数量：null=不限库存；0=售罄；不能为负 */
+    @Min(value = 0, message = "{biz.validation.stock-min}")
+    private Integer stock;
 }
