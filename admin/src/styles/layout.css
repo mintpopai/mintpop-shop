@@ -28,6 +28,8 @@
   --counter-deep-text: #9db2aa;
   --counter-danger: #b3341f;
   --counter-danger-deep: #932a19;
+  /* 低库存等预警文字色，白底达 AA */
+  --counter-warning: #8a5a12;
   /* 焦点绿：品牌绿压暗到刚好够 3:1（白 3.53、Cloud 3.30）。品牌绿本身只有 2.7，
      画成线达不到非文字图形的门槛；压暗后仍是薄荷家族，焦点态才像自家的东西 */
   --counter-focus: #0a9b73;

@@ -302,9 +302,10 @@ async function onToggleSale(product: AdminProduct) {
             <span v-else-if="product.stock <= 0" class="stock-out">
               售罄{{ product.stock < 0 ? `（${product.stock}）` : '' }}
             </span>
-            <span v-else :class="{ 'stock-low': product.stock <= LOW_STOCK }">{{
-              product.stock
-            }}</span>
+            <span v-else-if="product.stock <= LOW_STOCK" class="stock-low"
+              >仅剩 {{ product.stock }}</span
+            >
+            <span v-else>{{ product.stock }}</span>
           </td>
           <td>{{ product.badgeZh ?? '—' }}</td>
           <td class="col-detail">{{ product.detailZh ? '✓' : '—' }}</td>
@@ -632,7 +633,7 @@ async function onToggleSale(product: AdminProduct) {
 }
 
 .stock-low {
-  color: #b9731a;
+  color: var(--counter-warning);
   font-weight: 600;
 }
 

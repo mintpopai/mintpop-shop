@@ -583,7 +583,7 @@ describe('库存', () => {
 
     expect(rows[0].text()).toContain('不限')
     expect(rows[1].find('.stock-out').text()).toBe('售罄')
-    expect(rows[2].find('.stock-low').text()).toBe('3')
+    expect(rows[2].find('.stock-low').text()).toBe('仅剩 3')
     expect(rows[3].text()).toContain('120')
     expect(rows[3].find('.stock-low').exists()).toBe(false)
   })
