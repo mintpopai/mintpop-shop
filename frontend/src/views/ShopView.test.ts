@@ -2,6 +2,7 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter, type Router } from 'vue-router'
 import ShopView from './ShopView.vue'
+import ProductCard from '../components/ProductCard.vue'
 import {
   createOrder,
   fetchGroups,
@@ -205,6 +206,21 @@ describe('购买', () => {
 
     expect(toast.value).toEqual({ type: 'error', text: '库存不足' })
     expect(gotoLoginMock).not.toHaveBeenCalled()
+    expect(router.currentRoute.value.path).toBe('/')
+  })
+
+  it('售罄商品即便触发购买也不发下单请求', async () => {
+    login()
+    const w = await mountShop()
+    const card = w.findAllComponents(ProductCard)[0]!
+    const soldOutProduct = { ...(card.props('product') as Product), soldOut: true }
+
+    // 商品卡的购买按钮已禁用（disabled），真实点击测不到这条防线；
+    // 直接从组件上触发 buy 事件，绕过 disabled，模拟键盘/脚本触发
+    await card.vm.$emit('buy', soldOutProduct)
+    await flushPromises()
+
+    expect(createOrderMock).not.toHaveBeenCalled()
     expect(router.currentRoute.value.path).toBe('/')
   })
 })

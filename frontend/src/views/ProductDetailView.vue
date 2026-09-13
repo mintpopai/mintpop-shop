@@ -97,7 +97,7 @@ async function buy() {
             <span class="currency">USD</span>
           </p>
 
-          <p v-if="product.stockLeft !== null" class="stock-left">
+          <p v-if="product.stockLeft != null" class="stock-left">
             {{ $t('product.stockLeft', { n: product.stockLeft }) }}
           </p>
 

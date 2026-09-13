@@ -31,7 +31,7 @@ const emit = defineEmits<{ buy: [product: Product] }>()
       <div class="footer">
         <div class="price-block">
           <span class="price">{{ formatPrice(product.priceCents) }}</span>
-          <span v-if="product.stockLeft !== null" class="stock-left">
+          <span v-if="product.stockLeft != null" class="stock-left">
             {{ $t('product.stockLeft', { n: product.stockLeft }) }}
           </span>
         </div>

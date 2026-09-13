@@ -34,6 +34,10 @@ onMounted(async () => {
 })
 
 async function buy(product: Product) {
+  // 商品卡的按钮已禁用，这里再拦一道：键盘/脚本触发也不该发出下单请求（与详情页同一套防线）
+  if (product.soldOut) {
+    return
+  }
   // 下单必须登录：游客直接引导去统一登录
   if (!currentUser.value) {
     showToast('error', t('shop.loginRequired'))
