@@ -45,6 +45,7 @@ function product(overrides: Partial<AdminProduct> = {}): AdminProduct {
     priceCents: 1999,
     imageUrl: null,
     onSale: true,
+    stock: null,
     ...overrides,
   }
 }
@@ -567,5 +568,95 @@ describe('语言开关', () => {
 
     expect(toast.value).toEqual({ type: 'error', text: '请填写商品的中文名称' })
     expect(panelOf('#p-name-zh').style.display).toBe('')
+  })
+})
+
+describe('库存', () => {
+  it('列表库存列：不限 / 售罄 / 低库存高亮 / 普通数字', async () => {
+    const w = await render([
+      product({ id: 1, stock: null }),
+      product({ id: 2, stock: 0 }),
+      product({ id: 3, stock: 3 }),
+      product({ id: 4, stock: 120 }),
+    ])
+    const rows = w.findAll('tbody tr')
+
+    expect(rows[0].text()).toContain('不限')
+    expect(rows[1].find('.stock-out').text()).toBe('售罄')
+    expect(rows[2].find('.stock-low').text()).toBe('3')
+    expect(rows[3].text()).toContain('120')
+    expect(rows[3].find('.stock-low').exists()).toBe(false)
+  })
+
+  it('负库存（入账竞态补扣）按售罄显示并附上实际数字，让管理员看得见', async () => {
+    const w = await render([product({ stock: -2 })])
+
+    expect(w.find('.stock-out').text()).toBe('售罄（-2）')
+  })
+
+  it('页头统计售罄件数', async () => {
+    const w = await render([
+      product({ id: 1, stock: 0 }),
+      product({ id: 2, stock: null }),
+      product({ id: 3, stock: -1 }),
+    ])
+
+    expect(w.find('.page-facts').text()).toContain('售罄 2')
+  })
+
+  it('新增时库存留空按不限提交 null', async () => {
+    await render()
+    await openCreate()
+    await type('#p-name-zh', '新商品')
+    await type('#p-price', '9.99')
+    createMock.mockResolvedValue(product())
+
+    await save()
+
+    expect(createMock.mock.calls[0][0]).toMatchObject({ stock: null })
+  })
+
+  it('新增时填了库存按整数提交', async () => {
+    await render()
+    await openCreate()
+    await type('#p-name-zh', '新商品')
+    await type('#p-price', '9.99')
+    await type('#p-stock', '12')
+    createMock.mockResolvedValue(product())
+
+    await save()
+
+    expect(createMock.mock.calls[0][0]).toMatchObject({ stock: 12 })
+  })
+
+  it('库存为负或非整数时拦下', async () => {
+    await render()
+
+    for (const stock of ['-1', '1.5']) {
+      await openCreate()
+      await type('#p-name-zh', '新商品')
+      await type('#p-price', '9.99')
+      await type('#p-stock', stock)
+      await save()
+    }
+
+    expect(toast.value).toEqual({ type: 'error', text: '库存必须是不小于 0 的整数' })
+    expect(createMock).not.toHaveBeenCalled()
+  })
+
+  it('编辑时回填库存；不限库存回填成空', async () => {
+    await render([product({ id: 1, stock: 7 }), product({ id: 2, stock: null })])
+    const links = wrapper!.findAll('tbody tr .admin-link')
+
+    await links[0].trigger('click')
+    await flushPromises()
+    expect(($('#p-stock') as HTMLInputElement).value).toBe('7')
+
+    // 关掉再开第二件
+    ;(document.querySelector('.foot .admin-btn-ghost') as HTMLElement).click()
+    await flushPromises()
+    await links[2].trigger('click')
+    await flushPromises()
+    expect(($('#p-stock') as HTMLInputElement).value).toBe('')
   })
 })

@@ -28,6 +28,8 @@ const ACCENTS: Record<string, string> = {
 /** 商品名 / 描述长度上限，与后端 AdminProductService.NAME_MAX_LENGTH / DESCRIPTION_MAX_LENGTH 一致 */
 const NAME_MAX = 40
 const DESCRIPTION_MAX = 100
+/** 低库存阈值，与后端 StockUtil.LOW_STOCK_THRESHOLD 一致：列表里 1～5 件用暖色高亮 */
+const LOW_STOCK = 5
 
 const products = ref<AdminProduct[]>([])
 const groups = ref<AdminGroup[]>([])
@@ -45,6 +47,10 @@ const filteredProducts = computed(() =>
 
 /** 页头那行事实：当前筛选下的上下架构成 */
 const onSaleCount = computed(() => filteredProducts.value.filter((p) => p.onSale).length)
+/** 页头事实：当前筛选下已售罄的商品数（限库存且余量 ≤ 0） */
+const soldOutCount = computed(
+  () => filteredProducts.value.filter((p) => p.stock !== null && p.stock <= 0).length,
+)
 
 /** 下拉选项：分组筛选带「全部」，弹窗里的分组选择不带 */
 const groupFilterOptions = computed(() => [
@@ -85,6 +91,8 @@ const form = ref({
   priceUsd: '',
   imageUrl: '',
   onSale: true,
+  // 库存以文本编辑：空串=不限；Vue 对 type=number 的 v-model 会自动转数字，所以类型是 string | number
+  stock: '' as string | number,
 })
 const saving = ref(false)
 
@@ -130,6 +138,7 @@ function openCreate() {
     priceUsd: '',
     imageUrl: '',
     onSale: true,
+    stock: '',
   }
   modalOpen.value = true
 }
@@ -152,6 +161,7 @@ function openEdit(product: AdminProduct) {
     priceUsd: (product.priceCents / 100).toFixed(2),
     imageUrl: product.imageUrl ?? '',
     onSale: product.onSale,
+    stock: product.stock === null ? '' : product.stock,
   }
   modalOpen.value = true
 }
@@ -185,6 +195,12 @@ async function onSave() {
     showToast('error', '价格至少是 $0.01')
     return
   }
+  const stockText = String(form.value.stock).trim()
+  const stock = stockText === '' ? null : Number(stockText)
+  if (stock !== null && (!Number.isInteger(stock) || stock < 0)) {
+    showToast('error', '库存必须是不小于 0 的整数')
+    return
+  }
   saving.value = true
   const body = {
     groupId: form.value.groupId,
@@ -200,6 +216,7 @@ async function onSave() {
     priceCents,
     imageUrl: form.value.imageUrl,
     onSale: form.value.onSale,
+    stock,
   }
   try {
     if (editingId.value === null) {
@@ -234,7 +251,8 @@ async function onToggleSale(product: AdminProduct) {
     <p class="page-facts">
       共 <span class="fact">{{ filteredProducts.length }}</span> 件 · 在售
       <span class="fact">{{ onSaleCount }}</span> · 已下架
-      <span class="fact">{{ filteredProducts.length - onSaleCount }}</span>
+      <span class="fact">{{ filteredProducts.length - onSaleCount }}</span> · 售罄
+      <span class="fact">{{ soldOutCount }}</span>
     </p>
   </header>
 
@@ -260,6 +278,7 @@ async function onToggleSale(product: AdminProduct) {
           <th>名称</th>
           <th>分组</th>
           <th class="col-amount">价格</th>
+          <th class="col-amount">库存</th>
           <th>角标</th>
           <th>详情</th>
           <th>主题色</th>
@@ -278,6 +297,15 @@ async function onToggleSale(product: AdminProduct) {
           </td>
           <td>{{ groupName(product.groupId) }}</td>
           <td class="fact col-amount">{{ formatPrice(product.priceCents) }}</td>
+          <td class="fact col-amount">
+            <span v-if="product.stock === null" class="muted">不限</span>
+            <span v-else-if="product.stock <= 0" class="stock-out">
+              售罄{{ product.stock < 0 ? `（${product.stock}）` : '' }}
+            </span>
+            <span v-else :class="{ 'stock-low': product.stock <= LOW_STOCK }">{{
+              product.stock
+            }}</span>
+          </td>
           <td>{{ product.badgeZh ?? '—' }}</td>
           <td class="col-detail">{{ product.detailZh ? '✓' : '—' }}</td>
           <td class="fact">
@@ -512,6 +540,22 @@ async function onToggleSale(product: AdminProduct) {
         </div>
 
         <div class="admin-field">
+          <label for="p-stock">库存</label>
+          <input
+            id="p-stock"
+            v-model="form.stock"
+            class="admin-input"
+            type="number"
+            min="0"
+            step="1"
+            placeholder="不限"
+          />
+          <p class="field-note">
+            留空表示不限库存；填 0 表示售罄。下单会自动扣减，取消或超时会加回。
+          </p>
+        </div>
+
+        <div class="admin-field">
           <label id="p-on-sale-label">状态</label>
           <div class="segmented" role="radiogroup" aria-labelledby="p-on-sale-label">
             <button
@@ -580,6 +624,18 @@ async function onToggleSale(product: AdminProduct) {
 </template>
 
 <style scoped>
+/* 库存列：售罄用危险色、低库存用暖色，其余与价格同为等宽事实 */
+.stock-out {
+  color: var(--counter-danger);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.stock-low {
+  color: #b9731a;
+  font-weight: 600;
+}
+
 /* —— 商品弹窗：左「文案」右「货签」两栏，各自滚动 —— */
 .product-editor {
   display: flex;

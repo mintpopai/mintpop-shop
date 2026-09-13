@@ -19,6 +19,8 @@ export interface AdminProduct {
   priceCents: number
   imageUrl: string | null
   onSale: boolean
+  /** 库存数量：null=不限；≤0 售罄 */
+  stock: number | null
 }
 
 /** 商品新增/编辑请求体（镜像后端 AdminProductUpsertRequest） */
@@ -36,6 +38,7 @@ export interface AdminProductUpsert {
   priceCents: number
   imageUrl: string
   onSale: boolean
+  stock: number | null
 }
 
 /** 管理端分组（镜像后端 AdminGroupResponse） */
