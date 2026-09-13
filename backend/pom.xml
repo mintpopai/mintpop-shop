@@ -11,7 +11,7 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.mintpop</groupId>
+    <groupId>ai.mintpop</groupId>
     <artifactId>mintpop-shop-backend</artifactId>
     <version>0.2.4</version>
     <name>mintpop-shop-backend</name>
