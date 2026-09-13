@@ -40,7 +40,8 @@ onMounted(async () => {
 
 async function buy() {
   const current = product.value
-  if (!current) {
+  // 售罄的按钮已禁用，这里再拦一道：键盘/脚本触发也不该发出下单请求
+  if (!current || current.soldOut) {
     return
   }
   // 与商城首页同一套规矩：下单必须登录，游客直接引导去统一登录
@@ -83,7 +84,10 @@ async function buy() {
 
         <aside class="tag">
           <div class="tag-head">
-            <span v-if="product.badge" class="badge">{{ product.badge }}</span>
+            <span v-if="product.soldOut" class="badge badge-sold-out">{{
+              $t('product.soldOut')
+            }}</span>
+            <span v-else-if="product.badge" class="badge">{{ product.badge }}</span>
             <h2 class="name">{{ product.name }}</h2>
             <p v-if="product.description" class="summary">{{ product.description }}</p>
           </div>
@@ -93,8 +97,18 @@ async function buy() {
             <span class="currency">USD</span>
           </p>
 
-          <button class="buy-btn" type="button" :disabled="buying" @click="buy">
-            {{ buying ? $t('product.buying') : $t('product.buy') }}
+          <p v-if="product.stockLeft !== null" class="stock-left">
+            {{ $t('product.stockLeft', { n: product.stockLeft }) }}
+          </p>
+
+          <button class="buy-btn" type="button" :disabled="buying || product.soldOut" @click="buy">
+            {{
+              product.soldOut
+                ? $t('product.soldOut')
+                : buying
+                  ? $t('product.buying')
+                  : $t('product.buy')
+            }}
           </button>
           <p class="checkout-note">{{ $t('productDetail.checkoutNote') }}</p>
         </aside>
@@ -229,6 +243,11 @@ async function buy() {
   white-space: nowrap;
 }
 
+.badge-sold-out {
+  background: var(--color-ink-secondary);
+  color: #fff;
+}
+
 .tag-head {
   margin-bottom: 28px;
 }
@@ -273,6 +292,13 @@ async function buy() {
   font-size: 13px;
   font-weight: 500;
   color: var(--color-ink-secondary);
+}
+
+.stock-left {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-warning);
 }
 
 .buy-btn {

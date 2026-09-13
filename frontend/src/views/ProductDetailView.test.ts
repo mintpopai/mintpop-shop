@@ -173,3 +173,37 @@ describe('详情页下单', () => {
     expect(gotoLoginMock).toHaveBeenCalled()
   })
 })
+
+describe('详情页库存', () => {
+  it('售罄时购买按钮禁用并改成「售罄」，已登录点击也不下单', async () => {
+    currentUser.value = { id: 1, email: 'a@b.c', nickname: null, avatarUrl: null, locale: null }
+    const w = await mountView({ soldOut: true })
+    const button = w.find('.buy-btn')
+
+    expect(button.attributes('disabled')).toBeDefined()
+    expect(button.text()).toBe(t('product.soldOut'))
+    await button.trigger('click')
+    await flushPromises()
+    expect(createOrderMock).not.toHaveBeenCalled()
+  })
+
+  it('售罄时货签角标位显示「售罄」，原角标让位', async () => {
+    const w = await mountView({ soldOut: true, badge: '旗舰' })
+
+    expect(w.find('.badge-sold-out').text()).toBe(t('product.soldOut'))
+    expect(w.text()).not.toContain('旗舰')
+  })
+
+  it('低库存时价格下方提示剩余件数', async () => {
+    const w = await mountView({ stockLeft: 2 })
+
+    expect(w.find('.stock-left').text()).toBe(t('product.stockLeft', { n: 2 }))
+  })
+
+  it('库存充足或不限时不出现售罄与剩余提示', async () => {
+    const w = await mountView()
+
+    expect(w.find('.badge-sold-out').exists()).toBe(false)
+    expect(w.find('.stock-left').exists()).toBe(false)
+  })
+})
