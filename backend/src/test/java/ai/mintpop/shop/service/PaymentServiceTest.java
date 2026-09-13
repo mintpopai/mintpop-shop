@@ -25,9 +25,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 import java.util.Locale;
@@ -40,6 +43,8 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -64,18 +69,26 @@ class PaymentServiceTest {
     private OrderExpiryService orderExpiryService;
     @Mock
     private OrderNotifyService orderNotifyService;
+    @Mock
+    private StockService stockService;
+    @Mock
+    private TransactionTemplate transactionTemplate;
     private PaymentProperties properties;
     private PaymentService paymentService;
 
     @BeforeEach
+    @SuppressWarnings("unchecked")
     void setUp() {
         properties = new PaymentProperties();
         properties.setSecretKey("test-secret");
         properties.setPublishableKey("test-publishable");
         paymentService = new PaymentService(shopOrderMapper, productMapper, stripeGateway,
-                orderExpiryService, properties, orderNotifyService);
+                orderExpiryService, properties, orderNotifyService, stockService, transactionTemplate);
         // 断言中文商品名，需固定请求语言（与 OrderServiceTest 相同处理）
         LocaleContextHolder.setLocale(Locale.SIMPLIFIED_CHINESE);
+        // 事务模板直接执行回调；只有取消与入账进事务，其余用例不触发，故 lenient
+        lenient().when(transactionTemplate.execute(any())).thenAnswer(
+                inv -> ((TransactionCallback<Object>) inv.getArgument(0)).doInTransaction(null));
     }
 
     @AfterEach
@@ -474,6 +487,7 @@ class PaymentServiceTest {
         paymentService.cancel(42L, "MP20260714120000123456");
 
         verify(shopOrderMapper).update(isNull(), any());
+        verify(stockService).release(any());
     }
 
     @Test
@@ -488,6 +502,7 @@ class PaymentServiceTest {
                 .isInstanceOf(BizException.class)
                 .extracting(e -> ((BizException) e).getBizCode())
                 .isEqualTo(BizCodeEnum.ORDER_NOT_CANCELLABLE);
+        verify(stockService, never()).release(any());
     }
 
     @Test
@@ -517,5 +532,37 @@ class PaymentServiceTest {
         paymentService.handleWebhook(succeededEvent(11800L));
 
         verify(orderNotifyService, never()).notifyOrderPaid(anyString());
+    }
+
+    @Test
+    @DisplayName("首次入账：置 PAID 生效后把预占转为成交，再触发通知")
+    void settlePaidConsumesReservationThenNotifies() {
+        ShopOrder order = pendingOrder();
+        order.setPaymentProvider("stripe");
+        order.setPaymentTradeNo("pi_123");
+        when(shopOrderMapper.selectOne(any())).thenReturn(order);
+        when(shopOrderMapper.update(isNull(), any())).thenReturn(1);
+
+        paymentService.handleWebhook(succeededEvent(11800L));
+
+        InOrder inOrder = inOrder(shopOrderMapper, stockService, orderNotifyService);
+        inOrder.verify(shopOrderMapper).update(isNull(), any());
+        inOrder.verify(stockService).consume(order);
+        inOrder.verify(orderNotifyService).notifyOrderPaid("MP20260714120000123456");
+    }
+
+    @Test
+    @DisplayName("入账重放（0 行）：不再动库存")
+    void settleReplayDoesNotConsume() {
+        ShopOrder order = pendingOrder();
+        order.setStatus(OrderStatusEnum.PAID);
+        order.setPaymentProvider("stripe");
+        order.setPaymentTradeNo("pi_123");
+        when(shopOrderMapper.selectOne(any())).thenReturn(order);
+        when(shopOrderMapper.update(isNull(), any())).thenReturn(0);
+
+        paymentService.handleWebhook(succeededEvent(11800L));
+
+        verify(stockService, never()).consume(any());
     }
 }

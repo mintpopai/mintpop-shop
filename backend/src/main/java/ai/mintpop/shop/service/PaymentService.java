@@ -20,6 +20,7 @@ import com.stripe.model.PaymentIntent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -53,6 +54,8 @@ public class PaymentService {
     private final OrderExpiryService orderExpiryService;
     private final PaymentProperties paymentProperties;
     private final OrderNotifyService orderNotifyService;
+    private final StockService stockService;
+    private final TransactionTemplate transactionTemplate;
 
     /** 收银台信息：未配置时下发空通道列表，前端据此禁用支付入口 */
     public CheckoutInfoResponse checkoutInfo() {
@@ -170,14 +173,20 @@ public class PaymentService {
         return new VerifyOrderResponse(order.getOrderNo(), order.getStatus().name());
     }
 
-    /** 取消订单：仅待支付/支付失败可取消（条件 UPDATE，0 行即状态不允许） */
+    /** 取消订单：仅待支付/支付失败可取消（条件 UPDATE，0 行即状态不允许）；生效时同事务归还预占库存 */
     public void cancel(Long userId, String orderNo) {
-        requireOwnOrder(userId, orderNo);
-        int rows = shopOrderMapper.update(null, new LambdaUpdateWrapper<ShopOrder>()
-                .eq(ShopOrder::getOrderNo, orderNo)
-                .in(ShopOrder::getStatus, OrderStatusEnum.PENDING, OrderStatusEnum.FAILED)
-                .set(ShopOrder::getStatus, OrderStatusEnum.CANCELLED));
-        if (rows == 0) {
+        ShopOrder order = requireOwnOrder(userId, orderNo);
+        Integer rows = transactionTemplate.execute(status -> {
+            int updated = shopOrderMapper.update(null, new LambdaUpdateWrapper<ShopOrder>()
+                    .eq(ShopOrder::getOrderNo, orderNo)
+                    .in(ShopOrder::getStatus, OrderStatusEnum.PENDING, OrderStatusEnum.FAILED)
+                    .set(ShopOrder::getStatus, OrderStatusEnum.CANCELLED));
+            if (updated > 0) {
+                stockService.release(order);
+            }
+            return updated;
+        });
+        if (rows == null || rows == 0) {
             throw new BizException(BizCodeEnum.ORDER_NOT_CANCELLABLE);
         }
     }
@@ -186,6 +195,7 @@ public class PaymentService {
      * 幂等入账：先校验 provider 与金额/币种（最小单位整数，直接相等比较），
      * 再条件 UPDATE 置 PAID——允许来源 PENDING/FAILED/CANCELLED/EXPIRED（重试成功、
      * 取消或懒惰过期竞态时钱已收必须入账），影响 0 行即已处理过，静默返回。
+     * 置 PAID 生效后同事务内把预占转成交。
      */
     private void settlePaid(String orderNo, String intentId, Long amountMinorUnit, String currency) {
         ShopOrder order = shopOrderMapper.selectOne(new LambdaQueryWrapper<ShopOrder>()
@@ -207,21 +217,28 @@ public class PaymentService {
                     orderNo, amountMinorUnit, currency, order.getAmountCents());
             return;
         }
-        int rows = shopOrderMapper.update(null, new LambdaUpdateWrapper<ShopOrder>()
-                .eq(ShopOrder::getOrderNo, orderNo)
-                .in(ShopOrder::getStatus, OrderStatusEnum.PENDING, OrderStatusEnum.FAILED,
-                        OrderStatusEnum.CANCELLED, OrderStatusEnum.EXPIRED)
-                .set(ShopOrder::getStatus, OrderStatusEnum.PAID)
-                .set(ShopOrder::getPaidAt, LocalDateTime.now())
-                .set(ShopOrder::getPaymentProvider, PROVIDER_STRIPE)
-                .set(ShopOrder::getPaymentTradeNo, intentId));
-        if (rows == 0) {
+        // 置 PAID 与「预占转成交」同一事务：影响 0 行即已处理过，静默返回，不再动库存
+        Integer rows = transactionTemplate.execute(status -> {
+            int updated = shopOrderMapper.update(null, new LambdaUpdateWrapper<ShopOrder>()
+                    .eq(ShopOrder::getOrderNo, orderNo)
+                    .in(ShopOrder::getStatus, OrderStatusEnum.PENDING, OrderStatusEnum.FAILED,
+                            OrderStatusEnum.CANCELLED, OrderStatusEnum.EXPIRED)
+                    .set(ShopOrder::getStatus, OrderStatusEnum.PAID)
+                    .set(ShopOrder::getPaidAt, LocalDateTime.now())
+                    .set(ShopOrder::getPaymentProvider, PROVIDER_STRIPE)
+                    .set(ShopOrder::getPaymentTradeNo, intentId));
+            if (updated > 0) {
+                stockService.consume(order);
+            }
+            return updated;
+        });
+        if (rows == null || rows == 0) {
             log.info("入账重放（已处理过），忽略 orderNo={}", orderNo);
             return;
         }
         // 首次入账成功：异步推送飞书新订单提醒（尽力而为，通知失败不影响入账）。
-        // 前提：本方法无事务，上面的条件 UPDATE 已自动提交，异步线程重查必见 PAID 行——
-        // 若未来给本方法/handleWebhook 加 @Transactional，须改为提交后再触发，否则可能读到旧状态。
+        // 前提：上面的 transactionTemplate.execute 已返回，事务已提交，异步线程重查必见 PAID 行——
+        // 通知必须留在 execute 之外，挪进回调会让异步线程可能读到旧状态。
         // try-catch 兜底任务「提交」阶段的异常（如停机中执行器已关闭抛 TaskRejectedException）：
         // @Async 只消化任务执行中的异常，提交失败会同步冒回本线程，不能让它把 webhook 变 500。
         try {
