@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import ai.mintpop.shop.enumeration.OrderStatusEnum;
+import ai.mintpop.shop.enumeration.StockHoldEnum;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -26,6 +27,8 @@ public class ShopOrder {
     private Long productId;
     /** 购买数量 */
     private Integer quantity;
+    /** 本单对库存的占用状态：NONE=未预占 HELD=预占中 RELEASED=已归还 CONSUMED=已成交 */
+    private StockHoldEnum stockHold;
     /** 订单金额，单位美分 */
     private Long amountCents;
     /** 订单状态 */

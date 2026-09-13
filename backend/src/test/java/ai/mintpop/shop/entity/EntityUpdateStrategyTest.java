@@ -27,10 +27,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class EntityUpdateStrategyTest {
 
-    /** product 表中 DDL 为 NULL 的列：清空 = 写 null，必须 ALWAYS */
+    /** product 表中 DDL 为 NULL 的列：清空 = 写 null，必须 ALWAYS（stock 清空 = 改回不限库存） */
     private static final Set<String> PRODUCT_NULLABLE = Set.of(
             "description_zh", "description_en", "detail_zh", "detail_en",
-            "badge_zh", "badge_en", "image_url");
+            "badge_zh", "badge_en", "image_url", "stock");
 
     /**
      * product 表中 DDL 为 NOT NULL 的列：值永不为 null，NOT_NULL 策略对它们无害。

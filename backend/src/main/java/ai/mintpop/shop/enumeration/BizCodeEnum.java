@@ -23,6 +23,7 @@ public enum BizCodeEnum {
     IMAGE_TYPE_UNSUPPORTED(210006, "biz.image-type-unsupported"),
     IMAGE_TOO_LARGE(210007, "biz.image-too-large"),
     IMAGE_STORAGE_ERROR(210008, "biz.image-storage-error"),
+    PRODUCT_OUT_OF_STOCK(210009, "biz.product-out-of-stock"),
 
     USER_NOT_FOUND(310001, "biz.user-not-found"),
 
