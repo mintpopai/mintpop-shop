@@ -102,4 +102,32 @@ class ProductServiceTest {
                 .extracting(e -> ((BizException) e).getBizCode())
                 .isEqualTo(BizCodeEnum.PRODUCT_NOT_FOUND);
     }
+
+    @Test
+    @DisplayName("售罄商品仍可查到详情，soldOut 为真且不露剩余数")
+    void soldOutProductStillVisible() {
+        LocaleContextHolder.setLocale(Locale.SIMPLIFIED_CHINESE);
+        Product soldOut = onSaleProduct();
+        soldOut.setStock(0);
+        when(productMapper.selectById(11L)).thenReturn(soldOut);
+
+        ProductDetailResponse result = productService.getOnSaleProduct(11L);
+
+        assertThat(result.getSoldOut()).isTrue();
+        assertThat(result.getStockLeft()).isNull();
+    }
+
+    @Test
+    @DisplayName("低库存商品下发剩余数")
+    void lowStockProductExposesStockLeft() {
+        LocaleContextHolder.setLocale(Locale.SIMPLIFIED_CHINESE);
+        Product low = onSaleProduct();
+        low.setStock(3);
+        when(productMapper.selectById(11L)).thenReturn(low);
+
+        ProductDetailResponse result = productService.getOnSaleProduct(11L);
+
+        assertThat(result.getSoldOut()).isFalse();
+        assertThat(result.getStockLeft()).isEqualTo(3);
+    }
 }

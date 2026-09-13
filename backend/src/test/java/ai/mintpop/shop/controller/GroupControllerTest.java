@@ -37,7 +37,7 @@ class GroupControllerTest {
     void listGroupsReturnsData() throws Exception {
         when(groupService.listGroupsWithProducts()).thenReturn(List.of(
                 new GroupWithProductsResponse(1L, "盲盒系列", List.of(
-                        new ProductResponse(11L, "薄荷精灵盲盒", "经典款", 5900L, null, "经典款", "MINT")))));
+                        new ProductResponse(11L, "薄荷精灵盲盒", "经典款", 5900L, null, "经典款", "MINT", false, null)))));
 
         mockMvc.perform(get("/api/groups"))
                 .andExpect(status().isOk())

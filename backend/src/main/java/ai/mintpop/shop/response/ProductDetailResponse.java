@@ -2,6 +2,7 @@ package ai.mintpop.shop.response;
 
 import ai.mintpop.shop.entity.Product;
 import ai.mintpop.shop.util.I18nUtil;
+import ai.mintpop.shop.util.StockUtil;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -28,6 +29,10 @@ public class ProductDetailResponse {
     private String badge;
     /** 卡片主题色枚举：MINT/VIOLET/SKY/AMBER/ROSE */
     private String accent;
+    /** 是否售罄（限库存且余量 ≤ 0）；不限库存永远 false */
+    private Boolean soldOut;
+    /** 低库存剩余数：仅当 0 < 余量 ≤ 5 时下发，其余为 null（不暴露原始库存） */
+    private Integer stockLeft;
 
     public static ProductDetailResponse of(Product product, boolean english) {
         return new ProductDetailResponse(product.getId(),
@@ -36,6 +41,7 @@ public class ProductDetailResponse {
                 I18nUtil.pick(english, product.getDetailEn(), product.getDetailZh()),
                 product.getPriceCents(), product.getImageUrl(),
                 I18nUtil.pick(english, product.getBadgeEn(), product.getBadgeZh()),
-                product.getAccent());
+                product.getAccent(),
+                StockUtil.isSoldOut(product), StockUtil.lowStockLeft(product));
     }
 }

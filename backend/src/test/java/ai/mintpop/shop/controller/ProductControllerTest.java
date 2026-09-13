@@ -35,7 +35,7 @@ class ProductControllerTest {
     @DisplayName("GET /api/products/{id} 返回 code 0 与商品详情")
     void returnsProductDetail() throws Exception {
         when(productService.getOnSaleProduct(11L)).thenReturn(new ProductDetailResponse(
-                11L, "薄荷精灵盲盒", "经典款", "<p>详情</p>", 5900L, null, "经典款", "MINT"));
+                11L, "薄荷精灵盲盒", "经典款", "<p>详情</p>", 5900L, null, "经典款", "MINT", false, null));
 
         mockMvc.perform(get("/api/products/11"))
                 .andExpect(status().isOk())
