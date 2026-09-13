@@ -9,6 +9,7 @@ import ai.mintpop.shop.entity.ShopOrder;
 import ai.mintpop.shop.enumeration.BizCodeEnum;
 import ai.mintpop.shop.enumeration.OrderStatusEnum;
 import ai.mintpop.shop.exception.BizException;
+import ai.mintpop.shop.enumeration.StockHoldEnum;
 import ai.mintpop.shop.mapper.OrderShipmentMapper;
 import ai.mintpop.shop.mapper.ProductMapper;
 import ai.mintpop.shop.mapper.ShopOrderMapper;
@@ -29,6 +30,8 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -40,7 +43,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -64,13 +69,21 @@ class OrderServiceTest {
     private OrderExpiryService orderExpiryService;
     @Mock
     private OrderShipmentMapper orderShipmentMapper;
+    @Mock
+    private StockService stockService;
+    @Mock
+    private TransactionTemplate transactionTemplate;
     private OrderService orderService;
 
     @BeforeEach
+    @SuppressWarnings("unchecked")
     void setUp() {
         orderService = new OrderService(productMapper, shopOrderMapper, orderExpiryService,
-                TestMessages.create(), orderShipmentMapper);
+                TestMessages.create(), orderShipmentMapper, stockService, transactionTemplate);
         LocaleContextHolder.setLocale(Locale.SIMPLIFIED_CHINESE);
+        // 事务模板直接执行回调，等价于「在事务里跑」；列表/详情用例不下单，故用 lenient 放宽严格 stub 校验
+        lenient().when(transactionTemplate.execute(any())).thenAnswer(
+                inv -> ((TransactionCallback<Object>) inv.getArgument(0)).doInTransaction(null));
     }
 
     @AfterEach
@@ -124,9 +137,10 @@ class OrderServiceTest {
     }
 
     @Test
-    @DisplayName("下单成功：金额=单价×数量，状态待支付，绑定当前用户")
+    @DisplayName("下单成功：金额=单价×数量，状态待支付，绑定当前用户，占用状态写入订单")
     void createOrderSuccess() {
         when(productMapper.selectById(1L)).thenReturn(onSaleProduct());
+        when(stockService.reserve(any(), eq(2))).thenReturn(StockHoldEnum.NONE);
 
         CreateOrderResponse resp = orderService.createOrder(42L, new CreateOrderRequest(1L, 2));
 
@@ -138,6 +152,7 @@ class OrderServiceTest {
         assertThat(captor.getValue().getStatus()).isEqualTo(OrderStatusEnum.PENDING);
         assertThat(captor.getValue().getQuantity()).isEqualTo(2);
         assertThat(captor.getValue().getUserId()).isEqualTo(42L);
+        assertThat(captor.getValue().getStockHold()).isEqualTo(StockHoldEnum.NONE);
     }
 
     @Test
@@ -160,6 +175,39 @@ class OrderServiceTest {
 
         assertThatThrownBy(() -> orderService.createOrder(42L, new CreateOrderRequest(1L, 1)))
                 .isInstanceOf(BizException.class);
+    }
+
+    @Test
+    @DisplayName("下单：限库存商品先预占再插单，预占结果 HELD 写进订单")
+    void createOrderReservesBeforeInsert() {
+        Product limited = onSaleProduct();
+        limited.setStock(5);
+        when(productMapper.selectById(1L)).thenReturn(limited);
+        when(stockService.reserve(limited, 2)).thenReturn(StockHoldEnum.HELD);
+
+        orderService.createOrder(42L, new CreateOrderRequest(1L, 2));
+
+        InOrder inOrder = inOrder(stockService, shopOrderMapper);
+        inOrder.verify(stockService).reserve(limited, 2);
+        inOrder.verify(shopOrderMapper).insert(any(ShopOrder.class));
+        ArgumentCaptor<ShopOrder> captor = ArgumentCaptor.forClass(ShopOrder.class);
+        verify(shopOrderMapper).insert(captor.capture());
+        assertThat(captor.getValue().getStockHold()).isEqualTo(StockHoldEnum.HELD);
+    }
+
+    @Test
+    @DisplayName("下单：库存不足时预占抛 210009，订单不落库")
+    void createOrderOutOfStockDoesNotInsert() {
+        Product limited = onSaleProduct();
+        limited.setStock(1);
+        when(productMapper.selectById(1L)).thenReturn(limited);
+        when(stockService.reserve(limited, 2)).thenThrow(new BizException(BizCodeEnum.PRODUCT_OUT_OF_STOCK));
+
+        assertThatThrownBy(() -> orderService.createOrder(42L, new CreateOrderRequest(1L, 2)))
+                .isInstanceOf(BizException.class)
+                .extracting(e -> ((BizException) e).getBizCode())
+                .isEqualTo(BizCodeEnum.PRODUCT_OUT_OF_STOCK);
+        verify(shopOrderMapper, never()).insert(any(ShopOrder.class));
     }
 
     @Test

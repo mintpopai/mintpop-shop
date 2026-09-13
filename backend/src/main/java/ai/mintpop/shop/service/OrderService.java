@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -46,9 +47,12 @@ public class OrderService {
     private final OrderExpiryService orderExpiryService;
     private final MessageSource messageSource;
     private final OrderShipmentMapper orderShipmentMapper;
+    private final StockService stockService;
+    private final TransactionTemplate transactionTemplate;
 
     /**
      * 创建待支付订单：校验商品存在且上架，金额=单价×数量，绑定当前登录用户。
+     * 预占库存与插单在同一事务：预占不足直接抛出（无需回滚什么），插单失败则预占随事务回滚，不漏扣。
      */
     public CreateOrderResponse createOrder(Long userId, CreateOrderRequest request) {
         Product product = productMapper.selectById(request.getProductId());
@@ -63,7 +67,11 @@ public class OrderService {
         order.setAmountCents(product.getPriceCents() * request.getQuantity());
         order.setStatus(OrderStatusEnum.PENDING);
         order.setUserId(userId);
-        shopOrderMapper.insert(order);
+        transactionTemplate.execute(status -> {
+            order.setStockHold(stockService.reserve(product, request.getQuantity()));
+            shopOrderMapper.insert(order);
+            return null;
+        });
 
         return new CreateOrderResponse(order.getOrderNo(), order.getAmountCents());
     }
