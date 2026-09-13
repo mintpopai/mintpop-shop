@@ -9,6 +9,11 @@ import ai.mintpop.shop.mapper.ProductMapper;
 import ai.mintpop.shop.request.AdminProductUpsertRequest;
 import ai.mintpop.shop.response.AdminProductResponse;
 import ai.mintpop.shop.util.HtmlSanitizer;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +26,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -37,6 +43,13 @@ class AdminProductServiceTest {
     private HtmlSanitizer htmlSanitizer = new HtmlSanitizer();
     @InjectMocks
     private AdminProductService adminProductService;
+
+    /** 纯单测无 MyBatis 容器，需手动注册实体元数据，lambda 条件才能渲染出 SQL 段与参数 */
+    @BeforeAll
+    static void initTableInfo() {
+        TableInfoHelper.initTableInfo(
+                new MapperBuilderAssistant(new MybatisConfiguration(), ""), Product.class);
+    }
 
     private AdminProductUpsertRequest request(long groupId) {
         return new AdminProductUpsertRequest(groupId, " 薄荷猫手办 ", "Mint Cat", null, "",
@@ -158,24 +171,28 @@ class AdminProductServiceTest {
     }
 
     @Test
-    @DisplayName("上下架：只写 on_sale 一列，不把读到的旧库存整实体写回")
-    void setOnSaleUpdatesFlag() {
+    @DisplayName("上下架：生成的 UPDATE 只 set on_sale 一列，库存/描述/详情/角标/主图都不进 SET")
+    void setOnSaleUpdatesOnlyOnSaleColumn() {
         Product product = new Product();
         product.setId(3L);
         product.setOnSale(true);
         product.setStock(5);
-        product.setNameZh("薄荷猫手办");
         when(productMapper.selectById(3L)).thenReturn(product);
 
         AdminProductResponse response = adminProductService.setOnSale(3L, false);
 
-        ArgumentCaptor<Product> captor = ArgumentCaptor.forClass(Product.class);
-        verify(productMapper).updateById(captor.capture());
-        Product patch = captor.getValue();
-        assertThat(patch.getId()).isEqualTo(3L);
-        assertThat(patch.getOnSale()).isFalse();
-        assertThat(patch.getStock()).isNull();
-        assertThat(patch.getNameZh()).isNull();
         assertThat(response.getOnSale()).isFalse();
+        assertThat(response.getStock()).isEqualTo(5);
+        // 整实体写回或裸 patch 实体都会把 ALWAYS 列带进 SET，这里锁死只允许 wrapper 单列更新
+        verify(productMapper, never()).updateById(any(Product.class));
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<LambdaUpdateWrapper<Product>> captor = ArgumentCaptor.forClass(LambdaUpdateWrapper.class);
+        verify(productMapper).update(isNull(), captor.capture());
+        String sqlSet = captor.getValue().getSqlSet();
+        assertThat(sqlSet).contains("on_sale");
+        assertThat(sqlSet).doesNotContain("stock").doesNotContain("description").doesNotContain("detail")
+                .doesNotContain("badge").doesNotContain("image_url");
+        assertThat(captor.getValue().getSqlSegment()).contains("id");
+        assertThat(captor.getValue().getParamNameValuePairs()).containsValue(3L).containsValue(false);
     }
 }

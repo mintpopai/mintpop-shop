@@ -1,6 +1,7 @@
 package ai.mintpop.shop.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import ai.mintpop.shop.entity.Product;
 import ai.mintpop.shop.enumeration.BizCodeEnum;
 import ai.mintpop.shop.exception.BizException;
@@ -70,16 +71,20 @@ public class AdminProductService {
         return AdminProductResponse.of(product);
     }
 
-    /** 上/下架：只写 on_sale 一列。不能整实体写回——stock 是 ALWAYS 策略，会把读到的旧库存覆盖掉买家刚预占的结果 */
+    /**
+     * 上/下架：只更新 on_sale 一列。
+     * 不能整实体写回——stock 是 ALWAYS 策略，会把读到的旧库存覆盖掉买家刚预占的结果；
+     * 也不能用裸 new Product() 当 patch——Product 有 8 个 ALWAYS 列（stock/描述/详情/角标/主图），
+     * 裸实体上它们全是 null，照样会被写进 SET 把数据清空。只有显式 set 单列的 UpdateWrapper 才安全。
+     */
     public AdminProductResponse setOnSale(Long id, boolean onSale) {
         Product product = productMapper.selectById(id);
         if (product == null) {
             throw new BizException(BizCodeEnum.PRODUCT_NOT_FOUND);
         }
-        Product patch = new Product();
-        patch.setId(id);
-        patch.setOnSale(onSale);
-        productMapper.updateById(patch);
+        productMapper.update(null, new LambdaUpdateWrapper<Product>()
+                .eq(Product::getId, id)
+                .set(Product::getOnSale, onSale));
         product.setOnSale(onSale);
         return AdminProductResponse.of(product);
     }
