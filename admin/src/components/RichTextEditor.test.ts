@@ -7,6 +7,21 @@ import RichTextEditor from './RichTextEditor.vue'
 // 弹窗里的上传按钮会导入上传 API；这里只关心「上传成功后编辑器怎么用 URL」，把 API 顶掉
 vi.mock('../api-admin', () => ({ uploadAdminImage: vi.fn() }))
 
+// jsdom 没有布局引擎，Range 上连 getClientRects / getBoundingClientRect 都没有；而 TipTap 的 focus()
+// 会在下一帧（requestAnimationFrame）异步调 scrollIntoView，ProseMirror 据此算选区坐标，撞到 Range 就抛
+// 「target.getClientRects is not a function」。它在用例结束后才炸，本机快、编辑器已销毁所以侥幸躲过，
+// CI 慢就成了 Vitest 的未处理异常。补两个空实现让这一帧安静过去；坐标本身在测试里没有意义。
+if (typeof Range.prototype.getClientRects !== 'function') {
+  Range.prototype.getClientRects = () => [] as unknown as DOMRectList
+  Range.prototype.getBoundingClientRect = () => new DOMRect(0, 0, 0, 0)
+}
+
+/** 等 TipTap focus() 排在下一帧的 scrollIntoView 跑完：把「用例结束后才炸」变成「在用例里就能看见」 */
+async function settleFocus() {
+  await new Promise((resolve) => requestAnimationFrame(() => resolve(null)))
+  await flushPromises()
+}
+
 let wrapper: VueWrapper | null = null
 
 /** useEditor 在挂载后才建好实例，等一拍再断言 */
@@ -243,6 +258,7 @@ describe('链接与图片：问地址走自绘弹窗，不用 window.prompt', ()
 
     await typeUrl('https://cdn.example/a.png')
     await clickPrimary()
+    await settleFocus()
 
     expect(lastEmitted(w)).toContain('<img')
     expect(lastEmitted(w)).toContain('src="https://cdn.example/a.png"')
@@ -256,7 +272,7 @@ describe('链接与图片：问地址走自绘弹窗，不用 window.prompt', ()
     const uploader = w.findComponent({ name: 'ImageUploadButton' })
     expect(uploader.exists()).toBe(true)
     uploader.vm.$emit('uploaded', 'https://shop-assets.mintpop.ai/products/2026/09/a.png')
-    await flushPromises()
+    await settleFocus()
 
     expect(lastEmitted(w)).toContain('src="https://shop-assets.mintpop.ai/products/2026/09/a.png"')
     expect(dialog()).toBeNull()
