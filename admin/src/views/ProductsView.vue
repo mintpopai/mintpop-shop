@@ -39,18 +39,39 @@ const loadError = ref('')
 /** 分组筛选：0 = 全部（select 的 number 绑定用 0 兜底） */
 const groupFilter = ref(0)
 
-const filteredProducts = computed(() =>
+/**
+ * 上下架 tab：表格只显示当前 tab 那一种状态。下架的商品会越攒越多，
+ * 全混在一张表里在售的反而找不着，所以默认只看「上架中」。
+ */
+type StatusTab = 'ON_SALE' | 'OFF_SALE'
+const statusTab = ref<StatusTab>('ON_SALE')
+
+/** 分组筛选后的范围：页头统计与 tab 上的件数都按它算，不随上下架 tab 变 */
+const groupScoped = computed(() =>
   groupFilter.value === 0
     ? products.value
     : products.value.filter((p) => p.groupId === groupFilter.value),
 )
 
-/** 页头那行事实：当前筛选下的上下架构成 */
-const onSaleCount = computed(() => filteredProducts.value.filter((p) => p.onSale).length)
-/** 页头事实：当前筛选下已售罄的商品数（限库存且余量 ≤ 0） */
+/** 页头那行事实：当前分组范围内的上下架构成 */
+const onSaleCount = computed(() => groupScoped.value.filter((p) => p.onSale).length)
+const offSaleCount = computed(() => groupScoped.value.length - onSaleCount.value)
+/** 页头事实：当前分组范围内已售罄的商品数（限库存且余量 ≤ 0） */
 const soldOutCount = computed(
-  () => filteredProducts.value.filter((p) => p.stock !== null && p.stock <= 0).length,
+  () => groupScoped.value.filter((p) => p.stock !== null && p.stock <= 0).length,
 )
+
+/** 表格实际展示的商品：分组范围内再按 tab 取上架 / 下架那一半 */
+const filteredProducts = computed(() =>
+  groupScoped.value.filter((p) => p.onSale === (statusTab.value === 'ON_SALE')),
+)
+
+/** 表格空着时的原因：一件都没有 / 这个分组没有 / 只是当前 tab 下没有 */
+const emptyHint = computed(() => {
+  if (products.value.length === 0) return '还没有商品。新增的商品会出现在商城首页。'
+  if (groupScoped.value.length === 0) return '这个分组下还没有商品。'
+  return statusTab.value === 'ON_SALE' ? '没有上架中的商品。' : '没有已下架的商品。'
+})
 
 /** 下拉选项：分组筛选带「全部」，弹窗里的分组选择不带 */
 const groupFilterOptions = computed(() => [
@@ -270,14 +291,38 @@ async function onToggleSale(product: AdminProduct) {
   <header class="page-head">
     <h2 class="page-title">商品</h2>
     <p class="page-facts">
-      共 <span class="fact">{{ filteredProducts.length }}</span> 件 · 在售
+      共 <span class="fact">{{ groupScoped.length }}</span> 件 · 在售
       <span class="fact">{{ onSaleCount }}</span> · 已下架
-      <span class="fact">{{ filteredProducts.length - onSaleCount }}</span> · 售罄
+      <span class="fact">{{ offSaleCount }}</span> · 售罄
       <span class="fact">{{ soldOutCount }}</span>
     </p>
   </header>
 
   <div class="admin-toolbar">
+    <div class="status-tabs" role="tablist" aria-label="按上下架筛选">
+      <button
+        type="button"
+        class="status-tab"
+        data-status="ON_SALE"
+        role="tab"
+        :aria-selected="statusTab === 'ON_SALE'"
+        :class="{ active: statusTab === 'ON_SALE' }"
+        @click="statusTab = 'ON_SALE'"
+      >
+        上架中 <span class="tab-count fact">{{ onSaleCount }}</span>
+      </button>
+      <button
+        type="button"
+        class="status-tab"
+        data-status="OFF_SALE"
+        role="tab"
+        :aria-selected="statusTab === 'OFF_SALE'"
+        :class="{ active: statusTab === 'OFF_SALE' }"
+        @click="statusTab = 'OFF_SALE'"
+      >
+        已下架 <span class="tab-count fact">{{ offSaleCount }}</span>
+      </button>
+    </div>
     <Select v-model="groupFilter" :options="groupFilterOptions" aria-label="按分组筛选" />
     <span class="spacer"></span>
     <button type="button" class="admin-btn" @click="openCreate">新增商品</button>
@@ -287,11 +332,7 @@ async function onToggleSale(product: AdminProduct) {
   <p v-else-if="loadError" class="admin-hint error">{{ loadError }}</p>
 
   <div v-else class="admin-card">
-    <p v-if="filteredProducts.length === 0" class="admin-hint">
-      {{
-        groupFilter === 0 ? '还没有商品。新增的商品会出现在商城首页。' : '这个分组下还没有商品。'
-      }}
-    </p>
+    <p v-if="filteredProducts.length === 0" class="admin-hint">{{ emptyHint }}</p>
     <table v-else class="admin-table">
       <thead>
         <tr>
@@ -678,6 +719,56 @@ async function onToggleSale(product: AdminProduct) {
 </template>
 
 <style scoped>
+/* —— 工具栏里的上下架 tab：与弹窗里的语言开关同一套配方（灰槽 + 白面浮起） —— */
+.status-tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-button);
+  background: var(--color-bg-cloud);
+}
+
+.status-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-ink-secondary);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 18px;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.status-tab:hover {
+  color: var(--color-ink);
+}
+
+/* 当前 tab：白面浮起来 + 墨色加粗，两重表达，不靠单一颜色 */
+.status-tab.active {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(15, 26, 22, 0.12);
+}
+
+/* tab 上的件数：小一号的灰色事实，选中时跟着变墨色 */
+.tab-count {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-ink-secondary);
+}
+
+.status-tab.active .tab-count {
+  color: var(--color-ink);
+}
+
 /* 库存列：售罄用危险色、低库存用暖色，其余与价格同为等宽事实 */
 .stock-out {
   color: var(--counter-danger);

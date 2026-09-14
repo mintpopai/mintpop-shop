@@ -76,6 +76,12 @@ async function render(products: AdminProduct[] = [product()], groups = GROUPS) {
   return wrapper
 }
 
+/** 点工具栏里的上下架 tab */
+async function clickStatusTab(w: VueWrapper, status: 'ON_SALE' | 'OFF_SALE') {
+  await w.find(`.status-tab[data-status="${status}"]`).trigger('click')
+  await flushPromises()
+}
+
 /** 按 id 取某一语言的富文本编辑器 */
 function editorOf(w: VueWrapper, id: string) {
   const found = w.findAllComponents(RichTextEditorStub).find((c) => c.props('id') === id)
@@ -201,6 +207,72 @@ describe('列表加载', () => {
     const w = await render([])
 
     expect(w.find('.admin-hint').text()).toContain('还没有商品')
+  })
+})
+
+describe('上下架 tab', () => {
+  it('默认停在「上架中」，已下架商品不进表格；tab 上标各自件数', async () => {
+    const w = await render([
+      product({ id: 1, onSale: true }),
+      product({ id: 2, onSale: false }),
+      product({ id: 3, onSale: false }),
+    ])
+
+    const onTab = w.find('.status-tab[data-status="ON_SALE"]')
+    const offTab = w.find('.status-tab[data-status="OFF_SALE"]')
+    expect(onTab.attributes('aria-selected')).toBe('true')
+    expect(onTab.text()).toContain('上架中')
+    expect(onTab.text()).toContain('1')
+    expect(offTab.text()).toContain('已下架')
+    expect(offTab.text()).toContain('2')
+    expect(w.findAll('tbody tr')).toHaveLength(1)
+    expect(w.find('tbody tr').text()).toContain('上架中')
+  })
+
+  it('切到「已下架」只看下架商品——纯前端切换，不再请求后端', async () => {
+    const w = await render([product({ id: 1, onSale: true }), product({ id: 2, onSale: false })])
+    const before = fetchProductsMock.mock.calls.length
+
+    await clickStatusTab(w, 'OFF_SALE')
+
+    expect(w.find('.status-tab[data-status="OFF_SALE"]').attributes('aria-selected')).toBe('true')
+    expect(w.findAll('tbody tr')).toHaveLength(1)
+    expect(w.find('tbody tr').text()).toContain('已下架')
+    expect(fetchProductsMock.mock.calls.length).toBe(before)
+  })
+
+  it('页头统计按分组范围算，不随 tab 变', async () => {
+    const w = await render([product({ id: 1, onSale: true }), product({ id: 2, onSale: false })])
+
+    await clickStatusTab(w, 'OFF_SALE')
+
+    const facts = w.find('.page-facts').text()
+    expect(facts).toContain('共 2 件')
+    expect(facts).toContain('在售 1')
+    expect(facts).toContain('已下架 1')
+  })
+
+  it('tab 与分组筛选叠加：只留该分组里该状态的商品', async () => {
+    const w = await render([
+      product({ id: 1, groupId: 10, onSale: false }),
+      product({ id: 2, groupId: 20, onSale: false }),
+      product({ id: 3, groupId: 20, onSale: true }),
+    ])
+
+    await w.findComponent({ name: 'Select' }).vm.$emit('update:modelValue', 20)
+    await clickStatusTab(w, 'OFF_SALE')
+
+    expect(w.findAll('tbody tr')).toHaveLength(1)
+    expect(w.find('tbody tr').text()).toContain('卡密')
+    expect(w.find('.status-tab[data-status="OFF_SALE"]').text()).toContain('1')
+  })
+
+  it('当前 tab 下没有商品时给出针对性的空态文案', async () => {
+    const w = await render([product({ id: 1, onSale: true })])
+
+    await clickStatusTab(w, 'OFF_SALE')
+
+    expect(w.find('.admin-hint').text()).toBe('没有已下架的商品。')
   })
 })
 
@@ -446,6 +518,8 @@ describe('上下架', () => {
   it('已下架商品的动作是「上架」', async () => {
     const w = await render([product({ id: 7, onSale: false })])
     setOnSaleMock.mockResolvedValue(product({ id: 7, onSale: true }))
+    // 已下架的商品在「已下架」tab 下
+    await clickStatusTab(w, 'OFF_SALE')
 
     expect(w.findAll('tbody tr .admin-link')[1].text()).toBe('上架')
     await toggle()
@@ -460,6 +534,9 @@ describe('上下架', () => {
 
     await toggle()
 
+    // 下架后它从「上架中」tab 消失，切到「已下架」tab 才看得到——但没有重拉列表
+    expect(w.findAll('tbody tr')).toHaveLength(0)
+    await clickStatusTab(w, 'OFF_SALE')
     expect(w.find('tbody tr').text()).toContain('已下架')
     expect(fetchProductsMock.mock.calls.length).toBe(before)
     expect(toast.value).toEqual({ type: 'success', text: '已更新上架状态' })
