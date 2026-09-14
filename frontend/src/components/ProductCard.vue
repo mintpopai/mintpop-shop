@@ -30,7 +30,13 @@ const emit = defineEmits<{ buy: [product: Product] }>()
       <p class="desc">{{ product.description ?? '' }}</p>
       <div class="footer">
         <div class="price-block">
-          <span class="price">{{ formatPrice(product.priceCents) }}</span>
+          <span class="price-line">
+            <span class="price">{{ formatPrice(product.priceCents) }}</span>
+            <!-- 销量是展示销量与实际销量之和（后端相加）；0 不显示，「已售 0」只会劝退 -->
+            <span v-if="product.salesCount > 0" class="sales-count">
+              {{ $t('product.salesCount', { n: product.salesCount }) }}
+            </span>
+          </span>
           <span v-if="product.stockLeft != null" class="stock-left">
             {{ $t('product.stockLeft', { n: product.stockLeft }) }}
           </span>
@@ -206,6 +212,19 @@ const emit = defineEmits<{ buy: [product: Product] }>()
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+/* 价格与销量同一行、按基线对齐：销量是价格旁的一句小字 */
+.price-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.sales-count {
+  font-size: 12px;
+  color: var(--color-ink-secondary);
+  white-space: nowrap;
 }
 
 /* 低库存提示：暖色小字贴在价格下，制造紧迫感但不抢购买按钮 */

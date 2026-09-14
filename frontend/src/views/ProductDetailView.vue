@@ -95,6 +95,10 @@ async function buy() {
           <p class="price-row">
             <span class="price">{{ formatPrice(product.priceCents) }}</span>
             <span class="currency">USD</span>
+            <!-- 销量是展示销量与实际销量之和（后端相加）；0 不显示 -->
+            <span v-if="product.salesCount > 0" class="sales-count">
+              {{ $t('product.salesCount', { n: product.salesCount }) }}
+            </span>
           </p>
 
           <p v-if="product.stockLeft != null" class="stock-left">
@@ -292,6 +296,14 @@ async function buy() {
   font-size: 13px;
   font-weight: 500;
   color: var(--color-ink-secondary);
+}
+
+/* 销量：价格行末尾的一句灰字，靠 margin-left: auto 推到右侧与价格拉开 */
+.sales-count {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--color-ink-secondary);
+  white-space: nowrap;
 }
 
 .stock-left {

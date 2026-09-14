@@ -22,6 +22,8 @@ export interface Product {
   soldOut: boolean
   /** 低库存剩余数：仅 0 < 余量 ≤ 5 时有值，其余 null */
   stockLeft: number | null
+  /** 销量（后端已把展示销量与实际销量相加），0 时不展示 */
+  salesCount: number
 }
 
 /** 商品详情（镜像后端 ProductDetailResponse，比列表多一段富文本详情） */

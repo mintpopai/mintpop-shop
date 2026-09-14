@@ -54,7 +54,8 @@
     "buying": "下单中…",
     "viewDetail": "查看 {name} 详情",
     "soldOut": "售罄",
-    "stockLeft": "仅剩 {n} 件"
+    "stockLeft": "仅剩 {n} 件",
+    "salesCount": "已售 {n}"
   },
   "payment": {
     "title": "收银台",

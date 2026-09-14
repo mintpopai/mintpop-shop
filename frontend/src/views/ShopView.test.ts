@@ -43,6 +43,7 @@ function product(id: number, name: string): Product {
     accent: 'MINT',
     soldOut: false,
     stockLeft: null,
+    salesCount: 0,
   }
 }
 

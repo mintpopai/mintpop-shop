@@ -40,6 +40,7 @@ function detail(overrides: Partial<ProductDetail> = {}): ProductDetail {
     accent: 'MINT',
     soldOut: false,
     stockLeft: null,
+    salesCount: 0,
     ...overrides,
   }
 }
@@ -205,5 +206,19 @@ describe('详情页库存', () => {
 
     expect(w.find('.badge-sold-out').exists()).toBe(false)
     expect(w.find('.stock-left').exists()).toBe(false)
+  })
+})
+
+describe('销量', () => {
+  it('销量大于 0 时在价格旁展示已售数', async () => {
+    const w = await mountView({ salesCount: 356 })
+
+    expect(w.find('.sales-count').text()).toBe(t('product.salesCount', { n: 356 }))
+  })
+
+  it('销量为 0 时不展示', async () => {
+    const w = await mountView({ salesCount: 0 })
+
+    expect(w.find('.sales-count').exists()).toBe(false)
   })
 })

@@ -54,7 +54,8 @@
     "buying": "Ordering…",
     "viewDetail": "View details of {name}",
     "soldOut": "Sold out",
-    "stockLeft": "Only {n} left"
+    "stockLeft": "Only {n} left",
+    "salesCount": "{n} sold"
   },
   "payment": {
     "title": "Checkout",

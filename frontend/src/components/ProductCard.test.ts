@@ -15,6 +15,7 @@ function product(overrides: Partial<Product> = {}): Product {
     accent: 'MINT',
     soldOut: false,
     stockLeft: null,
+    salesCount: 0,
     ...overrides,
   }
 }
@@ -161,5 +162,19 @@ describe('ProductCard 库存', () => {
 
     expect(wrapper.find('.badge-sold-out').exists()).toBe(false)
     expect(wrapper.find('.stock-left').exists()).toBe(false)
+  })
+})
+
+describe('ProductCard 销量', () => {
+  it('销量大于 0 时在价格旁展示已售数', () => {
+    const wrapper = render({ salesCount: 128 })
+
+    expect(wrapper.find('.sales-count').text()).toBe(t('product.salesCount', { n: 128 }))
+  })
+
+  it('销量为 0 时不展示「已售 0」', () => {
+    const wrapper = render({ salesCount: 0 })
+
+    expect(wrapper.find('.sales-count').exists()).toBe(false)
   })
 })
