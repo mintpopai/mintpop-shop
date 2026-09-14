@@ -93,8 +93,18 @@ const form = ref({
   onSale: true,
   // 库存以文本编辑：空串=不限；Vue 对 type=number 的 v-model 会自动转数字，所以类型是 string | number
   stock: '' as string | number,
+  // 展示销量：留空按 0；同样是 type=number 的 v-model，类型 string | number
+  displaySales: 0 as string | number,
 })
 const saving = ref(false)
+/** 正在编辑的商品的实际销量（订单付款自动累加，只读），新增时为 0 */
+const editingSoldCount = ref(0)
+
+/** 展示销量输入框当前的数值（空串/非法按 0），供「商城会显示多少」的预览用 */
+const displaySalesPreview = computed(() => {
+  const n = Number(String(form.value.displaySales).trim() || 0)
+  return Number.isInteger(n) && n >= 0 ? n : 0
+})
 
 // 换了地址就重新试一次，别把上一张的失败状态留在新地址上
 watch(
@@ -139,7 +149,9 @@ function openCreate() {
     imageUrl: '',
     onSale: true,
     stock: '',
+    displaySales: 0,
   }
+  editingSoldCount.value = 0
   modalOpen.value = true
 }
 
@@ -162,7 +174,9 @@ function openEdit(product: AdminProduct) {
     imageUrl: product.imageUrl ?? '',
     onSale: product.onSale,
     stock: product.stock === null ? '' : product.stock,
+    displaySales: product.displaySales,
   }
+  editingSoldCount.value = product.soldCount
   modalOpen.value = true
 }
 
@@ -201,6 +215,12 @@ async function onSave() {
     showToast('error', '库存必须是不小于 0 的整数')
     return
   }
+  // 展示销量留空按 0（列 NOT NULL，后端要求必传）
+  const displaySales = Number(String(form.value.displaySales).trim() || 0)
+  if (!Number.isInteger(displaySales) || displaySales < 0) {
+    showToast('error', '展示销量必须是不小于 0 的整数')
+    return
+  }
   saving.value = true
   const body = {
     groupId: form.value.groupId,
@@ -217,6 +237,7 @@ async function onSave() {
     imageUrl: form.value.imageUrl,
     onSale: form.value.onSale,
     stock,
+    displaySales,
   }
   try {
     if (editingId.value === null) {
@@ -279,6 +300,7 @@ async function onToggleSale(product: AdminProduct) {
           <th>分组</th>
           <th class="col-amount">价格</th>
           <th class="col-amount">库存</th>
+          <th class="col-amount">销量</th>
           <th>角标</th>
           <th>详情</th>
           <th>主题色</th>
@@ -306,6 +328,15 @@ async function onToggleSale(product: AdminProduct) {
               >仅剩 {{ product.stock }}</span
             >
             <span v-else>{{ product.stock }}</span>
+          </td>
+          <td class="fact col-amount">
+            <!-- 商城看到的是两者之和；拆开写实际与展示，让管理员知道这个数里有多少是自己填的 -->
+            <div class="sales-cell">
+              <span class="sales-total">{{ product.soldCount + product.displaySales }}</span>
+              <span class="sales-split muted">
+                实际 {{ product.soldCount }} · 展示 {{ product.displaySales }}
+              </span>
+            </div>
           </td>
           <td>{{ product.badgeZh ?? '—' }}</td>
           <td class="col-detail">{{ product.detailZh ? '✓' : '—' }}</td>
@@ -557,6 +588,28 @@ async function onToggleSale(product: AdminProduct) {
         </div>
 
         <div class="admin-field">
+          <label for="p-display-sales">展示销量</label>
+          <input
+            id="p-display-sales"
+            v-model="form.displaySales"
+            class="admin-input"
+            type="number"
+            min="0"
+            step="1"
+            placeholder="0"
+          />
+          <!-- 新增时还没有订单，只说规则；编辑时把实际销量与商城会看到的总数一并摆出来 -->
+          <p v-if="editingId === null" class="field-note">
+            商城显示的销量 = 展示销量 + 实际销量（订单付款后自动累加）。
+          </p>
+          <p v-else class="field-note sold-count-note">
+            实际销量 {{ editingSoldCount }} 件由订单付款自动累加，不可改；商城会显示
+            <span class="fact">{{ editingSoldCount + displaySalesPreview }}</span
+            >。
+          </p>
+        </div>
+
+        <div class="admin-field">
           <label id="p-on-sale-label">状态</label>
           <div class="segmented" role="radiogroup" aria-labelledby="p-on-sale-label">
             <button
@@ -635,6 +688,19 @@ async function onToggleSale(product: AdminProduct) {
 .stock-low {
   color: var(--counter-warning);
   font-weight: 600;
+}
+
+/* 销量列：总数在上，实际/展示的拆分用小字灰色写在下面 */
+.sales-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.sales-split {
+  font-size: 11px;
+  white-space: nowrap;
 }
 
 /* —— 商品弹窗：左「文案」右「货签」两栏，各自滚动 —— */

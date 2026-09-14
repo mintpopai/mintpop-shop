@@ -58,6 +58,7 @@ function productUpsert(overrides: Partial<AdminProductUpsert> = {}): AdminProduc
     imageUrl: '',
     onSale: true,
     stock: null,
+    displaySales: 0,
     ...overrides,
   }
 }

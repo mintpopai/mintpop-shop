@@ -46,6 +46,8 @@ function product(overrides: Partial<AdminProduct> = {}): AdminProduct {
     imageUrl: null,
     onSale: true,
     stock: null,
+    displaySales: 0,
+    soldCount: 0,
     ...overrides,
   }
 }
@@ -658,5 +660,67 @@ describe('库存', () => {
     await links[2].trigger('click')
     await flushPromises()
     expect(($('#p-stock') as HTMLInputElement).value).toBe('')
+  })
+})
+
+describe('销量', () => {
+  it('列表销量列显示总数，并拆出实际与展示两部分', async () => {
+    const w = await render([product({ displaySales: 30, soldCount: 5 })])
+
+    const row = w.findAll('tbody tr')[0]
+    expect(row.find('.sales-total').text()).toBe('35')
+    expect(row.find('.sales-split').text()).toContain('实际 5')
+    expect(row.find('.sales-split').text()).toContain('展示 30')
+  })
+
+  it('新增时展示销量默认按 0 提交', async () => {
+    await render()
+    await openCreate()
+    await type('#p-name-zh', '新商品')
+    await type('#p-price', '9.99')
+    createMock.mockResolvedValue(product())
+
+    await save()
+
+    expect(createMock.mock.calls[0][0]).toMatchObject({ displaySales: 0 })
+  })
+
+  it('新增时填了展示销量按整数提交', async () => {
+    await render()
+    await openCreate()
+    await type('#p-name-zh', '新商品')
+    await type('#p-price', '9.99')
+    await type('#p-display-sales', '120')
+    createMock.mockResolvedValue(product())
+
+    await save()
+
+    expect(createMock.mock.calls[0][0]).toMatchObject({ displaySales: 120 })
+  })
+
+  it('展示销量为负或非整数时拦下', async () => {
+    await render()
+
+    for (const value of ['-1', '1.5']) {
+      await openCreate()
+      await type('#p-name-zh', '新商品')
+      await type('#p-price', '9.99')
+      await type('#p-display-sales', value)
+      await save()
+    }
+
+    expect(toast.value).toEqual({ type: 'error', text: '展示销量必须是不小于 0 的整数' })
+    expect(createMock).not.toHaveBeenCalled()
+  })
+
+  it('编辑时回填展示销量，并只读展示实际销量与商城看到的总数', async () => {
+    await render([product({ id: 1, displaySales: 30, soldCount: 5 })])
+
+    await wrapper!.findAll('tbody tr .admin-link')[0].trigger('click')
+    await flushPromises()
+
+    expect(($('#p-display-sales') as HTMLInputElement).value).toBe('30')
+    expect($('.sold-count-note')?.textContent).toContain('实际销量 5')
+    expect($('.sold-count-note')?.textContent).toContain('35')
   })
 })

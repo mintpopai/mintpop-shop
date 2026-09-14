@@ -21,6 +21,10 @@ export interface AdminProduct {
   onSale: boolean
   /** 库存数量：null=不限；≤0 售罄 */
   stock: number | null
+  /** 展示销量：管理员手填的销量基数 */
+  displaySales: number
+  /** 实际销量：订单付款自动累加，只读 */
+  soldCount: number
 }
 
 /** 商品新增/编辑请求体（镜像后端 AdminProductUpsertRequest） */
@@ -39,6 +43,8 @@ export interface AdminProductUpsert {
   imageUrl: string
   onSale: boolean
   stock: number | null
+  /** 展示销量：不能为负；商城显示 = 展示销量 + 实际销量 */
+  displaySales: number
 }
 
 /** 管理端分组（镜像后端 AdminGroupResponse） */
