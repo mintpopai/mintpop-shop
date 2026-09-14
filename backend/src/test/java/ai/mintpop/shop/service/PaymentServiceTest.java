@@ -38,6 +38,7 @@ import java.util.Locale;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -564,5 +565,34 @@ class PaymentServiceTest {
         paymentService.handleWebhook(succeededEvent(11800L));
 
         verify(stockService, never()).consume(any());
+    }
+
+    @Test
+    @DisplayName("首次入账：同事务内把购买数量累加到商品实际销量")
+    void settlePaidAddsSoldCount() {
+        ShopOrder order = pendingOrder();
+        order.setPaymentProvider("stripe");
+        order.setPaymentTradeNo("pi_123");
+        when(shopOrderMapper.selectOne(any())).thenReturn(order);
+        when(shopOrderMapper.update(isNull(), any())).thenReturn(1);
+
+        paymentService.handleWebhook(succeededEvent(11800L));
+
+        verify(productMapper).addSoldCount(1L, 2);
+    }
+
+    @Test
+    @DisplayName("入账重放（0 行）：不再累加销量")
+    void settleReplayDoesNotAddSoldCount() {
+        ShopOrder order = pendingOrder();
+        order.setStatus(OrderStatusEnum.PAID);
+        order.setPaymentProvider("stripe");
+        order.setPaymentTradeNo("pi_123");
+        when(shopOrderMapper.selectOne(any())).thenReturn(order);
+        when(shopOrderMapper.update(isNull(), any())).thenReturn(0);
+
+        paymentService.handleWebhook(succeededEvent(11800L));
+
+        verify(productMapper, never()).addSoldCount(anyLong(), anyInt());
     }
 }

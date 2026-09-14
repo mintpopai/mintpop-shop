@@ -114,6 +114,8 @@ public class AdminProductService {
         product.setOnSale(request.getOnSale());
         // 库存是绝对写入（把库存设为 N）；null 即不限。与买家下单并发时管理员旧值会覆盖预占结果，小店可接受（见 README）
         product.setStock(request.getStock());
+        // 展示销量是管理员手填的基数；实际销量（soldCount）由订单入账累加，这里不动它
+        product.setDisplaySales(request.getDisplaySales());
     }
 
     /** 可空列（DDL 为 NULL）的归一：空白一律落 null，库里不混存空串 */

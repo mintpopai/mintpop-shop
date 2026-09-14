@@ -59,6 +59,10 @@ public class Product {
     /** 库存数量：null=不限库存；>=0 为当前可售数（入账竞态补扣时可为负）。可空列，清空=改回不限，必须 ALWAYS 才能把 null 写回 */
     @TableField(updateStrategy = FieldStrategy.ALWAYS)
     private Integer stock;
+    /** 展示销量：管理员手填的销量基数，NOT NULL DEFAULT 0；前台展示 = displaySales + soldCount */
+    private Integer displaySales;
+    /** 实际销量：订单首次入账时按购买数量累加（相对更新，见 ProductMapper.addSoldCount），管理端只读 */
+    private Integer soldCount;
     /** 创建时间（数据库默认值维护）；updateStrategy=NEVER 防止整实体写回时把该列带进 UPDATE 的 SET，压制数据库侧的默认值/触发逻辑 */
     @TableField(updateStrategy = FieldStrategy.NEVER)
     private LocalDateTime createdAt;

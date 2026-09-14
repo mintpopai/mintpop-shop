@@ -90,4 +90,19 @@ class GroupServiceTest {
         assertThat(result.get(0).getProducts().get(0).getName()).isEqualTo("Mint Sprite Blind Box");
         assertThat(result.get(0).getProducts().get(1).getName()).isEqualTo("云朵萌宠盲盒");
     }
+
+    @Test
+    @DisplayName("列表商品下发的销量 = 展示销量 + 实际销量")
+    void productSalesCountIsDisplayPlusActual() {
+        LocaleContextHolder.setLocale(Locale.SIMPLIFIED_CHINESE);
+        when(productGroupMapper.selectList(any())).thenReturn(List.of(group(1L, "盲盒系列", "Blind Boxes")));
+        Product p = product(11L, 1L, "薄荷精灵盲盒", "Mint Sprite Blind Box");
+        p.setDisplaySales(30);
+        p.setSoldCount(5);
+        when(productMapper.selectList(any())).thenReturn(List.of(p));
+
+        List<GroupWithProductsResponse> result = groupService.listGroupsWithProducts();
+
+        assertThat(result.get(0).getProducts().get(0).getSalesCount()).isEqualTo(35);
+    }
 }

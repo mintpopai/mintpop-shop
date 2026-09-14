@@ -38,7 +38,7 @@ class EntityUpdateStrategyTest {
      */
     private static final Set<String> PRODUCT_NOT_NULL = Set.of(
             "id", "group_id", "name_zh", "name_en", "accent", "price_cents", "on_sale",
-            "created_at", "updated_at");
+            "display_sales", "sold_count", "created_at", "updated_at");
 
     /** product_group 表中 DDL 为 NULL 的列：暂无 */
     private static final Set<String> GROUP_NULLABLE = Set.of();

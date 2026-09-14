@@ -229,6 +229,8 @@ public class PaymentService {
                     .set(ShopOrder::getPaymentTradeNo, intentId));
             if (updated > 0) {
                 stockService.consume(order);
+                // 实际销量与置 PAID 同一事务、且只在首次入账（updated > 0）时累加，重放不会重复计数
+                productMapper.addSoldCount(order.getProductId(), order.getQuantity());
             }
             return updated;
         });

@@ -27,6 +27,7 @@ class AdminProductUpsertRequestTest {
         req.setAccent("MINT");
         req.setPriceCents(6900L);
         req.setOnSale(true);
+        req.setDisplaySales(0);
         return req;
     }
 
@@ -98,5 +99,23 @@ class AdminProductUpsertRequestTest {
         req.setStock(-1);
 
         assertThat(violatedProperties(req)).containsExactly("stock");
+    }
+
+    @Test
+    @DisplayName("展示销量为负被拒")
+    void rejectsNegativeDisplaySales() {
+        AdminProductUpsertRequest req = validRequest();
+        req.setDisplaySales(-1);
+
+        assertThat(violatedProperties(req)).containsExactly("displaySales");
+    }
+
+    @Test
+    @DisplayName("展示销量缺省被拒（列 NOT NULL，null 会让编辑静默保留旧值）")
+    void rejectsMissingDisplaySales() {
+        AdminProductUpsertRequest req = validRequest();
+        req.setDisplaySales(null);
+
+        assertThat(violatedProperties(req)).containsExactly("displaySales");
     }
 }

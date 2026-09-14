@@ -21,4 +21,8 @@ public interface ProductMapper extends BaseMapper<Product> {
     /** 补扣：入账时预占已被归还，钱已收必须成单，允许扣成负数 */
     @Update("UPDATE product SET stock = stock - #{quantity} WHERE id = #{id} AND stock IS NOT NULL")
     int deductStock(@Param("id") Long id, @Param("quantity") int quantity);
+
+    /** 实际销量累加：订单首次入账时按购买数量相对更新，与库存一样不读改写 */
+    @Update("UPDATE product SET sold_count = sold_count + #{quantity} WHERE id = #{id}")
+    int addSoldCount(@Param("id") Long id, @Param("quantity") int quantity);
 }

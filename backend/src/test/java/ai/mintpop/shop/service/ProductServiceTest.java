@@ -130,4 +130,18 @@ class ProductServiceTest {
         assertThat(result.getSoldOut()).isFalse();
         assertThat(result.getStockLeft()).isEqualTo(3);
     }
+
+    @Test
+    @DisplayName("详情下发的销量 = 展示销量 + 实际销量，不单独暴露两部分")
+    void salesCountIsDisplayPlusActual() {
+        LocaleContextHolder.setLocale(Locale.SIMPLIFIED_CHINESE);
+        Product p = onSaleProduct();
+        p.setDisplaySales(120);
+        p.setSoldCount(7);
+        when(productMapper.selectById(11L)).thenReturn(p);
+
+        ProductDetailResponse result = productService.getOnSaleProduct(11L);
+
+        assertThat(result.getSalesCount()).isEqualTo(127);
+    }
 }

@@ -42,11 +42,16 @@ public class AdminProductResponse {
 
     /** 库存数量：null=不限；≤0 售罄（负数为入账竞态补扣所致） */
     private Integer stock;
+    /** 展示销量：管理员手填的销量基数 */
+    private Integer displaySales;
+    /** 实际销量：订单入账累加，只读 */
+    private Integer soldCount;
 
     public static AdminProductResponse of(Product p) {
         return new AdminProductResponse(p.getId(), p.getGroupId(), p.getNameZh(), p.getNameEn(),
                 p.getDescriptionZh(), p.getDescriptionEn(), p.getDetailZh(), p.getDetailEn(),
                 p.getBadgeZh(), p.getBadgeEn(),
-                p.getAccent(), p.getPriceCents(), p.getImageUrl(), p.getOnSale(), p.getStock());
+                p.getAccent(), p.getPriceCents(), p.getImageUrl(), p.getOnSale(), p.getStock(),
+                p.getDisplaySales(), p.getSoldCount());
     }
 }

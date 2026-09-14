@@ -2,6 +2,7 @@ package ai.mintpop.shop.response;
 
 import ai.mintpop.shop.entity.Product;
 import ai.mintpop.shop.util.I18nUtil;
+import ai.mintpop.shop.util.SalesUtil;
 import ai.mintpop.shop.util.StockUtil;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -31,6 +32,8 @@ public class ProductResponse {
     private Boolean soldOut;
     /** 低库存剩余数：仅当 0 < 余量 ≤ 5 时下发，其余为 null（不暴露原始库存） */
     private Integer stockLeft;
+    /** 销量 = 展示销量 + 实际销量；两部分不单独下发，前台只知道一个数 */
+    private Integer salesCount;
 
     public static ProductResponse of(Product product, boolean english) {
         return new ProductResponse(product.getId(),
@@ -39,6 +42,7 @@ public class ProductResponse {
                 product.getPriceCents(), product.getImageUrl(),
                 I18nUtil.pick(english, product.getBadgeEn(), product.getBadgeZh()),
                 product.getAccent(),
-                StockUtil.isSoldOut(product), StockUtil.lowStockLeft(product));
+                StockUtil.isSoldOut(product), StockUtil.lowStockLeft(product),
+                SalesUtil.salesCount(product));
     }
 }

@@ -73,4 +73,9 @@ public class AdminProductUpsertRequest {
     /** 库存数量：null=不限库存；0=售罄；不能为负 */
     @Min(value = 0, message = "{biz.validation.stock-min}")
     private Integer stock;
+
+    /** 展示销量：管理员手填的销量基数，必填且不能为负（列 NOT NULL，缺省会让编辑静默保留旧值） */
+    @NotNull(message = "{biz.validation.display-sales-min}")
+    @Min(value = 0, message = "{biz.validation.display-sales-min}")
+    private Integer displaySales;
 }

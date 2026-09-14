@@ -53,7 +53,7 @@ class AdminProductServiceTest {
 
     private AdminProductUpsertRequest request(long groupId) {
         return new AdminProductUpsertRequest(groupId, " 薄荷猫手办 ", "Mint Cat", null, "",
-                null, "", "旗舰", " ", "MINT", 5900L, "  ", true, null);
+                null, "", "旗舰", " ", "MINT", 5900L, "  ", true, null, 0);
     }
 
     @Test
@@ -145,6 +145,28 @@ class AdminProductServiceTest {
     }
 
     @Test
+    @DisplayName("编辑：展示销量按请求落库，实际销量不受请求影响并原样回传")
+    void updateWritesDisplaySalesAndKeepsSoldCount() {
+        Product existing = new Product();
+        existing.setId(7L);
+        existing.setDisplaySales(0);
+        existing.setSoldCount(9);
+        when(productMapper.selectById(7L)).thenReturn(existing);
+        when(productGroupMapper.selectById(1L)).thenReturn(new ProductGroup());
+        AdminProductUpsertRequest request = request(1L);
+        request.setDisplaySales(200);
+
+        AdminProductResponse response = adminProductService.updateProduct(7L, request);
+
+        ArgumentCaptor<Product> captor = ArgumentCaptor.forClass(Product.class);
+        verify(productMapper).updateById(captor.capture());
+        assertThat(captor.getValue().getDisplaySales()).isEqualTo(200);
+        assertThat(captor.getValue().getSoldCount()).isEqualTo(9);
+        assertThat(response.getDisplaySales()).isEqualTo(200);
+        assertThat(response.getSoldCount()).isEqualTo(9);
+    }
+
+    @Test
     @DisplayName("编辑：商品不存在抛 210002")
     void updateMissingProductRejected() {
         when(productMapper.selectById(9L)).thenReturn(null);
@@ -191,7 +213,8 @@ class AdminProductServiceTest {
         String sqlSet = captor.getValue().getSqlSet();
         assertThat(sqlSet).contains("on_sale");
         assertThat(sqlSet).doesNotContain("stock").doesNotContain("description").doesNotContain("detail")
-                .doesNotContain("badge").doesNotContain("image_url");
+                .doesNotContain("badge").doesNotContain("image_url")
+                .doesNotContain("sales").doesNotContain("sold");
         assertThat(captor.getValue().getSqlSegment()).contains("id");
         assertThat(captor.getValue().getParamNameValuePairs()).containsValue(3L).containsValue(false);
     }
